@@ -3,6 +3,7 @@ package com.hebrewime.core.prediction
 import com.hebrewime.core.confusion.RealWordErrorDetector
 import com.hebrewime.core.correction.CorrectionEngine
 import com.hebrewime.core.dictionary.PersonalDictionary
+import com.hebrewime.core.learning.UserNgramModel
 import com.hebrewime.core.correction.HebrewFrequency
 import com.hebrewime.core.correction.LexiconTrie
 import com.hebrewime.core.lexicon.HebrewLexicon
@@ -116,6 +117,22 @@ class PredictiveEngine(
      */
     private val personal: PersonalDictionary = PersonalDictionary(),
     /**
+     * What this installation has learned about how this user writes. Empty unless the user
+     * turned learning on.
+     *
+     * ### It adjusts, it does not replace
+     * The static table stays the ranking's backbone; [Config.userWeight] scales a bounded
+     * contribution on top of it. A pair the user typed a handful of times must not outrank
+     * strong corpus evidence outright — that is how a keyboard becomes confidently wrong about
+     * someone after one unusual afternoon.
+     *
+     * Empty by default, and an empty model must produce **byte-identical** predictions to an
+     * engine built without one. `LearningNeutralityTest` asserts that, because it is what keeps
+     * every number in `docs/PREDICTION_MEASUREMENTS.md` and
+     * `docs/CONFUSION_MEASUREMENTS.md` a claim about what still ships.
+     */
+    private val userModel: UserNgramModel = UserNgramModel.empty(),
+    /**
      * Finds words that are spelled correctly and still wrong. Optional, so an engine can be
      * built without one — and so the M10 measurements can be reproduced exactly as they were
      * taken, without M11 changing them.
@@ -163,6 +180,25 @@ class PredictiveEngine(
         val bigramWeight: Double = 2.0,
         /** How many trie completions to consider before ranking. */
         val completionCandidates: Int = 24,
+        /**
+         * Weight on the learned layer, in the same log-count units as [bigramWeight].
+         *
+         * **Chosen on `learning_dev` and reported on `learning_test`**, which share no
+         * sentence; see `docs/LEARNING_MEASUREMENTS.md` for the sweep, the static-only
+         * baseline beside it, and the cold-start curve.
+         *
+         * 0.0 disables the layer arithmetically as well as by an empty model, so a build can
+         * be compared against static-only without rebuilding anything.
+         */
+        val userWeight: Double = DEFAULT_USER_WEIGHT,
+        /**
+         * Cap on the learned layer's contribution, in log-count units before weighting.
+         *
+         * Without it, a pair the user happens to repeat often enough would eventually dominate
+         * any corpus evidence at all. The cap is what makes "adjusts, does not replace" a
+         * property of the arithmetic rather than a hope about how people type.
+         */
+        val userEvidenceCap: Int = DEFAULT_USER_EVIDENCE_CAP,
         /**
          * What to do when the typed string is not a word in the lexicon.
          *
@@ -309,13 +345,42 @@ class PredictiveEngine(
 
     private fun nextWord(previousIndex: Int?): List<Prediction> {
         if (previousIndex == null) return emptyList()
-        return bigrams.continuationsOf(previousIndex, config.limit)
-            .map { (index, logCount) ->
-                Prediction(
-                    lexicon.wordAt(index), index, SuggestionKind.NEXT_WORD, logCount.toDouble(),
-                )
+        // Take more static candidates than will be shown, so the learned layer can reorder
+        // within a real set rather than only appending to a list already truncated to three.
+        val scored = LinkedHashMap<Int, Double>()
+        for ((index, logCount) in bigrams.continuationsOf(previousIndex, NEXT_WORD_CANDIDATES)) {
+            scored[index] = logCount.toDouble()
+        }
+        if (config.userWeight != 0.0) {
+            for ((index, logCount) in userModel.continuationsOf(
+                previousIndex, NEXT_WORD_CANDIDATES,
+            )) {
+                // A learned continuation the corpus never saw is still offerable -- that is
+                // most of the point -- but it enters at its own bounded weight rather than
+                // being promoted to the top by default.
+                scored[index] = (scored[index] ?: 0.0) + userContribution(logCount)
+            }
+        }
+        return scored.entries
+            // Drop the sentinel BEFORE truncating. Filtering afterwards would silently return
+            // two suggestions instead of three whenever the strongest learned continuation
+            // happened to be an unknown word -- a hole in the strip with no visible cause.
+            .filter { it.key >= 0 }
+            .sortedByDescending { it.value }
+            .take(config.limit)
+            .map { (index, score) ->
+                Prediction(lexicon.wordAt(index), index, SuggestionKind.NEXT_WORD, score)
             }
     }
+
+    /**
+     * The learned layer's bounded addition to a score.
+     *
+     * Capped **before** weighting, so raising [Config.userWeight] scales a bounded quantity
+     * rather than removing the bound.
+     */
+    private fun userContribution(logCount: Int): Double =
+        config.userWeight * logCount.coerceAtMost(config.userEvidenceCap)
 
     private fun completions(prefix: String, previousIndex: Int?): List<Prediction> {
         if (prefix.length < config.minPrefixForCompletion) return emptyList()
@@ -333,11 +398,14 @@ class PredictiveEngine(
                 val bigram =
                     if (previousIndex == null || config.bigramWeight == 0.0) 0.0
                     else bigrams.logCountOf(previousIndex, index).toDouble()
+                val learned =
+                    if (previousIndex == null || config.userWeight == 0.0) 0.0
+                    else userContribution(userModel.logCountOf(previousIndex, index))
                 Prediction(
                     lexicon.wordAt(index),
                     index,
                     SuggestionKind.COMPLETION,
-                    unigram + config.bigramWeight * bigram,
+                    unigram + config.bigramWeight * bigram + learned,
                 )
             }
             .sortedByDescending { it.score }
@@ -379,5 +447,25 @@ class PredictiveEngine(
          * "the user asked for this word", which is not a point on the frequency scale.
          */
         const val PERSONAL_SCORE: Double = Double.MAX_VALUE
+
+        /**
+         * BASELINE VALUE, not a chosen one. Zero is static-only — exactly what shipped before
+         * this layer existed — so the first measurement is taken against the behaviour the
+         * published numbers describe. It moves only after the sweep on `learning_dev`.
+         */
+        const val DEFAULT_USER_WEIGHT: Double = 0.0
+
+        /**
+         * 32 log-count units, which is a raw count of 15.
+         *
+         * Above that the learned layer stops distinguishing "this person says this" from "this
+         * person says this constantly", and the extra head-room would only buy the ability to
+         * bury the corpus. Not swept: it is a bound, and tuning a bound upward until it stops
+         * binding is how a bound becomes decorative.
+         */
+        const val DEFAULT_USER_EVIDENCE_CAP: Int = 32
+
+        /** Static candidates pulled before the learned layer reorders them. */
+        private const val NEXT_WORD_CANDIDATES: Int = 16
     }
 }
