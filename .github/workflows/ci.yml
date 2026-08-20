@@ -37,6 +37,31 @@ jobs:
       - name: Assemble debug, release, and the netcontrol positive-control APK
         run: ./gradlew :app:assembleDebug :app:assembleRelease :app:assembleNetcontrol
 
+      # GATE-LEX-1's reproducibility detector and GATE-LEX-2 both need the 37 MB of upstream
+      # lexicon sources, which are gitignored and therefore absent on a fresh runner. Without
+      # them there is nothing to rebuild and nothing to corrupt, so the control CANNOT go red
+      # -- and run_gates.py reports NOT-MEASURED, which is honest but leaves reproducibility
+      # unproven on every push.
+      #
+      # So the cache is warmed here, best-effort. continue-on-error because an upstream host
+      # being down is not a defect in this repository, and failing the build for it would
+      # teach everyone to ignore a red CI. When the fetch fails the gate says NOT-MEASURED in
+      # the summary below, in its own row, where it can be seen.
+      - name: Fetch upstream lexicon sources (best-effort; feeds GATE-LEX-1/2)
+        continue-on-error: true
+        timeout-minutes: 10
+        run: python3 scripts/check_lexicon.py --allow-fetch --json > /dev/null
+
+      - name: Report whether the lexicon sources are present
+        run: |
+          for f in lexicon/cache/InflectedVerbsExtended.csv lexicon/cache/he_full.txt; do
+            if [ -f "$f" ]; then
+              echo "present: $f ($(stat -c%s "$f") bytes)"
+            else
+              echo "ABSENT: $f -- GATE-LEX-2 will report NOT-MEASURED, not PASS"
+            fi
+          done
+
       - name: Run all gates + positive controls
         run: python3 scripts/run_gates.py --verbose
 

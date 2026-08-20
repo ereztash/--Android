@@ -38,6 +38,15 @@ def _gates(strict: bool) -> list[dict]:
     release_apk = os.path.join(ROOT, "app", "build", "outputs", "apk", "release",
                                "app-release-unsigned.apk")
     release_baseline = os.path.join(ROOT, "tools", "apk_dex_baseline_release.json")
+    # The 37 MB of upstream lexicon sources. Gitignored, so absent on a fresh clone and on
+    # every CI runner unless a step fetches them first. Both the reproducibility detector and
+    # its positive control need them: with no sources there is nothing to rebuild and nothing
+    # to corrupt, so the control cannot go red -- which is NOT the same as a control that ran
+    # and failed to fire, and must not be reported as though it were.
+    lexicon_sources = [
+        os.path.join(ROOT, "lexicon", "cache", "InflectedVerbsExtended.csv"),
+        os.path.join(ROOT, "lexicon", "cache", "he_full.txt"),
+    ]
     return [
         {
             "id": "GATE-NET-1",
@@ -70,6 +79,10 @@ def _gates(strict: bool) -> list[dict]:
                             "SecureRandom",
         },
         {
+            # The artifact detector needs nothing but the repository, so this gate is proven
+            # everywhere. Its reproducibility detector needs the sources and reports
+            # NOT-MEASURED without them, which is why the gate can come back PASS-PARTIAL on a
+            # runner that has no cache. PASS-PARTIAL is not PASS and is printed as such.
             "id": "GATE-LEX-1",
             "what": "the shipped lexicon matches its manifest and the recipe reproduces it",
             "real": [PY, lex, "--json"] + s,
@@ -82,6 +95,7 @@ def _gates(strict: bool) -> list[dict]:
             "real": [PY, lex, "--json"] + s,
             "control": [PY, lex, "--inject-defect", "checksum", "--json"],
             "control_desc": "one byte of upstream source A flipped before hashing",
+            "requires": lexicon_sources,
         },
         {
             "id": "GATE-XML-1",
@@ -219,7 +233,12 @@ def main() -> int:
             absent = [p for p in g.get("requires", []) if not os.path.isfile(p)]
             if absent:
                 rows.append((g["id"], "NOT-MEASURED",
-                             f"artifact absent: {os.path.basename(absent[0])}", "n/a"))
+                             f"input absent: {os.path.basename(absent[0])}", "n/a"))
+                print(f"\n!!! {g['id']}: NOT-MEASURED. Its control needs "
+                      f"{', '.join(os.path.relpath(p, ROOT) for p in absent)}, which is not "
+                      f"present. A control that cannot run has proven nothing -- this gate is "
+                      f"unproven in THIS environment, and is reported as such rather than as "
+                      f"a pass or as a broken gate.", file=sys.stderr)
                 if args.strict:
                     ok = False
                 continue

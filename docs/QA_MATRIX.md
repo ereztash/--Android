@@ -31,6 +31,46 @@ Scale: 39 production Kotlin files, 26 test files, **179 JVM tests**, 8 gate scri
 
 ---
 
+## Where these gates are proven — and where they were not
+
+**Two of the sixteen gates cannot be proven on a fresh clone**, because their positive control
+needs the 37 MB of upstream lexicon sources, which are gitignored. With no sources there is
+nothing to rebuild and nothing to corrupt, so the control cannot go red.
+
+That is not a hole in the argument; it is the argument working. `run_gates.py` reports such a
+gate as **NOT-MEASURED**, distinctly from `NOT-A-GATE` (a control that ran and stayed green)
+and from `PASS`. Under `--strict` it is a failure.
+
+| gate | proven on a fresh clone? | needs |
+|---|---|---|
+| GATE-LEX-1 `artifact` detector | yes | the repository only |
+| GATE-LEX-1 `reproducibility` detector | **no** — NOT-MEASURED, gate reads PASS-PARTIAL | `lexicon/cache/` sources |
+| GATE-LEX-2 | **no** — NOT-MEASURED | `lexicon/cache/` sources |
+| the other 14 | yes | the repository, plus a built APK for six of them |
+
+CI now warms that cache **best-effort** before running the gates, and prints whether each
+source is present, so a NOT-MEASURED row is visible rather than inferred. An upstream host
+being down does not fail the build — a red CI nobody can act on is a red CI everybody learns
+to ignore.
+
+### The CI history, stated rather than quietly fixed
+
+**CI was red on every push from M1 through M12.** The cause was this exact case: GATE-LEX-2's
+control could not run on a runner, `run_gates.py` did not distinguish "could not run" from
+"ran and stayed green", and reported `NOT-A-GATE`, failing the job. Every other job — unit
+tests, assemble, lint — was green throughout, and the fifteen other gates passed with their
+controls red.
+
+Two things were true at once and only one of them was being said: the gates passed **locally**,
+where the sources are cached, and the gate job failed **in CI**. Commit messages through M12
+say "16 gates green, all controls red" without naming where. That was measured on the build
+host, and it was not the whole picture.
+
+`tools/gate_tests/test_gates.py` now moves a source aside and asserts the NOT-MEASURED /
+NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur silently.
+
+---
+
 ## PASSED — gates, each with its control demonstrated red
 
 | ID | Check | Denominator | Positive control |

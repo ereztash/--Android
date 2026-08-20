@@ -18,10 +18,13 @@ Two independent reasons, either of which is sufficient:
 The build is complete through M12 in the sense that every milestone's code exists, compiles,
 and is covered by tests and gates:
 
-- **16 gates**, each with a committed positive control demonstrated red in the same run.
-  `scripts/run_gates.py` reports a gate as `NOT-A-GATE` and fails the build if its control ever
-  comes back green — verified by neutering a control by hand and watching the orchestrator
-  catch it.
+- **16 gates**, each with a committed positive control. Fourteen are demonstrated red on any
+  fresh clone; **two — GATE-LEX-2 and GATE-LEX-1's reproducibility detector — need the 37 MB of
+  upstream lexicon sources and are NOT-MEASURED without them.** `scripts/run_gates.py` reports
+  a gate as `NOT-A-GATE` and fails the build if its control ever comes back green — verified by
+  neutering a control by hand — and as `NOT-MEASURED`, distinctly, when a control could not run
+  at all. See the QA matrix for which is which, and for the CI history: the gate job was red
+  from M1 to M12 on exactly this distinction.
 - **179 JVM tests**, 0 failures, 0 skipped.
 - A **release AAB (5,940,182 bytes)** and APK that build, survive R8 with everything the system
   instantiates by name intact, and carry no network permission or network class reference.

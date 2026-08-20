@@ -155,6 +155,43 @@ class TestOrchestrator(unittest.TestCase):
         for gate in ("GATE-NET-1", "GATE-API-1", "GATE-DENOM-1"):
             self.assertIn(gate, p.stdout)
 
+    def test_an_absent_input_is_not_measured_not_a_broken_gate(self):
+        """A control that CANNOT RUN and a control that RAN AND STAYED GREEN are different.
+
+        The first says nothing about the gate; the second says the gate is worthless. Reporting
+        them the same way costs one of two things: either a fresh clone shows a red build for a
+        missing 37 MB download and everyone learns to ignore red, or the distinction is
+        smoothed over and a genuinely dead control hides inside it.
+
+        CI ran red on every push from M1 to M12 for exactly this: GATE-LEX-2's control needs
+        the upstream lexicon sources, which are gitignored, so on a runner it could not go red
+        and the orchestrator called the gate broken. This test moves the source aside and pins
+        the distinction.
+        """
+        source = os.path.join(ROOT, "lexicon", "cache", "InflectedVerbsExtended.csv")
+        if not os.path.isfile(source):
+            self.skipTest("upstream source not cached here; nothing to move aside")
+        stashed = source + ".stashed-by-test"
+        os.rename(source, stashed)
+        try:
+            p = subprocess.run([PY, os.path.join(ROOT, "scripts", "run_gates.py")],
+                               capture_output=True, text=True, cwd=ROOT)
+            row = next(line for line in p.stdout.splitlines()
+                       if line.startswith("GATE-LEX-2"))
+            self.assertIn("NOT-MEASURED", row, row)
+            self.assertNotIn("NOT-A-GATE", row, row)
+            self.assertNotIn("PASS", row, "an unproven gate must never read as a pass")
+            self.assertEqual(0, p.returncode,
+                             "an absent input is not a build failure by default")
+
+            strict = subprocess.run(
+                [PY, os.path.join(ROOT, "scripts", "run_gates.py"), "--strict"],
+                capture_output=True, text=True, cwd=ROOT)
+            self.assertEqual(1, strict.returncode,
+                             "under --strict, an unproven gate IS a failure")
+        finally:
+            os.rename(stashed, source)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
