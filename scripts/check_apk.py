@@ -47,6 +47,7 @@ from gatelib import Detector, Finding, GateResult, report  # noqa: E402
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BASELINE = os.path.join(ROOT, "tools", "apk_dex_baseline.json")
 LEXICON_MANIFEST = os.path.join(ROOT, "lexicon", "MANIFEST.json")
+BIGRAM_MANIFEST = os.path.join(ROOT, "lexicon", "BIGRAM_MANIFEST.json")
 
 NETWORK_PERMISSIONS = {
     "android.permission.INTERNET",
@@ -187,7 +188,7 @@ def check_lexicon_asset(apk: str, inject: str | None) -> Detector:
     # The Kotlin side opens these by EXACT name. AGP strips the .gz while packaging, so the
     # names in the APK are not the names in the repository, and a rename here would be a
     # runtime crash on first suggestion rather than a build error.
-    expected_names = {"assets/he_lexicon.txt", "assets/he_freq.bin"}
+    expected_names = {"assets/he_lexicon.txt", "assets/he_freq.bin", "assets/he_bigrams.bin"}
     if inject == "asset_name":
         # PLANTED DEFECT: pretend the code expects a name AGP does not produce, which is what
         # a rename or a change in AGP's .gz handling would look like.
@@ -229,6 +230,73 @@ def check_lexicon_asset(apk: str, inject: str | None) -> Detector:
                     "apk_lexicon", os.path.basename(apk), 0,
                     f"{name} holds {words} lines, manifest says "
                     f"{expected.get('word_count')}", "apk.lexicon_count"))
+    return det
+
+
+def check_bigram_asset(apk: str, inject: str | None) -> Detector:
+    """The bigram table inside the APK must be the one every prediction number was measured on.
+
+    Same argument as `check_lexicon_asset`, one step further along. The accuracy figures in
+    `docs/PREDICTION_MEASUREMENTS.md` -- and the floors `PredictionAccuracyTest` enforces --
+    are properties of a specific 532,168-entry table built from a specific dump. Ship a
+    different one and every number becomes a claim about a file that is not in the app.
+
+    The failure this actually guards against is silent: `BigramModel.EMPTY` exists so that a
+    missing table degrades prediction to unigram ranking instead of crashing. That is the right
+    runtime behaviour and the wrong thing to discover in production -- prefix-1 top-3 would
+    fall from 5.73% to 2.15% with nothing anywhere reporting a problem. So the absence is
+    caught here, on the artifact, rather than by a user noticing the keyboard got worse.
+    """
+    det = Detector(name="apk_bigrams", unit="packaged bigram assets", denominator=0)
+    if not os.path.isfile(BIGRAM_MANIFEST):
+        det.notes.append("lexicon/BIGRAM_MANIFEST.json missing; NOT-MEASURED")
+        return det
+    manifest = json.load(open(BIGRAM_MANIFEST, encoding="utf-8"))["model"]
+
+    with zipfile.ZipFile(apk) as z:
+        names = [n for n in z.namelist()
+                 if n.startswith("assets/") and "he_bigrams" in n]
+        if not names:
+            det.findings.append(Finding(
+                "apk_bigrams", os.path.basename(apk), 0,
+                "no bigram table in the APK; CorrectionController opens assets/he_bigrams.bin "
+                "by that exact name and degrades to BigramModel.EMPTY when it is absent, so "
+                "the app would run and quietly score prefix-1 top-3 2.15% instead of 5.73% "
+                "with nothing at runtime reporting a problem",
+                "apk.missing_bigram_asset"))
+            det.denominator = 1
+            return det
+
+        det.denominator = len(names)
+        for name in names:
+            data = z.read(name)
+            if data[:2] == b"\x1f\x8b":
+                data = gzip.decompress(data)
+            if inject == "bigram_content":
+                data = data + b"\x00"
+            digest = hashlib.sha256(data).hexdigest()
+            det.notes.append(f"{name}: {len(data)} bytes uncompressed, sha256 {digest}")
+            if digest != manifest["raw_sha256"]:
+                det.findings.append(Finding(
+                    "apk_bigrams", os.path.basename(apk), 0,
+                    f"{name} hashes to {digest}, but lexicon/BIGRAM_MANIFEST.json says "
+                    f"{manifest['raw_sha256']}", "apk.bigram_mismatch"))
+            if len(data) != manifest["raw_bytes"]:
+                det.findings.append(Finding(
+                    "apk_bigrams", os.path.basename(apk), 0,
+                    f"{name} is {len(data)} bytes, manifest says {manifest['raw_bytes']}",
+                    "apk.bigram_size"))
+            # Parse the header the way BigramModel.load does, so a table that is present and
+            # correctly hashed but structurally wrong is still caught.
+            if len(data) >= 4:
+                groups = int.from_bytes(data[0:4], "little")
+                det.notes.append(f"{name}: header declares {groups} groups, "
+                                 f"manifest says {manifest['groups']}")
+                if groups != manifest["groups"]:
+                    det.findings.append(Finding(
+                        "apk_bigrams", os.path.basename(apk), 0,
+                        f"{name} header declares {groups} groups, manifest says "
+                        f"{manifest['groups']}", "apk.bigram_groups"))
     return det
 
 
@@ -278,6 +346,10 @@ NOT_COVERED = [
     "manifest describes.",
     "The lexicon detector checks the artifact's bytes, not its linguistic quality. Coverage "
     "and accuracy live in docs/LEXICON_MEASUREMENTS.md and M5.",
+    "The bigram detector checks that the shipped table is byte-identical to the measured one "
+    "and that its header agrees with the manifest. It does NOT check that the model is any "
+    "good -- prediction accuracy is measured in PredictionAccuracyTest against a held-out "
+    "corpus, and neither check substitutes for the other.",
 ]
 
 
@@ -292,7 +364,8 @@ def main() -> int:
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--strict", action="store_true")
     ap.add_argument("--inject-defect",
-                    choices=["permission", "dex", "service", "lexicon", "asset_name"],
+                    choices=["permission", "dex", "service", "lexicon", "asset_name",
+                             "bigram_content"],
                     help="PLANT A DEFECT. Positive control; every value must go red.")
     args = ap.parse_args()
 
@@ -308,7 +381,8 @@ def main() -> int:
                 for n, u in (("apk_permissions", "uses-permission entries"),
                              ("apk_dex", "DEX class descriptors"),
                              ("apk_ime_service", "IME service requirements"),
-                             ("apk_lexicon", "packaged lexicon assets"))
+                             ("apk_lexicon", "packaged lexicon assets"),
+                             ("apk_bigrams", "packaged bigram assets"))
             ],
             not_covered=NOT_COVERED,
         )
@@ -350,6 +424,7 @@ def main() -> int:
                 args.apk,
                 {"lexicon": "content", "asset_name": "asset_name"}.get(args.inject_defect),
             ),
+            check_bigram_asset(args.apk, args.inject_defect),
         ],
         not_covered=NOT_COVERED,
     )

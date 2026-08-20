@@ -156,6 +156,47 @@ class InputContextBuffer(
         return false
     }
 
+    /**
+     * The completed word before [currentWord], or null when there is none, it is not known, or
+     * a sentence boundary separates it from the cursor.
+     *
+     * ### Null in three distinct situations, all of them honest
+     * 1. **Nothing precedes.** The cursor is at the start of the field.
+     * 2. **[precedingContextKnown] is false.** After a desync this buffer does not know what
+     *    came before, and a prediction conditioned on a guess is worse than none.
+     * 3. **A sentence boundary intervenes.** `scripts/build_bigrams.py` splits the training
+     *    text on [SENTENCE_BOUNDARY_CHARS] and the `--` sequence *before* counting pairs, so
+     *    the model was never shown a pair that straddles one. Returning the word across a full
+     *    stop would be asking the model about input from outside the distribution it was
+     *    trained on — not a conservative choice about a risky prediction, but a factual
+     *    mismatch between training and inference. The boundary set is pinned to the builder's
+     *    by [PreviousWordTest].
+     *
+     * A non-Hebrew run that is not a boundary — Latin words, digits — does **not** break the
+     * pair, because the builder's `HEBREW_RUN_RE` skips over those too and therefore did count
+     * the surrounding Hebrew words as adjacent. Mirroring the builder means mirroring both its
+     * splits and its non-splits.
+     */
+    val previousWord: String?
+        get() {
+            if (!precedingContextKnown) return null
+            var end = wordStart.coerceIn(0, before.length)
+            while (end > 0 && !isWordChar(before[end - 1])) {
+                val c = before[end - 1]
+                if (c in SENTENCE_BOUNDARY_CHARS) return null
+                if (c == '-' && end >= 2 && before[end - 2] == '-') return null
+                end--
+            }
+            if (end == 0) return null
+            var start = end
+            while (start > 0 && isWordChar(before[start - 1])) start--
+            val word = before.substring(start, end)
+            return word.ifEmpty { null }
+        }
+
+    private fun isWordChar(c: Char): Boolean =
+        HebrewText.isHebrewLetter(c) || HebrewText.isCombiningMark(c)
+
     /** True when the current word is a well-formed Hebrew word worth looking up. */
     fun currentWordIsHebrew(): Boolean = HebrewText.isHebrewWord(currentWord)
 
@@ -171,15 +212,23 @@ class InputContextBuffer(
         var i = before.length
         // Combining marks count as part of the word. A pointed word is still one word, and
         // scanning back over letters alone would cut it at the first niqqud.
-        while (i > 0 && (HebrewText.isHebrewLetter(before[i - 1]) ||
-                    HebrewText.isCombiningMark(before[i - 1]))
-        ) {
-            i--
-        }
+        while (i > 0 && isWordChar(before[i - 1])) i--
         wordStart = i
     }
 
     companion object {
         const val DEFAULT_MAX_CONTEXT: Int = 2048
+
+        /**
+         * Characters the bigram builder splits on, and therefore the characters across which
+         * this buffer will not report a previous word.
+         *
+         * Mirrors `BOUNDARY_RE = re.compile(r"[.!?;:\n\u05c3]|--")` in
+         * `scripts/build_bigrams.py`. The `--` sequence is handled separately because it is
+         * two characters, and a single hyphen deliberately does not split — the builder does
+         * not split on it either.
+         */
+        val SENTENCE_BOUNDARY_CHARS: Set<Char> =
+            setOf('.', '!', '?', ';', ':', '\n', '\u05c3')
     }
 }

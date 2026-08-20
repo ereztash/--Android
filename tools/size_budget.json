@@ -1,0 +1,23 @@
+{
+  "measured_from": "app/build/outputs/apk/release/app-release-unsigned.apk",
+  "measured_bytes": {
+    "apk_total_bytes": 5161766,
+    "dex_bytes": 1914332,
+    "assets_bytes": 3023163
+  },
+  "how": "Every limit below was written AFTER the measurement beside it, and each states the growth it allows in bytes rather than a percentage, because 'headroom' means one thing as a fraction of the limit and another as a fraction of the measurement. Raising a limit is a deliberate act that belongs in its own commit with the reason attached.",
+  "limits": {
+    "apk_total_bytes": {
+      "max_bytes": 6500000,
+      "why": "Measured 5,161,766; this allows 1,338,234 more bytes (+25.9%). That is roughly five more assets the size of the frequency table, or one substantial dependency. An IME is installed once and used everywhere, and an offline keyboard's audience includes exactly the people on metered connections and 64 GB phones."
+    },
+    "assets_bytes": {
+      "max_bytes": 3600000,
+      "why": "Measured 3,023,163 in-artifact, of which the bigram table is 1,849,636 -- 61% of the assets and 36% of the whole APK, bought for prefix-3 top-3 accuracy of 49.28% against 38.27% without it. This allows 576,837 more bytes (+19.1%). Deliberately the tightest of the three: assets are where this app grows, and M11's confusion-set data has to fit inside it or justify a raise on its own measured merits."
+    },
+    "dex_bytes": {
+      "max_bytes": 2600000,
+      "why": "Measured 1,914,332 after R8; this allows 685,668 more bytes (+35.8%). Code size is the signal that moves when a dependency with real weight is added -- GATE-NET-1 checks what a dependency can do, this checks what it costs."
+    }
+  }
+}

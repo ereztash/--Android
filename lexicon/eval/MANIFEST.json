@@ -1,0 +1,106 @@
+{
+  "purpose": "held-out evaluation for prediction and confusion sets; NOT used to train the bigram model",
+  "source": {
+    "wiki": "hewiki",
+    "dump_date": "20260801",
+    "license": "CC BY-SA 4.0"
+  },
+  "disjointness": {
+    "training_phase": 0.5,
+    "eval_phase": 0.0,
+    "training_ranges": [
+      [
+        58284499,
+        70867411
+      ],
+      [
+        175392273,
+        187975185
+      ],
+      [
+        292362593,
+        304945505
+      ],
+      [
+        409299235,
+        421882147
+      ],
+      [
+        526257249,
+        538840161
+      ],
+      [
+        643106311,
+        655689223
+      ],
+      [
+        760153275,
+        772736187
+      ],
+      [
+        877042803,
+        889625715
+      ],
+      [
+        993968019,
+        1006550931
+      ],
+      [
+        1110988212,
+        1123571124
+      ]
+    ],
+    "eval_ranges": [
+      [
+        635,
+        8389243
+      ],
+      [
+        194863695,
+        203252303
+      ],
+      [
+        389774436,
+        398163044
+      ],
+      [
+        584629017,
+        593017625
+      ],
+      [
+        779618614,
+        788007222
+      ],
+      [
+        974517149,
+        982905757
+      ]
+    ],
+    "intersections": 0,
+    "proven_by": "scripts/build_eval_corpus.py refuses to write when any eval byte range intersects a training byte range"
+  },
+  "corpus": {
+    "sentences": 799319,
+    "tokens": 10660060,
+    "blocks": 392,
+    "compressed_bytes_fetched": 50331654,
+    "uncompressed_bytes": 108094624,
+    "sha256": "a1c14bb99932d38d8426b9455ca72385201db9ce2e197dca4b72cd82c55568da"
+  },
+  "known_limitations": [
+    "Wikipedia prose; the register is wrong for phone typing.",
+    "Sentence splitting is punctuation-based and will merge or split some sentences."
+  ],
+  "sample": {
+    "file": "lexicon/eval/hewiki_eval_sample.txt.gz",
+    "why": "The full corpus is 28 MB and is not committed; this deterministic slice is what the tests read. Re-cut it with scripts/slice_eval_corpus.py after rebuilding the corpus.",
+    "rule": "sentences of 4..40 tokens, every 37th, first 6000",
+    "parent_sha256": "a1c14bb99932d38d8426b9455ca72385201db9ce2e197dca4b72cd82c55568da",
+    "sentences": 6000,
+    "tokens": 85840,
+    "eligible_in_parent": 732360,
+    "sentences_in_parent": 799319,
+    "sha256": "cedfb5be743bc15c2b3db381011e2c74f31f512e9373ed4038f198dcb4b3d299",
+    "uncompressed_bytes": 884788
+  }
+}

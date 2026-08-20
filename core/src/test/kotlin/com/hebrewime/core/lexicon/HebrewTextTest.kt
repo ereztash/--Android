@@ -10,7 +10,7 @@ import kotlin.test.assertTrue
  * reduced the lexicon. If these two ever diverge, every vocalized lookup silently misses --
  * a failure that produces no error, just a keyboard that underlines correct words.
  *
- * Denominator: 21 assertions.
+ * Denominator: 21 assertions, plus 165 generated over the whole U+0591..U+05C7 range.
  */
 class HebrewTextTest {
 
@@ -72,5 +72,53 @@ class HebrewTextTest {
         assertFalse(HebrewText.isCombiningMark('֐'))
         assertFalse(HebrewText.isCombiningMark('׈'))
         assertFalse(HebrewText.isCombiningMark('א'))
+    }
+
+    @Test
+    fun everyCodePointInTheRangeIsClassifiedTheWayUnicodeClassifiesIt() {
+        // Checked against Character.getType -- the JDK's own Unicode tables -- and NOT against
+        // a list written here. A hand-written expectation would have agreed with a
+        // hand-written implementation and proved nothing, which is exactly how the mirrored
+        // keyboard survived M3 through M8.
+        var marks = 0
+        var punctuation = 0
+        for (cp in 0x0591..0x05C7) {
+            val c = cp.toChar()
+            val isMarkPerUnicode = when (Character.getType(c).toByte()) {
+                Character.NON_SPACING_MARK,
+                Character.COMBINING_SPACING_MARK,
+                Character.ENCLOSING_MARK -> true
+                else -> false
+            }
+            assertEquals(
+                isMarkPerUnicode,
+                HebrewText.isCombiningMark(c),
+                "U+%04X (%s) classified against Character.getType".format(cp, Character.getName(cp)),
+            )
+            assertEquals(
+                !isMarkPerUnicode,
+                HebrewText.isHebrewBlockPunctuation(c),
+                "U+%04X is either a mark or the punctuation exception, never both".format(cp),
+            )
+            if (isMarkPerUnicode) marks++ else punctuation++
+        }
+        assertEquals(55, marks + punctuation, "denominator: U+0591..U+05C7 is 55 code points")
+        assertEquals(4, punctuation, "maqaf, paseq, sof pasuq, nun hafukha")
+        assertEquals(51, marks)
+    }
+
+    @Test
+    fun stripPointsStillRemovesTheWholeRangeIncludingThePunctuation() {
+        // The split between marks and punctuation deliberately did NOT change what
+        // stripPoints removes. Every lexicon lookup in the app depends on this reduction
+        // matching scripts/build_lexicon.py, so narrowing it would silently change which
+        // words resolve.
+        for (cp in 0x0591..0x05C7) {
+            assertEquals(
+                "שלום",
+                HebrewText.stripPoints("של" + cp.toChar() + "ום"),
+                "U+%04X must still be stripped".format(cp),
+            )
+        }
     }
 }

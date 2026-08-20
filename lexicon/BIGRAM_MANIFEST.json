@@ -1,0 +1,47 @@
+{
+  "source": {
+    "wiki": "hewiki",
+    "dump_date": "20260801",
+    "url": "https://dumps.wikimedia.org/hewiki/20260801/hewiki-20260801-pages-articles-multistream.xml.bz2",
+    "license": "CC BY-SA 4.0"
+  },
+  "provenance": {
+    "cached": true,
+    "path": "lexicon/cache/bigram-corpus-20260801-10x12582912.txt.gz",
+    "chunks_requested": 10,
+    "chunk_bytes": 12582912,
+    "chunk_starts": [
+      58284499,
+      175392273,
+      292362593,
+      409299235,
+      526257249,
+      643106311,
+      760153275,
+      877042803,
+      993968019,
+      1110988212
+    ]
+  },
+  "corpus": {
+    "sentences": 2224511,
+    "tokens": 25619680,
+    "out_of_lexicon_tokens": 1315367
+  },
+  "model": {
+    "min_count": 5,
+    "max_bigrams": null,
+    "distinct_bigrams_before_pruning": 8391745,
+    "bigrams_kept": 532168,
+    "groups": 54133,
+    "raw_bytes": 2985642,
+    "gzip_bytes": 1846688,
+    "raw_sha256": "90cd6525ec041977558087c0e1c0a9b535af594589af513edb83eea915794221",
+    "encoding": "u32 groupCount, then per group: u32 firstWordIndex, u16 n, then n x (u32 secondWordIndex, u8 log2Count*8). Groups sorted by firstWordIndex; continuations sorted by count descending."
+  },
+  "known_limitations": [
+    "Wikipedia prose. The register is wrong for phone typing.",
+    "Chunks are contiguous within themselves, so the sample is not uniform over articles.",
+    "Bigrams straddling an out-of-lexicon word are dropped rather than joined."
+  ]
+}

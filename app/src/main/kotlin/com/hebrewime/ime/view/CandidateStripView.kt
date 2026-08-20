@@ -5,8 +5,10 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.view.MotionEvent
 import android.view.View
+import androidx.core.view.ViewCompat
 import com.hebrewime.R
-import com.hebrewime.core.correction.Suggestion
+import com.hebrewime.core.prediction.Prediction
+import com.hebrewime.core.prediction.SuggestionKind
 
 /**
  * The strip of suggestions above the keyboard.
@@ -15,16 +17,36 @@ import com.hebrewime.core.correction.Suggestion
  * where the eye starts. This follows the *script*, not the device locale — a Hebrew suggestion
  * strip reads right-to-left on an English phone too.
  *
+ * ### Corrections are marked, completions are not
+ * A [SuggestionKind.CORRECTION] is an assertion that the word as typed is wrong. A
+ * [SuggestionKind.COMPLETION] asserts only that it is unfinished, and a
+ * [SuggestionKind.NEXT_WORD] asserts nothing about what was typed at all. Presenting all three
+ * identically would mean the keyboard can tell a user their spelling is wrong and have no way
+ * to say so. Corrections are therefore drawn in a distinct colour **and** described as
+ * corrections to accessibility services — colour alone would carry the distinction only to a
+ * sighted user with normal colour vision.
+ *
  * Holds no state that matters: the suggestions are pushed in by the service and the view is
  * destroyed and recreated on every configuration change.
  */
 class CandidateStripView(context: Context) : View(context) {
 
-    var onCandidateChosen: ((Suggestion) -> Unit)? = null
+    /** One candidate and the horizontal band it occupies. Shared with the a11y helper. */
+    data class Slot(val prediction: Prediction, val left: Float, val right: Float)
 
-    private var candidates: List<Suggestion> = emptyList()
+    var onCandidateChosen: ((Prediction) -> Unit)? = null
+
+    /**
+     * Exposes each drawn candidate as a virtual view node. Without it the entire strip is one
+     * blank rectangle to TalkBack and no suggestion is reachable at all.
+     */
+    private val accessibilityHelper = CandidateAccessibilityHelper(this).also {
+        ViewCompat.setAccessibilityDelegate(this, it)
+    }
+
+    private var candidates: List<Prediction> = emptyList()
     private var pressedIndex = -1
-    private var bounds: List<ClosedFloatingPointRange<Float>> = emptyList()
+    private var slots: List<Slot> = emptyList()
 
     private val background = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = context.getColor(R.color.key_background_function)
@@ -36,69 +58,85 @@ class CandidateStripView(context: Context) : View(context) {
         color = context.getColor(R.color.key_label)
         textAlign = Paint.Align.CENTER
     }
+    private val correctionLabel = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = context.getColor(R.color.candidate_correction)
+        textAlign = Paint.Align.CENTER
+    }
     private val divider = Paint().apply {
         color = context.getColor(R.color.keyboard_background)
         strokeWidth = 2f
     }
 
-    fun setCandidates(list: List<Suggestion>) {
+    fun setCandidates(list: List<Prediction>) {
         candidates = list
         pressedIndex = -1
-        recomputeBounds()
+        recomputeSlots()
         invalidate()
     }
+
+    /** Required so ExploreByTouchHelper can receive hover events. */
+    override fun dispatchHoverEvent(event: MotionEvent): Boolean =
+        accessibilityHelper.dispatchHoverEvent(event) || super.dispatchHoverEvent(event)
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val width = MeasureSpec.getSize(widthMeasureSpec)
         val height = (resources.displayMetrics.density * HEIGHT_DP).toInt()
         setMeasuredDimension(width, height)
-        label.textSize = height * LABEL_FRACTION
+        setTextSize(height.toFloat())
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        label.textSize = h * LABEL_FRACTION
-        recomputeBounds()
+        setTextSize(h.toFloat())
+        recomputeSlots()
     }
 
-    private fun recomputeBounds() {
+    private fun setTextSize(height: Float) {
+        label.textSize = height * LABEL_FRACTION
+        correctionLabel.textSize = height * LABEL_FRACTION
+    }
+
+    private fun recomputeSlots() {
         if (candidates.isEmpty() || width == 0) {
-            bounds = emptyList()
+            slots = emptyList()
+            accessibilityHelper.setSlots(slots)
             return
         }
-        val slot = width.toFloat() / candidates.size
+        val slotWidth = width.toFloat() / candidates.size
         // Right-to-left: candidate 0, the best one, occupies the rightmost slot.
-        bounds = candidates.indices.map { i ->
-            val right = width - i * slot
-            (right - slot)..right
+        slots = candidates.mapIndexed { i, prediction ->
+            val right = width - i * slotWidth
+            Slot(prediction, right - slotWidth, right)
         }
+        accessibilityHelper.setSlots(slots)
     }
 
     override fun onDraw(canvas: Canvas) {
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), background)
-        if (candidates.isEmpty()) return
+        if (slots.isEmpty()) return
         val metrics = label.fontMetrics
         val baseline = height / 2f - (metrics.descent + metrics.ascent) / 2f
-        candidates.forEachIndexed { i, candidate ->
-            val range = bounds[i]
+        slots.forEachIndexed { i, slot ->
             if (i == pressedIndex) {
-                canvas.drawRect(range.start, 0f, range.endInclusive, height.toFloat(), pressed)
+                canvas.drawRect(slot.left, 0f, slot.right, height.toFloat(), pressed)
             }
+            val paint =
+                if (slot.prediction.kind == SuggestionKind.CORRECTION) correctionLabel else label
             canvas.drawText(
-                candidate.word,
-                (range.start + range.endInclusive) / 2f,
+                slot.prediction.word,
+                (slot.left + slot.right) / 2f,
                 baseline,
-                label,
+                paint,
             )
-            if (i < candidates.size - 1) {
-                canvas.drawLine(range.start, height * 0.2f, range.start, height * 0.8f, divider)
+            if (i < slots.size - 1) {
+                canvas.drawLine(slot.left, height * 0.2f, slot.left, height * 0.8f, divider)
             }
         }
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (candidates.isEmpty()) return false
-        val index = bounds.indexOfFirst { event.x in it }
+        if (slots.isEmpty()) return false
+        val index = slots.indexOfFirst { event.x >= it.left && event.x < it.right }
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
                 if (index != pressedIndex) {
@@ -111,7 +149,7 @@ class CandidateStripView(context: Context) : View(context) {
                 invalidate()
                 if (index >= 0) {
                     performClick()
-                    onCandidateChosen?.invoke(candidates[index])
+                    onCandidateChosen?.invoke(slots[index].prediction)
                 }
             }
             MotionEvent.ACTION_CANCEL -> {

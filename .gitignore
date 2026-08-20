@@ -25,3 +25,7 @@ lexicon/cache/
 # Python
 __pycache__/
 *.pyc
+
+# The full held-out evaluation corpus is 28 MB. Only the deterministic slice the tests
+# read is committed; cut it with scripts/slice_eval_corpus.py after rebuilding the corpus.
+lexicon/eval/hewiki_eval_sentences.txt.gz

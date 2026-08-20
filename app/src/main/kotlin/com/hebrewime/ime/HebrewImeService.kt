@@ -6,12 +6,13 @@ import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import android.widget.LinearLayout
-import com.hebrewime.core.correction.Suggestion
 import com.hebrewime.core.input.InputContextBuffer
 import com.hebrewime.core.keyboard.EditCommand
 import com.hebrewime.core.keyboard.Key
 import com.hebrewime.core.keyboard.KeyPressPlanner
 import com.hebrewime.core.keyboard.Layouts
+import com.hebrewime.core.prediction.Prediction
+import com.hebrewime.core.prediction.SuggestionKind
 import com.hebrewime.core.privacy.FieldDescriptor
 import com.hebrewime.core.privacy.SensitiveFieldPolicy
 import com.hebrewime.core.privacy.SessionStart
@@ -283,36 +284,77 @@ class HebrewImeService : InputMethodService() {
         }
     }
 
-    /** Ask for suggestions for the word under the cursor, if this field allows any. */
+    /**
+     * Ask for suggestions for the current input position, if this field allows any.
+     *
+     * An **empty** current word is a legitimate request, not an early exit: it is exactly the
+     * moment after a word boundary when a next-word prediction is what the user wants. Only a
+     * restricted field short-circuits, and it does so before either word is handed over.
+     *
+     * `contextBuffer.previousWord` is null after a desync, in a field whose initial text was
+     * withheld, and across a sentence boundary. Each of those is passed through as null rather
+     * than as a guess; the engine then simply has no next-word answer.
+     */
     private fun refreshSuggestions() {
-        val word = contextBuffer.currentWord
-        if (!session.maySuggest || word.isEmpty()) {
+        if (!session.maySuggest) {
             correction.cancelOutstanding()
             candidateStrip?.setCandidates(emptyList())
             return
         }
-        correction.requestSuggestions(word, allowed = session.maySuggest) { suggestions ->
-            candidateStrip?.setCandidates(suggestions)
+        val word = contextBuffer.currentWord
+        val previous = contextBuffer.previousWord
+        if (word.isEmpty() && previous == null) {
+            correction.cancelOutstanding()
+            candidateStrip?.setCandidates(emptyList())
+            return
+        }
+        correction.requestPredictions(word, previous, allowed = session.maySuggest) { predicted ->
+            candidateStrip?.setCandidates(predicted)
         }
     }
 
-    /** Replace the word under the cursor with a suggestion the user chose. */
-    private fun applySuggestion(suggestion: Suggestion) {
+    /**
+     * Apply a suggestion the user tapped.
+     *
+     * The two cases are genuinely different edits and are not merged:
+     *
+     * - A [SuggestionKind.NEXT_WORD] is offered when nothing is being typed, so it is
+     *   **appended**. Deleting "the current word" here would delete zero characters on a good
+     *   day and the preceding space on a bad one.
+     * - A completion or correction **replaces** what is under the cursor.
+     *
+     * A chosen suggestion is never queued for undo. [lastReplacement] exists so that backspace
+     * reverses a replacement the user did not ask for; this one they asked for, and backspace
+     * should edit the resulting word normally.
+     */
+    private fun applySuggestion(prediction: Prediction) {
         val ic = currentInputConnection ?: return
         val original = contextBuffer.currentWord
-        if (original.isEmpty()) return
 
+        if (prediction.kind == SuggestionKind.NEXT_WORD) {
+            // Offered only when the current word is empty. If something has been typed since
+            // the request went out, the prediction describes a position the cursor has left.
+            if (original.isNotEmpty()) {
+                candidateStrip?.setCandidates(emptyList())
+                return
+            }
+            ic.commitText(prediction.word, 1)
+            contextBuffer.onTextCommitted(prediction.word)
+            lastReplacement = null
+            candidateStrip?.setCandidates(emptyList())
+            return
+        }
+
+        if (original.isEmpty()) return
         ic.beginBatchEdit()
         try {
             ic.deleteSurroundingTextInCodePoints(original.codePointCount(), 0)
-            ic.commitText(suggestion.word, 1)
+            ic.commitText(prediction.word, 1)
         } finally {
             ic.endBatchEdit()
         }
         contextBuffer.onCharsDeleted(original.length)
-        contextBuffer.onTextCommitted(suggestion.word)
-        // A chosen suggestion is not an automatic replacement, so it is not queued for undo:
-        // the user asked for it, and backspace should edit the new word normally.
+        contextBuffer.onTextCommitted(prediction.word)
         lastReplacement = null
         candidateStrip?.setCandidates(emptyList())
     }

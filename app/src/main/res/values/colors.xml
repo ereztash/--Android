@@ -13,4 +13,7 @@
     <color name="key_background_pressed">#3D8BFD</color>
     <color name="key_label">#101418</color>
     <color name="key_label_pressed">#FFFFFF</color>
+
+    <!-- Marks a candidate that claims the typed word is WRONG, as opposed to unfinished. -->
+    <color name="candidate_correction">#C2410C</color>
 </resources>

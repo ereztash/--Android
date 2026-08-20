@@ -34,6 +34,8 @@ tasks.withType<Test>().configureEach {
     )
     systemProperty("frequency.file", rootProject.file("lexicon/assets/he_freq.bin.gz").absolutePath)
     systemProperty("golden.dir", rootProject.file("lexicon/golden").absolutePath)
+    systemProperty("bigram.file", rootProject.file("lexicon/assets/he_bigrams.bin.gz").absolutePath)
+    systemProperty("eval.dir", rootProject.file("lexicon/eval").absolutePath)
     // The correction measurement loads the whole lexicon, builds a trie over it and runs
     // thousands of queries. The default heap is not enough.
     maxHeapSize = "3g"

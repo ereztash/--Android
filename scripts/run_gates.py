@@ -30,6 +30,7 @@ def _gates(strict: bool) -> list[dict]:
     lex = os.path.join(ROOT, "scripts", "check_lexicon.py")
     xml = os.path.join(ROOT, "scripts", "check_xml.py")
     trace = os.path.join(ROOT, "scripts", "check_trace_sections.py")
+    size = os.path.join(ROOT, "scripts", "check_size.py")
     apk = os.path.join(ROOT, "scripts", "check_apk.py")
     debug_apk = os.path.join(ROOT, "app", "build", "outputs", "apk", "debug", "app-debug.apk")
     netc_apk = os.path.join(ROOT, "app", "build", "outputs", "apk", "netcontrol",
@@ -125,6 +126,15 @@ def _gates(strict: bool) -> list[dict]:
             "requires": [debug_apk],
         },
         {
+            "id": "GATE-BIGRAM-1",
+            "what": "the bigram table INSIDE the apk is the one prediction was measured on",
+            "real": [PY, apk, "--apk", debug_apk, "--json"] + s,
+            "control": [PY, apk, "--apk", debug_apk, "--inject-defect", "bigram_content",
+                        "--json"],
+            "control_desc": "one byte appended to the packaged bigram table",
+            "requires": [debug_apk],
+        },
+        {
             "id": "GATE-NET-3",
             "what": "the RELEASE artifact -- the one that ships -- has no network capability",
             "real": [PY, apk, "--apk", release_apk, "--baseline", release_baseline,
@@ -141,6 +151,15 @@ def _gates(strict: bool) -> list[dict]:
             "control": [PY, apk, "--apk", release_apk, "--baseline", release_baseline,
                         "--inject-defect", "service", "--json"],
             "control_desc": "the IME service declaration invalidated in the release manifest",
+            "requires": [release_apk],
+        },
+        {
+            "id": "GATE-SIZE-1",
+            "what": "the release artifact stays inside the size budget written down for it",
+            "real": [PY, size, "--apk", release_apk, "--json"] + s,
+            "control": [PY, size, "--apk", release_apk, "--inject-defect", "assets", "--json"],
+            "control_desc": "assets measured 50% larger, which is what regenerating the "
+                            "bigram table at a lower prune threshold would look like",
             "requires": [release_apk],
         },
         {

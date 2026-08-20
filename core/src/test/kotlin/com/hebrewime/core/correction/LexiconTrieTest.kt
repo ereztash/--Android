@@ -158,3 +158,64 @@ class LexiconTrieTest {
         }
     }
 }
+
+/**
+ * Completion cost, measured before choosing a strategy rather than after.
+ *
+ * The first version capped the walk and returned trie order, which is alphabetical. The
+ * fan-out measurement below is why that was wrong: a one-letter prefix has a median of 7,716
+ * completions, so the cap would have discarded every common word in favour of whatever sorts
+ * first. Walking the whole subtree and keeping top-K by frequency costs the numbers printed
+ * here.
+ */
+class CompletionCostTest {
+
+    private val lexiconFile = File(System.getProperty("lexicon.file")!!)
+    private val frequencyFile = File(System.getProperty("frequency.file")!!)
+
+    @Test
+    fun measureCompletionCostAndCorrectness() {
+        val lexicon = lexiconFile.inputStream().use { HebrewLexicon.load(it) }
+        val words = ArrayList<String>(lexicon.size)
+        for (i in 0 until lexicon.size) words.add(lexicon.wordAt(i))
+        val trie = LexiconTrie.build(words)
+        val frequency = frequencyFile.inputStream().use { HebrewFrequency.load(it) }
+        val score = { i: Int -> frequency.logFrequencyOf(i) }
+
+        val letters = ('א'..'ת').toList()
+        val one = letters.map { it.toString() }
+        val two = letters.flatMap { a -> letters.take(9).map { b -> "$a$b" } }
+
+        fun report(label: String, prefixes: List<String>) {
+            val counts = prefixes.map { trie.completionCount(it) }.sorted()
+            val start = System.nanoTime()
+            var produced = 0
+            repeat(3) { prefixes.forEach { produced += trie.completionsTopK(it, 8, score).size } }
+            val perCall = (System.nanoTime() - start) / 1_000.0 / (prefixes.size * 3)
+            println(
+                "  $label: n=${prefixes.size} fan-out median=${counts[counts.size / 2]} " +
+                    "max=${counts.last()} | topK(8) ${"%.0f".format(perCall)} us/call"
+            )
+            assertTrue(produced > 0)
+        }
+
+        println("completion cost over the real lexicon (JVM on the build host, NOT a device)")
+        report("1 letter ", one)
+        report("2 letters", two)
+
+        // Correctness: results really are the highest-frequency completions, and really are
+        // completions.
+        for (p in listOf("מק", "של", "בי", "אנ")) {
+            val top = trie.completionsTopK(p, 5, score)
+            assertTrue(top.isNotEmpty(), "no completions for '$p'")
+            for (h in top) assertTrue(words[h].startsWith(p), "'${words[h]}' !startsWith '$p'")
+            val scores = top.map { score(it) }
+            assertEquals(scores.sortedDescending(), scores, "top-K must be frequency-ordered")
+            // Nothing outside the returned set may beat the worst of it.
+            val worst = scores.last()
+            val better = trie.completions(p, Int.MAX_VALUE).count { score(it) > worst }
+            assertTrue(better <= top.size, "top-K missed a more frequent completion for '$p'")
+        }
+        assertTrue(trie.completionsTopK("זזזזזז", 5, score).isEmpty())
+    }
+}
