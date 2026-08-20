@@ -93,7 +93,10 @@
   ],
   "sample": {
     "file": "lexicon/eval/hewiki_eval_sample.txt.gz",
+    "shape": "strided",
     "offset": 0,
+    "pseudo_users": null,
+    "sentences_per_pseudo_user": null,
     "used_by": "M10 prediction: the weight sweep, the ordering sweep, and the locked accuracy floors.",
     "sentences": 6000,
     "tokens": 85840,
@@ -102,7 +105,7 @@
   },
   "slices": {
     "why": "The full corpus is 28 MB and is not committed; these deterministic slices are what the tests read. Re-cut them with scripts/slice_eval_corpus.py after rebuilding the corpus.",
-    "rule": "sentences of 4..40 tokens, every 37th from a per-slice offset, first 6000",
+    "rule": "strided slices: sentences of 4..40 tokens, every 37th from a per-slice offset, first 6000. Block slices: 120 contiguous blocks of 80 sentences each, drawn from the sentences the strided slices left unused.",
     "parent_sha256": "a1c14bb99932d38d8426b9455ca72385201db9ce2e197dca4b72cd82c55568da",
     "eligible_in_parent": 732360,
     "sentences_in_parent": 799319,
@@ -110,7 +113,10 @@
     "proven_by": "scripts/slice_eval_corpus.py compares the index sets and refuses to write when any two slices intersect",
     "sample": {
       "file": "lexicon/eval/hewiki_eval_sample.txt.gz",
+      "shape": "strided",
       "offset": 0,
+      "pseudo_users": null,
+      "sentences_per_pseudo_user": null,
       "used_by": "M10 prediction: the weight sweep, the ordering sweep, and the locked accuracy floors.",
       "sentences": 6000,
       "tokens": 85840,
@@ -119,7 +125,10 @@
     },
     "confusion_dev": {
       "file": "lexicon/eval/hewiki_confusion_dev.txt.gz",
+      "shape": "strided",
       "offset": 1,
+      "pseudo_users": null,
+      "sentences_per_pseudo_user": null,
       "used_by": "M11 real-word errors: the margin sweep. Thresholds are chosen here and nowhere else.",
       "sentences": 6000,
       "tokens": 87247,
@@ -128,12 +137,39 @@
     },
     "confusion_test": {
       "file": "lexicon/eval/hewiki_confusion_test.txt.gz",
+      "shape": "strided",
       "offset": 2,
+      "pseudo_users": null,
+      "sentences_per_pseudo_user": null,
       "used_by": "M11 real-word errors: the reported recall and false-alarm numbers, measured once with the thresholds already fixed.",
       "sentences": 6000,
       "tokens": 86882,
       "sha256": "9fc528ae547f0bfab6d2893383d388a007abd7dbaedcb20e266f934dbc0d32ff",
       "uncompressed_bytes": 891742
+    },
+    "learning_dev": {
+      "file": "lexicon/eval/hewiki_learning_dev.txt.gz",
+      "shape": "contiguous blocks",
+      "offset": null,
+      "pseudo_users": 120,
+      "sentences_per_pseudo_user": 80,
+      "used_by": "Adaptive learning: the interpolation sweep and the cold-start curve. Thresholds are chosen here and nowhere else.",
+      "sentences": 9600,
+      "tokens": 132491,
+      "sha256": "0eaa1be095e069026392914a615022d620d599ec3a81e59c8cc7831caedc75ea",
+      "uncompressed_bytes": 1342035
+    },
+    "learning_test": {
+      "file": "lexicon/eval/hewiki_learning_test.txt.gz",
+      "shape": "contiguous blocks",
+      "offset": null,
+      "pseudo_users": 120,
+      "sentences_per_pseudo_user": 80,
+      "used_by": "Adaptive learning: the reported top-1/top-3 and offer rates, measured once with the interpolation already fixed.",
+      "sentences": 9600,
+      "tokens": 127588,
+      "sha256": "d8177a78eace8701da1f5af3371b1b6508db16e4a96a22a2b7656b24006cc2f9",
+      "uncompressed_bytes": 1283088
     }
   }
 }
