@@ -7,9 +7,31 @@ The app is not release-ready, and this document does not qualify that. There is 
 
 Two independent reasons, either of which is sufficient:
 
-1. **Nothing has ever run on an Android device.** Not one keystroke, not one screen, not one
-   suggestion. Everything asserted in this repository is a static check or a JVM measurement.
+1. **Nothing built since M9 has ever run on an Android device.** The operator did install and
+   type on it once — see below — but that was a build from before prediction, real-word error
+   detection and the personal-dictionary wiring existed, and the layout it exercised was the
+   mirrored one that session found. Everything asserted about the *current* build is a static
+   check or a JVM measurement.
 2. **The release artifact is unsigned**, and the signing secrets are the operator's to provide.
+
+### Correction to this document
+
+Until now point 1 read *"Nothing has ever run on an Android device. Not one keystroke, not one
+screen."* That was written at M8 and was true then. It stopped being true when the operator
+installed the app, enabled the IME, typed with it, and sent screenshots — the session that
+produced M9. **The sentence survived four milestones and two rewrites of this file after it
+became false**, including one where I was editing the paragraph directly.
+
+It is worth naming why that is the same failure this project keeps finding, pointing the other
+way. Usually the risk is a claim wider than its evidence. This was a claim *narrower* than the
+evidence — and it was not harmless: it understated what was known, it credited nothing to the
+one real test this project has had, and if the operator had not corrected it out loud it would
+still be there. A stale pessimistic claim is not the safe direction. It is just a different way
+of not saying what is true.
+
+What that session does and does not establish is itemised in
+[`docs/QA_MATRIX.md`](QA_MATRIX.md) under **OBSERVED ON A DEVICE**, kept deliberately narrow:
+it installs, it enables, it types, and the layout was visibly wrong. Nothing was measured.
 
 ---
 
@@ -55,7 +77,9 @@ path for automatic replacement was unreachable, because nothing ever performed o
 ### 1. Put it on a phone (nobody else can start until this happens)
 
 Install the debug APK, enable the IME in Settings, select it, and type. That single session
-would resolve twelve NOT RUN rows and is the highest-value hour available to this project.
+would resolve most of the remaining NOT RUN rows and is the highest-value hour available to
+this project. It has been done once, against a build from before M10 — everything the keyboard
+now does was written after that session and has never been seen working.
 
 Watch specifically for:
 - the bottom key row sitting under the gesture bar (targetSdk 36 forces edge-to-edge with no

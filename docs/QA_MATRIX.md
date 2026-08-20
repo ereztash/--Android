@@ -176,11 +176,41 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 
 Nothing below has been exercised. None of it is described anywhere as working.
 
-### Requires a physical Android device — nothing here has ever run on one
+### OBSERVED ON A DEVICE — by the operator, on their own phone
+
+**This section exists because the claim above it used to be false.** The operator installed the
+app on their phone, enabled it, typed with it, and sent screenshots. That session is what found
+the mirrored layout; M9 exists because of it. Until now this document went on saying nothing had
+ever run on a device, which was written at M8 and never corrected.
+
+Provenance: the operator's phone, 2026-08-20, from a build **before `913354a`** (the M9 fix) —
+i.e. at or before `8352313`. Not a controlled test: no logs, no timings, no device model
+recorded here. What follows is what a human watching the screen can attest to, and nothing more.
+
+| ID | Check | Evidence | Now |
+|---|---|---|---|
+| M2-ENABLE | The IME can be enabled and selected from system settings | The operator did it; there is no other way to type with it | **OBSERVED** |
+| M3-TOUCH | A touch has ever been dispatched to `KeyboardView` | The operator typed: *"זה עובד על הטלפון ואפשר להקליד"* | **OBSERVED** |
+| M2-INSTALL | The APK installs and the keyboard renders on a real panel | Screenshots | **OBSERVED** |
+| M3-LAYOUT-BUG | The layout was **wrong** on screen | *"כאילו זו מראה"* — the report that produced M9 | **OBSERVED, and fixed** |
+
+**What that session did NOT establish, and is not credited with:**
+
+- It ran a build from **before M10, M11 and M12 existed.** Prediction, real-word error
+  detection and the personal-dictionary wiring have never run on a device — they were written
+  after those screenshots.
+- The layout it exercised was the mirrored one. The **corrected** layout has never been seen on
+  a phone by anyone.
+- Nothing was measured. No latency, no memory, no rotation, no logs. "It typed" is an
+  observation, not a measurement, and it is recorded here as an observation.
+- The bottom row was not *reported* as clipped, which is not the same as M2-INSETS passing. An
+  absent complaint is not a check.
+
+### Requires a physical Android device — still not exercised
 
 | ID | Check | What it needs |
 |---|---|---|
-| M2-ENABLE | The IME can be enabled and selected from system settings | A device |
+| M2-ENABLE-POST-M9 | That the app still installs and the IME still enables **on the current build** | A device. The observation above is against a build four milestones old. |
 | M2-INSETS | The bottom key row clears the gesture bar at targetSdk 36 | A device with gesture navigation |
 | M2-ROTATION | State survives rotation and other configuration changes | A device. `configChanges` is now honoured, but the view is still recreated for changes outside the declared list, and that path has never been exercised. |
 | M2-SPELLCHECK | The system spell checker is actually suppressed on API 31+ | A device |
