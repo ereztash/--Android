@@ -38,10 +38,57 @@ object HebrewText {
      * for either half, and a bigram query across a sentence boundary that the model was never
      * trained on. A predicate borrowed for a job it was not written for.
      */
+    /** Gershayim ״ U+05F4 — the mark inside an abbreviation: כ״כ, צה״ל. */
+    const val GERSHAYIM: Char = '\u05f4'
+
+    /** Geresh ׳ U+05F3 — the mark ending a shortened word: וכו׳, עמ׳. */
+    const val GERESH: Char = '\u05f3'
+
     private const val MAQAF: Char = '\u05be'
     private const val PASEQ: Char = '\u05c0'
     private const val SOF_PASUQ: Char = '\u05c3'
     private const val NUN_HAFUKHA: Char = '\u05c6'
+
+    /**
+     * Gershayim ״ (U+05F4) and geresh ׳ (U+05F3), plus the ASCII `"` and `'` people actually
+     * type on a phone.
+     *
+     * These are the marks of an abbreviation — `כ״כ`, `וכו׳` — and they are the reason
+     * [isHebrewWord] alone was never enough: it demands every character be a letter, so any
+     * abbreviation failed it and was handed to the spelling corrector as a misspelling.
+     */
+    fun isAbbreviationMark(c: Char): Boolean =
+        c == GERSHAYIM || c == GERESH || c == '"' || c == '\''
+
+    /** The marks removed, leaving the bare letters an abbreviation table is keyed on. */
+    fun stripAbbreviationMarks(s: String): String {
+        if (s.none { isAbbreviationMark(it) }) return s
+        val sb = StringBuilder(s.length)
+        for (c in s) if (!isAbbreviationMark(c)) sb.append(c)
+        return sb.toString()
+    }
+
+    /**
+     * True for a Hebrew word that may carry abbreviation marks **inside** it.
+     *
+     * A leading or trailing mark is not part of the word — that is an opening quote or a
+     * closing one, and treating it as part of the token would break every lookup.
+     */
+    fun isHebrewWordOrAbbreviation(s: CharSequence): Boolean {
+        if (s.isEmpty()) return false
+        if (isAbbreviationMark(s[0]) || isAbbreviationMark(s[s.length - 1])) {
+            // A trailing geresh is the one legitimate exception: `וכו׳` ends with its mark.
+            val trailingOnly = !isAbbreviationMark(s[0]) && s.length >= 2
+            if (!trailingOnly) return false
+        }
+        var letters = 0
+        for (i in s.indices) {
+            val c = s[i]
+            if (isHebrewLetter(c)) letters++
+            else if (!isAbbreviationMark(c)) return false
+        }
+        return letters > 0
+    }
 
     fun isHebrewLetter(c: Char): Boolean = c in FIRST_LETTER..LAST_LETTER
 

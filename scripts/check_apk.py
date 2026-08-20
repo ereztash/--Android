@@ -188,7 +188,10 @@ def check_lexicon_asset(apk: str, inject: str | None) -> Detector:
     # The Kotlin side opens these by EXACT name. AGP strips the .gz while packaging, so the
     # names in the APK are not the names in the repository, and a rename here would be a
     # runtime crash on first suggestion rather than a build error.
-    expected_names = {"assets/he_lexicon.txt", "assets/he_freq.bin", "assets/he_bigrams.bin"}
+    expected_names = {
+        "assets/he_lexicon.txt", "assets/he_freq.bin", "assets/he_bigrams.bin",
+        "assets/he_abbreviations.txt",
+    }
     if inject == "asset_name":
         # PLANTED DEFECT: pretend the code expects a name AGP does not produce, which is what
         # a rename or a change in AGP's .gz handling would look like.

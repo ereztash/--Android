@@ -32,6 +32,10 @@ object PredictionDescriptions {
         SuggestionKind.REAL_WORD_ERROR ->
             "${prediction.word}, replaces ${prediction.replaces.orEmpty()} earlier in the " +
                 "sentence"
+        // "Abbreviation" rather than "correction": the letters are right and only the marks
+        // are missing, and a listener told they misspelled something they did not misspell
+        // will distrust the next announcement too.
+        SuggestionKind.ABBREVIATION -> "${prediction.word}, abbreviation"
     }
 
     /** Every kind this object can name, so a test can state a denominator. */

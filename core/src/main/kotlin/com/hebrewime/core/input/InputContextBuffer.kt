@@ -261,8 +261,20 @@ class InputContextBuffer(
         return before.substring(start)
     }
 
+    /**
+     * Abbreviation marks count as word characters, so `כ״כ` is one word and not two.
+     *
+     * Without this the buffer split on the gershayim and the keyboard saw two one-letter
+     * words — which is why abbreviations produced nothing useful and could not be completed.
+     *
+     * A mark at the very start of a word is a quote rather than part of the token; lookups
+     * strip leading and trailing marks rather than this predicate trying to know its position,
+     * because it is given one character and no context.
+     */
     private fun isWordChar(c: Char): Boolean =
-        HebrewText.isHebrewLetter(c) || HebrewText.isCombiningMark(c)
+        HebrewText.isHebrewLetter(c) ||
+            HebrewText.isCombiningMark(c) ||
+            HebrewText.isAbbreviationMark(c)
 
     /** True when the current word is a well-formed Hebrew word worth looking up. */
     fun currentWordIsHebrew(): Boolean = HebrewText.isHebrewWord(currentWord)

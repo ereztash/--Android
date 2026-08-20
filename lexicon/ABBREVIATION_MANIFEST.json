@@ -1,0 +1,31 @@
+{
+  "purpose": "Hebrew abbreviations (rashei tevot), so the keyboard stops calling them misspellings and can offer the punctuated form",
+  "source": {
+    "wiki": "hewiki",
+    "dump_date": "20260801",
+    "license": "CC BY-SA 4.0",
+    "phase": 0.5,
+    "chunks": 4,
+    "chunk_bytes": 12582912,
+    "blocks": 449
+  },
+  "why_a_separate_fetch": "Both lexicon sources are letters-only (checked: zero abbreviation-shaped entries), and the cached bigram corpus was tokenised with [alef-tav]+ which splits on the gershayim.",
+  "table": {
+    "distinct_found": 14324,
+    "min_count": 10,
+    "kept": 879,
+    "phonetic_geresh_dropped": 135,
+    "unambiguous_bare_keys": 861,
+    "ambiguous_dropped": 9,
+    "format": "bare<TAB>canonical<TAB>count, sorted by count descending",
+    "raw_bytes": 19518,
+    "gzip_bytes": 6757,
+    "sha256": "d7e4ddfa8cf3d6480c2f82ced7ef16f086b79339dfd1d38a969164b91fc63346"
+  },
+  "known_limitations": [
+    "Wikipedia abbreviations skew encyclopedic (organisations, ranks, place names) and under-represent the conversational ones people type in messages.",
+    "A bare form with more than one expansion is dropped, not disambiguated.",
+    "ASCII quote spellings are folded onto the Hebrew punctuation, so the counts mix two typing conventions.",
+    "Forms ending in a phonetically-modified letter (gimel, zayin, tsadi, tav + geresh) are excluded wholesale, which also removes any genuine abbreviation ending that way."
+  ]
+}

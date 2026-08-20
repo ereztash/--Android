@@ -9,6 +9,7 @@ import com.hebrewime.core.correction.LexiconTrie
 import com.hebrewime.core.correction.NeutralCostModel
 import com.hebrewime.core.dictionary.PersonalDictionary
 import com.hebrewime.core.learning.UserNgramModel
+import com.hebrewime.core.lexicon.HebrewAbbreviations
 import com.hebrewime.core.lexicon.HebrewLexicon
 import com.hebrewime.core.prediction.BigramModel
 import com.hebrewime.core.prediction.Prediction
@@ -101,6 +102,7 @@ class CorrectionController(
         val trie: LexiconTrie,
         val frequency: HebrewFrequency,
         val bigrams: BigramModel,
+        val abbreviations: HebrewAbbreviations,
     )
 
     /**
@@ -163,10 +165,22 @@ class CorrectionController(
                     degraded.add(BIGRAM_ASSET)
                     BigramModel.EMPTY
                 }
+                // Same treatment as the bigram table: worth having, not worth losing the
+                // keyboard over. GATE-ASSET-1 is what keeps this a diagnostic rather than a
+                // way for a packaging mistake to reach a user unnoticed.
+                val abbreviations = try {
+                    context.assets.open(ABBREVIATION_ASSET)
+                        .use { HebrewAbbreviations.load(it) }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (unreadable: Throwable) {
+                    degraded.add(ABBREVIATION_ASSET)
+                    HebrewAbbreviations.EMPTY
+                }
                 personal = readPersonalDictionary()
                 learningEnabled = LearningPreferences.isEnabled(context)
                 userModel = if (learningEnabled) readUserModel() else UserNgramModel.empty()
-                artifacts = Artifacts(lexicon, trie, frequency, bigrams)
+                artifacts = Artifacts(lexicon, trie, frequency, bigrams, abbreviations)
                 engine = build(artifacts!!, personal, userModel)
                 loaded = Loaded(
                     lexiconWords = lexicon.size,
@@ -404,6 +418,7 @@ class CorrectionController(
         // Empty unless the user opted in, and an empty model is arithmetically identical to no
         // model at all -- LearningNeutralityTest asserts that over 135,960 contexts.
         userModel = learned,
+        abbreviations = a.abbreviations,
     )
 
     /** Cancel outstanding work. Called when the input session changes or the IME is destroyed. */
@@ -431,6 +446,7 @@ class CorrectionController(
         const val LEXICON_ASSET = "he_lexicon.txt"
         const val FREQUENCY_ASSET = "he_freq.bin"
         const val BIGRAM_ASSET = "he_bigrams.bin"
+        const val ABBREVIATION_ASSET = "he_abbreviations.txt"
 
         /**
          * Trace section names, matched by the M7 macrobenchmark.

@@ -6,6 +6,7 @@ import com.hebrewime.core.dictionary.PersonalDictionary
 import com.hebrewime.core.learning.UserNgramModel
 import com.hebrewime.core.correction.HebrewFrequency
 import com.hebrewime.core.correction.LexiconTrie
+import com.hebrewime.core.lexicon.HebrewAbbreviations
 import com.hebrewime.core.lexicon.HebrewLexicon
 import com.hebrewime.core.lexicon.HebrewText
 
@@ -29,6 +30,16 @@ enum class SuggestionKind {
      * [Prediction.wordsBack].
      */
     REAL_WORD_ERROR,
+
+    /**
+     * The letters typed are a known Hebrew abbreviation, offered with its marks: `ככ` → `כ״כ`.
+     *
+     * Distinct from [COMPLETION] because nothing is being finished — the word is complete and
+     * the punctuation is what is missing — and distinct from [CORRECTION] because the user did
+     * not misspell anything. `ראשי תיבות` are simply absent from a lexicon built out of word
+     * lists, and were treated as misspellings until this existed.
+     */
+    ABBREVIATION,
 }
 
 data class Prediction(
@@ -132,6 +143,12 @@ class PredictiveEngine(
      * `docs/CONFUSION_MEASUREMENTS.md` a claim about what still ships.
      */
     private val userModel: UserNgramModel = UserNgramModel.empty(),
+    /**
+     * Hebrew abbreviations, so `ככ` can be offered as `כ״כ` and `צה״ל` stops being called a
+     * misspelling. Empty by default; see [HebrewAbbreviations] for why it is a separate
+     * artifact from the lexicon.
+     */
+    private val abbreviations: HebrewAbbreviations = HebrewAbbreviations.EMPTY,
     /**
      * Finds words that are spelled correctly and still wrong. Optional, so an engine can be
      * built without one — and so the M10 measurements can be reproduced exactly as they were
@@ -312,6 +329,38 @@ class PredictiveEngine(
             ?.takeIf { it >= 0 }
 
         if (word.isEmpty()) return nextWord(previousIndex)
+
+        // Abbreviations first, because they fail every test below. `כ״כ` is not in the lexicon
+        // and never will be -- the lexicon holds letters -- so without this it reaches the
+        // spelling corrector, which dutifully offers to "fix" a word the user spelled right.
+        val bareLetters = HebrewText.stripAbbreviationMarks(word)
+        if (abbreviations.isKnownAbbreviation(word)) {
+            // Correctly written already. Say nothing about it; suggest what follows instead.
+            return nextWord(previousIndex)
+        }
+        val expanded = abbreviations.canonicalFor(bareLetters)
+        if (expanded != null && expanded != word) {
+            val abbreviation = Prediction(
+                word = expanded,
+                wordIndex = ABBREVIATION_WORD_INDEX,
+                kind = SuggestionKind.ABBREVIATION,
+                score = Double.MAX_VALUE,
+                replaces = word,
+            )
+            // Ordinary suggestions still follow: `ככ` is a real prefix of real words, and a
+            // user typing one of those must not be forced through the abbreviation.
+            val rest = if (HebrewText.isHebrewWord(word)) {
+                if (corrections.isValid(word)) completions(word, previousIndex)
+                else corrections.suggest(word).map {
+                    Prediction(it.word, it.wordIndex, SuggestionKind.CORRECTION,
+                        -it.cost.toDouble())
+                }
+            } else {
+                emptyList()
+            }
+            return (listOf(abbreviation) + rest).distinctBy { it.word }.take(config.limit)
+        }
+
         if (!HebrewText.isHebrewWord(word)) return emptyList()
 
         if (corrections.isValid(word)) return completions(word, previousIndex)
@@ -477,6 +526,13 @@ class PredictiveEngine(
          * `docs/LEARNING_MEASUREMENTS.md`.
          */
         const val DEFAULT_USER_WEIGHT: Double = 2.0
+
+        /**
+         * Abbreviations have no lexicon index — they are not in the lexicon at all. Negative,
+         * so it can never be mistaken for one by arithmetic accident, and distinct from
+         * [PERSONAL_WORD_INDEX] so the two cannot be confused when a caller branches on source.
+         */
+        const val ABBREVIATION_WORD_INDEX: Int = -2
 
         /**
          * 32 log-count units, which is a raw count of 15.

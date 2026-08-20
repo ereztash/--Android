@@ -49,7 +49,8 @@ def main() -> int:
     ap.add_argument("--chunk-bytes", type=int, default=DEFAULT_CHUNK_BYTES)
     ap.add_argument("--min-count", type=int, default=None,
                     help="prune below this count. Omit to REPORT the distribution only.")
-    ap.add_argument("--out", default=os.path.join(OUT_DIR, "he_skipgrams.bin.gz"))
+    ap.add_argument("--out", default=os.path.join(ROOT, "lexicon", "experimental", "he_skipgrams.bin.gz"),
+                    help="NOT lexicon/assets/: anything in that directory is packaged into the APK, and this layer failed its stopping rule")
     args = ap.parse_args()
 
     with gzip.open(LEXICON, "rb") as fh:

@@ -35,7 +35,8 @@ tasks.withType<Test>().configureEach {
     systemProperty("frequency.file", rootProject.file("lexicon/assets/he_freq.bin.gz").absolutePath)
     systemProperty("golden.dir", rootProject.file("lexicon/golden").absolutePath)
     systemProperty("bigram.file", rootProject.file("lexicon/assets/he_bigrams.bin.gz").absolutePath)
-    systemProperty("skipgram.file", rootProject.file("lexicon/assets/he_skipgrams.bin.gz").absolutePath)
+    systemProperty("skipgram.file", rootProject.file("lexicon/experimental/he_skipgrams.bin.gz").absolutePath)
+    systemProperty("abbreviation.file", rootProject.file("lexicon/assets/he_abbreviations.txt.gz").absolutePath)
     systemProperty("eval.dir", rootProject.file("lexicon/eval").absolutePath)
     // The confusion margin is swept on the dev slice and reported on the test slice, which
     // share no sentence -- see scripts/slice_eval_corpus.py, which proves it before writing.
