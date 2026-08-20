@@ -21,3 +21,7 @@ lexicon/cache/
 
 # OS
 .DS_Store
+
+# Python
+__pycache__/
+*.pyc
