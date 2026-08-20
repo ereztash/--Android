@@ -1,0 +1,136 @@
+#!/usr/bin/env python3
+"""Run every repo gate, and refuse to record any of them as PASSED unless its positive
+control was demonstrated RED in this same run.
+
+This is the mechanism behind the project's overriding rule:
+
+    A gate that has never failed has not been shown to be a gate.
+
+For each gate we run the control FIRST. If the control does not go red, the gate is reported
+as NOT-A-GATE and the whole run fails -- regardless of what the gate said about the real tree.
+A green result from an unproven gate is worth nothing and is not allowed to look like a pass.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+import tempfile
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PY = sys.executable
+
+
+def _gates(strict: bool) -> list[dict]:
+    s = ["--strict"] if strict else []
+    net = os.path.join(ROOT, "scripts", "check_no_network.py")
+    api = os.path.join(ROOT, "scripts", "check_forbidden_api.py")
+    return [
+        {
+            "id": "GATE-NET-1",
+            "what": "no network capability (manifests, sources, dependency coordinates)",
+            "real": [PY, net, "--root", ROOT, "--json"] + s,
+            "control": [PY, net, "--root",
+                        os.path.join(ROOT, "tools", "positive_controls", "network"),
+                        "--no-default-excludes", "--json"],
+            "control_desc": "planted INTERNET permission + okhttp/java.net/WebView source + "
+                            "okhttp & firebase coordinates",
+        },
+        {
+            "id": "GATE-API-1",
+            "what": "no IME API that compiles cleanly and fails at runtime (§1.1/1.3/1.4/1.6)",
+            "real": [PY, api, "--root", ROOT, "--json"] + s,
+            "control": [PY, api, "--root",
+                        os.path.join(ROOT, "tools", "positive_controls", "forbidden_api"),
+                        "--no-default-excludes", "--json"],
+            "control_desc": "planted session-interface override, return-value branch, "
+                            "hardcoded backspace width, blocking getTextBeforeCursor",
+        },
+        {
+            "id": "GATE-DENOM-1",
+            "what": "a check that examined nothing must not report PASS",
+            "real": None,  # meta-gate: it has no real-tree run, only a control
+            "control": [PY, net, "--root", "@EMPTYDIR@", "--strict", "--json"],
+            "control_desc": "run GATE-NET-1 over an empty directory under --strict; every "
+                            "detector has denominator 0, so the only correct answer is a "
+                            "failure, not PASS",
+        },
+    ]
+
+
+def _run(cmd: list[str], empty_dir: str) -> tuple[int, dict | None, str]:
+    cmd = [c.replace("@EMPTYDIR@", empty_dir) for c in cmd]
+    p = subprocess.run(cmd, capture_output=True, text=True)
+    data = None
+    try:
+        data = json.loads(p.stdout)
+    except json.JSONDecodeError:
+        pass
+    return p.returncode, data, (p.stdout + p.stderr)
+
+
+def _denoms(data: dict | None) -> str:
+    if not data:
+        return "n/a"
+    return ", ".join(f"{d['name']}={d['denominator']}" for d in data.get("detectors", []))
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--strict", action="store_true",
+                    help="NOT-MEASURED detectors count as failures (release readiness)")
+    ap.add_argument("--verbose", action="store_true")
+    args = ap.parse_args()
+
+    rows = []
+    ok = True
+
+    with tempfile.TemporaryDirectory() as empty_dir:
+        for g in _gates(args.strict):
+            # 1. Control first. It must go red.
+            c_code, c_data, c_out = _run(g["control"], empty_dir)
+            control_red = c_code != 0
+            c_status = (c_data or {}).get("status", f"exit={c_code}")
+
+            if not control_red:
+                ok = False
+                rows.append((g["id"], "NOT-A-GATE", "control did NOT go red", "n/a"))
+                print(f"\n!!! {g['id']}: positive control did not fail. "
+                      f"The gate is unproven and cannot be trusted.\n{c_out}",
+                      file=sys.stderr)
+                continue
+
+            if args.verbose:
+                print(f"--- {g['id']} control output ---\n{c_out}")
+
+            # 2. Real tree.
+            if g["real"] is None:
+                rows.append((g["id"], "PROVEN", f"control red ({c_status})", "n/a"))
+                continue
+
+            r_code, r_data, r_out = _run(g["real"], empty_dir)
+            r_status = (r_data or {}).get("status", f"exit={r_code}")
+            if r_code != 0:
+                ok = False
+                print(f"\n!!! {g['id']} FAILED on the real tree:\n{r_out}", file=sys.stderr)
+            rows.append((g["id"], r_status, f"control red ({c_status})", _denoms(r_data)))
+
+    width = max(len(r[0]) for r in rows)
+    print("\n" + "=" * 100)
+    print("GATE RESULTS  (a gate is only PASSED if its control was demonstrated RED here)")
+    print("=" * 100)
+    print(f"{'gate'.ljust(width)}  {'result':<13} {'control':<22} denominators")
+    print("-" * 100)
+    for gid, status, ctrl, den in rows:
+        print(f"{gid.ljust(width)}  {status:<13} {ctrl:<22} {den}")
+    print("=" * 100)
+    print("PASS-PARTIAL means at least one detector had denominator 0 and was reported "
+          "NOT-MEASURED.\nIt is not a pass. Run with --strict to make it a failure.")
+    print(f"\noverall: {'OK' if ok else 'FAILED'}")
+    return 0 if ok else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

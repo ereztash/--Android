@@ -1,0 +1,4 @@
+# POSITIVE CONTROL coordinate list. Deliberately defective.
+org.jetbrains.kotlin:kotlin-stdlib:2.2.21
+com.squareup.okhttp3:okhttp:4.12.0
+com.google.firebase:firebase-analytics:22.1.2
