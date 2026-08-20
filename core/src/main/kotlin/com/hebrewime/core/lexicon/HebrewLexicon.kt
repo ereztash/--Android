@@ -55,6 +55,31 @@ class HebrewLexicon private constructor(
     override fun contains(word: String): Boolean = indexOf(word) >= 0
 
     /** Index of [word], or a negative value if absent. */
+    /**
+     * A `List<String>` **view** over the lexicon. Nothing is materialised.
+     *
+     * ### Why this exists rather than a plain `ArrayList`
+     * Building the trie needs every word once, in order. The obvious way to supply that is to
+     * copy all 355,587 words into an `ArrayList<String>` — and measured on the build host, that
+     * list costs **~34 MB of heap**, which is the single largest allocation this app ever makes
+     * and is alive at exactly the moment the trie's own arrays are being built. Peak warm-up
+     * heap was 84.5 MB.
+     *
+     * An IME is one of the most heap-constrained processes on Android. Losing that race throws
+     * `OutOfMemoryError`, which is a `Throwable`, which the warm-up path catches — leaving a
+     * keyboard that types but never suggests, permanently and silently.
+     *
+     * With this view only ONE word string is alive at a time: each is decoded on `get`, used by
+     * the trie builder, and immediately garbage. The blob and the offset table were already
+     * resident, so the copy bought nothing at all.
+     *
+     * `RandomAccess`, because the builder indexes it.
+     */
+    fun asWordList(): List<String> = object : AbstractList<String>(), RandomAccess {
+        override val size: Int get() = this@HebrewLexicon.size
+        override fun get(index: Int): String = wordAt(index)
+    }
+
     fun indexOf(word: String): Int {
         if (word.isEmpty()) return -1
         val needle = word.toByteArray(Charsets.UTF_8)

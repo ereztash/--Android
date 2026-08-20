@@ -35,6 +35,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.hebrewime.R
 import com.hebrewime.core.dictionary.PersonalDictionary
+import com.hebrewime.diagnostics.ImeDiagnostics
 import com.hebrewime.dictionary.PersonalDictionaryRepository
 import androidx.lifecycle.lifecycleScope
 import com.hebrewime.learning.LearningPreferences
@@ -80,6 +81,7 @@ private fun SettingsScreen(
     var learningEnabled by remember { mutableStateOf(LearningPreferences.isEnabled(context)) }
     var learnedPairs by remember { mutableStateOf(0) }
     var confirmingForget by remember { mutableStateOf(false) }
+    var diagnostics by remember { mutableStateOf(ImeDiagnostics.read(context)) }
 
     LaunchedEffect(Unit) {
         dictionary = repository.load()
@@ -87,6 +89,7 @@ private fun SettingsScreen(
         // Only read the learned model when learning is on. Loading it while the feature is off
         // would mean touching the Keystore for data the user has not asked the app to use.
         if (learningEnabled) learnedPairs = learning.load().pairCount
+        diagnostics = ImeDiagnostics.read(context)
     }
 
     Scaffold { inner ->
@@ -176,6 +179,45 @@ private fun SettingsScreen(
             ) {
                 Text(stringResource(R.string.dictionary_wipe_button))
             }
+
+            HorizontalDivider()
+
+            // Keyboard status. This exists because a user reported the keyboard typing fine and
+            // never suggesting, and every possible cause was silent -- see ImeDiagnostics.
+            Text(
+                stringResource(R.string.diagnostics_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                stringResource(R.string.diagnostics_hint),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Card {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(diagnostics.verdict, style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        buildString {
+                            append("state: ${diagnostics.state}")
+                            if (diagnostics.lexiconWords > 0) {
+                                append("\nwords: ${diagnostics.lexiconWords}")
+                                append(" · trie nodes: ${diagnostics.trieNodes}")
+                                append(" · bigrams: ${diagnostics.bigramPairs}")
+                            }
+                            if (diagnostics.degradedAssets.isNotEmpty()) {
+                                append("\nunreadable: ${diagnostics.degradedAssets}")
+                            }
+                            append("\nrequests: ${diagnostics.requests}")
+                            append(" · permitted: ${diagnostics.allowed}")
+                            append(" · produced something: ${diagnostics.nonEmpty}")
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+            TextButton(onClick = {
+                ImeDiagnostics.reset(context)
+                diagnostics = ImeDiagnostics.read(context)
+            }) { Text(stringResource(R.string.diagnostics_reset)) }
 
             HorizontalDivider()
 

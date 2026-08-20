@@ -261,13 +261,48 @@ class LexiconTrie private constructor(
          * silently wrong dictionary is far worse than a loud failure.
          */
         fun build(words: List<String>): LexiconTrie {
-            val capacity = 1 + words.sumOf { it.length }.coerceAtLeast(16)
+            // ### Sizing: grow, do not reserve for the worst case
+            //
+            // The obvious capacity is the total number of characters, since that is the most
+            // nodes a trie could possibly need. It is also, for a real dictionary, roughly
+            // FOUR TIMES too many -- a trie exists precisely because words share prefixes.
+            //
+            // Measured on the shipped lexicon: 2,125,923 characters, 567,767 actual nodes, a
+            // 3.7x over-allocation. At 18 bytes per node across the five arrays that reserved
+            // 37.4 MB to use 10 MB, transiently, inside an IME process -- one of the most
+            // heap-constrained processes on Android. Losing that race throws OutOfMemoryError,
+            // which the warm-up path catches, leaving a keyboard that types and never
+            // suggests.
+            //
+            // So start near the word count and double. Node count runs about 1.6x words for
+            // Hebrew, so this is normally one growth, and the peak is bounded by the growth
+            // rather than by the worst case that never happens.
+            var capacity = maxOf(16, words.size + 16)
             var charOf = CharArray(capacity)
             var firstChild = IntArray(capacity) { NONE }
             var nextSibling = IntArray(capacity) { NONE }
             var wordIndex = IntArray(capacity) { NONE }
-            val lastChild = IntArray(capacity) { NONE }
+            var lastChild = IntArray(capacity) { NONE }
             var count = 1 // the root
+
+            fun ensure(needed: Int) {
+                if (needed <= capacity) return
+                val grown = maxOf(capacity * 2, needed)
+                charOf = charOf.copyOf(grown)
+                firstChild = firstChild.copyOf(grown).also {
+                    java.util.Arrays.fill(it, capacity, grown, NONE)
+                }
+                nextSibling = nextSibling.copyOf(grown).also {
+                    java.util.Arrays.fill(it, capacity, grown, NONE)
+                }
+                wordIndex = wordIndex.copyOf(grown).also {
+                    java.util.Arrays.fill(it, capacity, grown, NONE)
+                }
+                lastChild = lastChild.copyOf(grown).also {
+                    java.util.Arrays.fill(it, capacity, grown, NONE)
+                }
+                capacity = grown
+            }
 
             var path = IntArray(64)
             var previous = ""
@@ -283,6 +318,7 @@ class LexiconTrie private constructor(
                 while (common < shared && word[common] == previous[common]) common++
 
                 var node = if (common == 0) ROOT else path[common]
+                ensure(count + (word.length - common))
                 for (depth in common until word.length) {
                     val child = count++
                     charOf[child] = word[depth]

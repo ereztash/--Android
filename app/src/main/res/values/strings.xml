@@ -22,6 +22,10 @@
     <string name="onboarding_not_enabled">Not enabled yet</string>
     <string name="onboarding_selected">Currently in use</string>
     <string name="onboarding_not_selected">Not currently in use</string>
+    <string name="diagnostics_title">Keyboard status</string>
+    <string name="diagnostics_hint">If suggestions are not appearing, this says why.</string>
+    <string name="diagnostics_reset">Reset counters</string>
+
     <string name="learning_title">Learn how you write</string>
     <string name="learning_body">Off by default. When you turn this on, the keyboard counts
         which words you tend to put next to each other and uses that to order its suggestions.

@@ -14,6 +14,7 @@ import com.hebrewime.core.prediction.BigramModel
 import com.hebrewime.core.prediction.Prediction
 import com.hebrewime.core.prediction.PredictiveEngine
 import com.hebrewime.core.prediction.TypingContext
+import com.hebrewime.diagnostics.ImeDiagnostics
 import com.hebrewime.dictionary.PersonalDictionaryRepository
 import com.hebrewime.learning.LearningPreferences
 import com.hebrewime.learning.UserModelRepository
@@ -142,11 +143,13 @@ class CorrectionController(
         loadJob = scope.launch {
             Trace.beginSection(TRACE_LOAD)
             val degraded = LinkedHashSet<String>()
+            ImeDiagnostics.recordLoading(context)
             try {
                 val lexicon = context.assets.open(LEXICON_ASSET).use { HebrewLexicon.load(it) }
-                val words = ArrayList<String>(lexicon.size)
-                for (i in 0 until lexicon.size) words.add(lexicon.wordAt(i))
-                val trie = LexiconTrie.build(words)
+                // A VIEW, not a copy. Copying 355,587 words into an ArrayList costs ~34 MB of
+                // heap and is alive exactly while the trie's arrays are being allocated; see
+                // HebrewLexicon.asWordList.
+                val trie = LexiconTrie.build(lexicon.asWordList())
                 val frequency = context.assets.open(FREQUENCY_ASSET)
                     .use { HebrewFrequency.load(it) }
                 // Prediction is worth having without bigrams; the keyboard is not worth losing
@@ -173,6 +176,9 @@ class CorrectionController(
                     personalWords = personal.size,
                     learnedPairs = userModel.pairCount,
                 )
+                ImeDiagnostics.recordReady(
+                    context, lexicon.size, trie.nodeCount, bigrams.bigramCount, degraded,
+                )
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (unreadable: Throwable) {
@@ -182,6 +188,11 @@ class CorrectionController(
                 engine = null
                 loaded = null
                 degraded.add(LEXICON_ASSET)
+                // The class name only. NEVER the message: an exception from a parser can
+                // quote the bytes it choked on, and those bytes could be anything.
+                ImeDiagnostics.recordFailed(
+                    context, unreadable.javaClass.simpleName, degraded,
+                )
             } finally {
                 degradedAssets = degraded
                 Trace.endSection()
@@ -199,6 +210,14 @@ class CorrectionController(
      *   then simply does less.
      * @param onResult delivered on the main thread. Never called if the request is cancelled.
      */
+    /**
+     * The Android [android.content.Context], named apart from the `TypingContext` parameter
+     * below. Two different things called `context` in one function is how a diagnostic ends up
+     * silently recording the wrong object -- or, here, simply failing to compile, which is the
+     * better outcome of the two.
+     */
+    private val androidContext get() = context
+
     fun requestPredictions(
         context: TypingContext,
         allowed: Boolean,
@@ -209,11 +228,13 @@ class CorrectionController(
             // A restricted field. Not "compute and discard" -- nothing is computed at all, so
             // the context never reaches the engine, the trie, or any allocation that outlives
             // this call.
+            ImeDiagnostics.recordRequest(androidContext, allowed = false, produced = 0)
             onResult(emptyList())
             return
         }
         val ready = engine
         if (ready == null) {
+            ImeDiagnostics.recordRequest(androidContext, allowed = true, produced = 0)
             warmUp()
             onResult(emptyList())
             return
@@ -225,6 +246,7 @@ class CorrectionController(
             } finally {
                 Trace.endSection()
             }
+            ImeDiagnostics.recordRequest(androidContext, allowed = true, produced = result.size)
             withContext(Dispatchers.Main) { onResult(result) }
         }
     }

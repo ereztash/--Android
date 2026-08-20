@@ -42,12 +42,23 @@ tasks.withType<Test>().configureEach {
     // Adaptive learning: interpolation weight and session floor are swept on learning_dev and
     // reported on learning_test, which share no sentence with it or with each other.
     systemProperty("runLearningSweep", project.findProperty("runLearningSweep")?.toString() ?: "")
+
+    // Warm-up under a deliberately small heap. An IME is one of the most heap-constrained
+    // processes on Android and this project has no device to measure on, so the substitute is
+    // to shrink the JVM until the allocation actually fails and report where that line sits.
+    systemProperty("warmUpMode", project.findProperty("warmUpMode")?.toString() ?: "")
     // The correction measurement loads the whole lexicon, builds a trie over it and runs
     // thousands of queries. The default heap is not enough.
+    //
+    // -PtestHeap overrides it, and must come AFTER this line or it is silently ignored --
+    // which it was on the first attempt, producing a table of "survives 24 MB" results from a
+    // JVM that actually had 3 GB.
     maxHeapSize = "3g"
+    project.findProperty("testHeap")?.let { maxHeapSize = it.toString() }
     // Forward the sweep opt-in into the test JVM. Gradle's -D sets it on the daemon, not on
     // the forked test process, so it has to be passed through explicitly.
     if (project.hasProperty("runWeightSweep")) {
         systemProperty("runWeightSweep", project.property("runWeightSweep").toString())
     }
 }
+
