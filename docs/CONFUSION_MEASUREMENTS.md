@@ -351,3 +351,41 @@ before any result is seen.
 Raw skip-2 evidence triples the false-alarm rate. Everything therefore depends on whether a
 margin exists that keeps most of the 92.4% while rejecting most of the 7.6% — and those two
 populations may simply not separate. That is **NOT MEASURED** and is the whole question.
+
+
+### S1 VERDICT: FAILED. Not shipped.
+
+Margin chosen on `confusion_dev` (80 — the lowest value at which the skip path added no false
+alarms on that slice), then measured **once** on `confusion_test`, through the same harness that
+produced the published figures:
+
+| | caught | recall | false alarms | rate |
+|---|---|---|---|---|
+| adjacent only (shipped) | 29,621 | 64.58% | 178 | 0.256% |
+| + distance-2, margin 80 | 29,864 | **65.11%** | 182 | **0.262%** |
+| difference | **+243** | +0.53 | **+4** | +0.006 |
+
+**Recall passes. False alarms do not.** The rule was `false <= 0.26%`; the result is 0.262%.
+It fails by four sites out of 69,494.
+
+**Two things about that, stated rather than smoothed over.**
+
+First, a flaw in how I wrote the rule: it compared a precisely measured value against the
+*rounded* published constant 0.26%, when the actual shipped rate is 0.256%. A better-written
+rule would have said "no worse than the baseline measured in the same run". That is a criticism
+of my rule-writing, not a reason to pass — under either reading the layer adds false alarms
+rather than holding them constant.
+
+Second, and more important: **the margin is not being re-picked.** `confusion_test` has now been
+observed for this question. Choosing a different margin because the test failed is tuning on the
+test set, which the rule forbids in as many words. There is no second attempt at this slice; a
+further attempt would need a fresh slice cut from the residual pool.
+
+The trade actually on offer is **+243 errors caught for +4 false alarms — 61 to 1**. That is a
+good trade by most standards. It is also, precisely, a request to move a number that was
+committed in writing not to move, which is an operator decision and not one to be taken by the
+person who wants the feature to pass.
+
+Escalated. Layer built, measured, and left disabled: `RealWordErrorDetector` defaults `skip` to
+`BigramModel.EMPTY` and `CorrectionController` does not load the asset.
+`SkipLayerVerdictTest.theFailedLayerIsNotWiredIntoProduction` asserts that it stays that way.

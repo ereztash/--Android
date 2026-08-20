@@ -201,7 +201,7 @@ class ConfusionAccuracyTest {
     fun aPermissiveDetectorIsCaughtByTheSameCount() {
         val (lexicon, bigrams) = fixture()
         val permissive = RealWordErrorDetector(
-            lexicon, bigrams,
+            lexicon, bigrams, config =
             RealWordErrorDetector.Config(margin = 0, requireNoSupportForTyped = false),
         )
         val sentences = testSlice()

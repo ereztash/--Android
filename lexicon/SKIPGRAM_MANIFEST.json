@@ -1,0 +1,47 @@
+{
+  "purpose": "distance-2 co-occurrence, for real-word errors whose deciding evidence lies outside the adjacent window",
+  "source": {
+    "wiki": "hewiki",
+    "dump_date": "20260801",
+    "license": "CC BY-SA 4.0"
+  },
+  "provenance": {
+    "cached": true,
+    "path": "lexicon/cache/bigram-corpus-20260801-10x12582912.txt.gz",
+    "chunks_requested": 10,
+    "chunk_bytes": 12582912,
+    "chunk_starts": [
+      58284499,
+      175392273,
+      292362593,
+      409299235,
+      526257249,
+      643106311,
+      760153275,
+      877042803,
+      993968019,
+      1110988212
+    ]
+  },
+  "corpus": {
+    "sentences": 2224511,
+    "tokens": 25619680,
+    "out_of_lexicon_tokens": 1315367
+  },
+  "model": {
+    "distance": 2,
+    "min_count": 10,
+    "distinct_before_pruning": 10881006,
+    "kept": 150526,
+    "groups": 16923,
+    "raw_bytes": 854172,
+    "gzip_bytes": 494889,
+    "raw_sha256": "cee3872c949a9a7e067dac7f2210c535e6fcc98db6852d59924e68392daa7a53",
+    "encoding": "identical to he_bigrams.bin, so BigramModel loads it unchanged"
+  },
+  "known_limitations": [
+    "Wikipedia prose; the register is wrong for phone typing.",
+    "Distance-2 pairs are counted ACROSS out-of-lexicon words, unlike the adjacent table, because the gap is what is being modelled.",
+    "A pair two apart is weaker evidence than an adjacent one and is not interchangeable with it; the detector weighs them separately."
+  ]
+}

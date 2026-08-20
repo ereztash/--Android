@@ -35,6 +35,17 @@ import com.hebrewime.core.prediction.BigramModel
 class RealWordErrorDetector(
     private val lexicon: HebrewLexicon,
     private val bigrams: BigramModel,
+    /**
+     * Distance-2 co-occurrence, for the 30.2% of confusable positions where **neither**
+     * candidate has any adjacent evidence and the window therefore has nothing to weigh.
+     *
+     * Same format as [bigrams] — a skip table *is* a table of `(first, second, count)` and only
+     * the definition of "second" differs, so [BigramModel] loads it unchanged and there is no
+     * second reader to keep correct.
+     *
+     * Empty by default. An empty table makes [checkWide] behave exactly like [check].
+     */
+    private val skip: BigramModel = BigramModel.EMPTY,
     private val config: Config = Config(),
 ) {
 
@@ -75,6 +86,19 @@ class RealWordErrorDetector(
 
         /** Which confusion table. See [HebrewConfusions] for why `ו`/`י` is not the default. */
         val pairs: List<Pair<Char, Char>> = HebrewConfusions.HOMOPHONE_PAIRS,
+
+        /**
+         * Margin required when the decision rests on **distance-2** evidence alone.
+         *
+         * Separate from [margin] because the two are not the same kind of evidence and must not
+         * share a threshold. Measured on the test slice, distance-2 evidence points at the
+         * correct word 92.4% of the time — real signal, and the 7.6% that point the wrong way
+         * would add 0.42 points of false alarms on top of a shipped rate of 0.26%, roughly
+         * tripling it, if used at the adjacent margin.
+         *
+         * Swept on `confusion_dev`; see `docs/CONFUSION_MEASUREMENTS.md`.
+         */
+        val skipMargin: Int = DEFAULT_SKIP_MARGIN,
     )
 
     /** One real-word error, with the evidence that produced it. */
@@ -141,6 +165,75 @@ class RealWordErrorDetector(
         return best
     }
 
+    /**
+     * Like [check], but also given the words **two** positions away on each side.
+     *
+     * ### The adjacent path is untouched
+     * If the adjacent window can decide — either candidate has any evidence at all — this
+     * delegates to [check] and returns exactly what it would have returned. Distance-2 evidence
+     * is consulted **only where the adjacent window is blind**, so recall can only rise and any
+     * new false alarm is attributable to the new path alone. That is a property of the
+     * structure, not of the thresholds, which is what makes the stopping rule in
+     * `docs/CONFUSION_MEASUREMENTS.md` decidable.
+     */
+    fun checkWide(
+        previous2: String?,
+        previous: String?,
+        word: String,
+        next: String?,
+        next2: String?,
+    ): Finding? {
+        val adjacent = check(previous, word, next)
+        if (adjacent != null) return adjacent
+
+        if (word.length < config.minLength) return null
+        val typed = HebrewText.stripPoints(word)
+        if (!HebrewText.isHebrewWord(typed)) return null
+        val typedIndex = lexicon.indexOf(typed)
+        if (typedIndex < 0) return null
+
+        // Only where the adjacent window had nothing. If it had anything at all, `check` has
+        // already applied the adjacent rule and declined, and overriding that here would be
+        // the skip table contradicting evidence the corpus actually has.
+        val previousIndex = indexOf(previous)
+        val nextIndex = indexOf(next)
+        val variants = HebrewConfusions.variantsOf(typed, lexicon, config.pairs)
+        if (variants.isEmpty()) return null
+        if (evidence(typedIndex, previousIndex, nextIndex) > 0) return null
+        if (variants.any { evidence(it, previousIndex, nextIndex) > 0 }) return null
+
+        val p2 = indexOf(previous2)
+        val n2 = indexOf(next2)
+        if (p2 < 0 && n2 < 0) return null
+
+        val typedSkip = skipEvidence(typedIndex, p2, n2)
+        if (config.requireNoSupportForTyped && typedSkip > 0) return null
+
+        var best: Finding? = null
+        for (candidate in variants) {
+            val candidateSkip = skipEvidence(candidate, p2, n2)
+            if (candidateSkip - typedSkip < config.skipMargin) continue
+            if (best != null && candidateSkip <= best.suggestedEvidence) continue
+            best = Finding(
+                typed = typed,
+                typedIndex = typedIndex,
+                suggested = lexicon.wordAt(candidate),
+                suggestedIndex = candidate,
+                typedEvidence = typedSkip,
+                suggestedEvidence = candidateSkip,
+                contextWords = (if (p2 >= 0) 1 else 0) + (if (n2 >= 0) 1 else 0),
+            )
+        }
+        return best
+    }
+
+    private fun skipEvidence(wordIndex: Int, previous2: Int, next2: Int): Int {
+        var total = 0
+        if (previous2 >= 0) total += skip.logCountOf(previous2, wordIndex)
+        if (next2 >= 0) total += skip.logCountOf(wordIndex, next2)
+        return total
+    }
+
     private fun evidence(wordIndex: Int, previousIndex: Int, nextIndex: Int): Int {
         var total = 0
         if (previousIndex >= 0) total += bigrams.logCountOf(previousIndex, wordIndex)
@@ -152,5 +245,15 @@ class RealWordErrorDetector(
         val stripped = word?.let { HebrewText.stripPoints(it) } ?: return -1
         if (!HebrewText.isHebrewWord(stripped)) return -1
         return lexicon.indexOf(stripped)
+    }
+
+    companion object {
+        /**
+         * BASELINE, not a chosen value. `build_skipgrams.py` prunes at a count of 10 and
+         * `round(log2(10 + 1) * 8)` is 28, so no stored pair carries less — 28 is the table's
+         * own floor and states the rule "the corpus has seen this pair at all". It moves only
+         * after the sweep on `confusion_dev`.
+         */
+        const val DEFAULT_SKIP_MARGIN: Int = 28
     }
 }

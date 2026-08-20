@@ -59,7 +59,7 @@ class ConfusionSweepTest {
                 for (margin in listOf(1, 8, 16, 20, 21, 22, 24, 29, 32, 48, 64)) {
                     val detector = RealWordErrorDetector(
                         lexicon, bigrams,
-                        RealWordErrorDetector.Config(
+                        config = RealWordErrorDetector.Config(
                             margin = margin, requireNoSupportForTyped = requireZero,
                         ),
                     )
