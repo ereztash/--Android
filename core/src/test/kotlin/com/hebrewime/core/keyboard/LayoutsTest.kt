@@ -42,11 +42,29 @@ class LayoutsTest {
     }
 
     @Test
-    fun hebrewIsRtlAndEnglishIsNot() {
-        // A property of the script, not of the device locale.
-        assertTrue(Layouts.hebrew.rtl)
-        assertTrue(!Layouts.english.rtl)
-        assertTrue(!Layouts.numeric.rtl)
+    fun scriptDirectionDescribesTheTextNotTheKeys() {
+        // A property of the script, not of the device locale -- and NOT of the key positions.
+        // KeyGeometry deliberately never reads this; see KeyboardLayout's docs for the bug
+        // that conflating the two produced.
+        assertEquals(ScriptDirection.RIGHT_TO_LEFT, Layouts.hebrew.scriptDirection)
+        assertEquals(ScriptDirection.LEFT_TO_RIGHT, Layouts.english.scriptDirection)
+        assertEquals(ScriptDirection.LEFT_TO_RIGHT, Layouts.numeric.scriptDirection)
+    }
+
+    @Test
+    fun hebrewRowsAreInQwertyOrder() {
+        // The external standard, not the code. SI-1452 maps Hebrew onto QWERTY positions.
+        assertEquals("קראטוןםפ", Layouts.hebrew.rows[0].keys.joinToString("") { it.output!! })
+        assertEquals(
+            "שדגכעיחלךף",
+            Layouts.hebrew.rows[1].keys.joinToString("") { it.output!! },
+        )
+        assertEquals(
+            "זסבהנמצתץ",
+            Layouts.hebrew.rows[2].keys
+                .filter { it.action == KeyAction.CHARACTER }
+                .joinToString("") { it.output!! },
+        )
     }
 
     @Test

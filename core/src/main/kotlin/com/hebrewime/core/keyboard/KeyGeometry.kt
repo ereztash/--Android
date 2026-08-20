@@ -42,9 +42,13 @@ data class KeyRect(
 object KeyGeometry {
 
     /**
-     * @param rtl mirrors each row horizontally. Applied as a reflection of the finished
-     *   left-to-right layout rather than by laying rows out backwards: reflection is a single
-     *   operation that cannot drift, and it keeps row tiling exact.
+     * Key rectangles, always left-to-right.
+     *
+     * **There is deliberately no mirroring here and no direction parameter.** A previous
+     * version mirrored rows for right-to-left scripts, which produced a Hebrew keyboard that a
+     * user described on sight as "a mirror". Hebrew layouts follow the physical QWERTY key
+     * positions, which run left-to-right regardless of which way the script reads. See
+     * [KeyboardLayout.scriptDirection].
      */
     fun layout(
         layout: KeyboardLayout,
@@ -70,11 +74,7 @@ object KeyGeometry {
                 } else {
                     width * (consumedWeight / total)
                 }
-                out += if (layout.rtl) {
-                    KeyRect(key, width - right, top, width - left, bottom)
-                } else {
-                    KeyRect(key, left, top, right, bottom)
-                }
+                out += KeyRect(key, left, top, right, bottom)
             }
         }
         return out

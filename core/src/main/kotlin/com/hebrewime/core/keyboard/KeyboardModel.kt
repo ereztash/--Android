@@ -44,17 +44,39 @@ data class KeyboardRow(val keys: List<Key>) {
     val totalWeight: Float get() = keys.sumOf { it.widthWeight.toDouble() }.toFloat()
 }
 
+/** Writing direction of the script a layout produces. See [KeyboardLayout.scriptDirection]. */
+enum class ScriptDirection { LEFT_TO_RIGHT, RIGHT_TO_LEFT }
+
 /**
  * A complete layout.
  *
- * @param rtl true when the row should be laid out right-to-left. This is a property of the
- *   *script*, not of the device locale: the Hebrew layout is RTL even for a user whose phone
- *   is in English, and the English layout is LTR even on a Hebrew phone.
+ * @param scriptDirection the direction the *text* reads.
+ *
+ * **This does NOT affect key positions, and the distinction is the whole point.** An earlier
+ * version of this class had an `rtl` flag that [KeyGeometry] used to mirror each row, on the
+ * reasoning that Hebrew reads right-to-left so a Hebrew keyboard must too. That is wrong, it
+ * shipped, and a user opened the keyboard and said it looked like a mirror.
+ *
+ * Hebrew keyboard layouts (SI-1452) map letters onto the **physical QWERTY key positions**,
+ * which run left-to-right:
+ * ```
+ *   Q  W  E  R  T  Y  U  I  O  P
+ *   /  '  ק  ר  א  ט  ו  ן  ם  פ
+ * ```
+ * so on a phone, with `/` and `'` dropped, the top row is `ק ר א ט ו ן ם פ` reading
+ * **left to right on screen**. The script is right-to-left; the keyboard is not. Every Hebrew
+ * typist has the left-to-right arrangement in muscle memory from a physical keyboard.
+ *
+ * The same mistake also put backspace on the left, shift on the right, and the layout switch
+ * in the wrong corner — one root cause, three visible symptoms.
+ *
+ * [KeyGeometry] deliberately does not read this field. It exists for the candidate strip and
+ * for text presentation, where direction genuinely matters.
  */
 data class KeyboardLayout(
     val id: String,
     val rows: List<KeyboardRow>,
-    val rtl: Boolean,
+    val scriptDirection: ScriptDirection,
 ) {
     init { require(rows.isNotEmpty()) { "a layout must have rows" } }
 
@@ -80,7 +102,8 @@ object Layouts {
     /** All 27 Hebrew letters: 22 base plus the 5 final forms. */
     val hebrew: KeyboardLayout = KeyboardLayout(
         id = HEBREW,
-        rtl = true,
+        // The SCRIPT is right-to-left. The KEY POSITIONS are not -- see KeyboardLayout.
+        scriptDirection = ScriptDirection.RIGHT_TO_LEFT,
         rows = listOf(
             row("קראטוןםפ"),
             row("שדגכעיחלךף"),
@@ -91,7 +114,7 @@ object Layouts {
 
     val english: KeyboardLayout = KeyboardLayout(
         id = ENGLISH,
-        rtl = false,
+        scriptDirection = ScriptDirection.LEFT_TO_RIGHT,
         rows = listOf(
             row("qwertyuiop"),
             row("asdfghjkl"),
@@ -102,7 +125,7 @@ object Layouts {
 
     val numeric: KeyboardLayout = KeyboardLayout(
         id = NUMERIC,
-        rtl = false,
+        scriptDirection = ScriptDirection.LEFT_TO_RIGHT,
         rows = listOf(
             row("1234567890"),
             row("-/:;()₪&@\""),
