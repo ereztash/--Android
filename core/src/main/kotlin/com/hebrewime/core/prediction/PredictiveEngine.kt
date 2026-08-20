@@ -449,11 +449,34 @@ class PredictiveEngine(
         const val PERSONAL_SCORE: Double = Double.MAX_VALUE
 
         /**
-         * BASELINE VALUE, not a chosen one. Zero is static-only — exactly what shipped before
-         * this layer existed — so the first measurement is taken against the behaviour the
-         * published numbers describe. It moves only after the sweep on `learning_dev`.
+         * 2.0, chosen on `learning_dev` — **and deliberately not the value that scored best.**
+         *
+         * The sweep's peak is 8.0 (top-1 11.24% against 11.07% at 4.0 and 10.87% at 2.0).
+         * It was rejected on an invariant the accuracy table cannot see. The learned layer's
+         * largest possible contribution is `userWeight × userEvidenceCap`, and the static
+         * score it is added to is a log-count capped at 255, so:
+         *
+         * | weight | max contribution | overturns corpus pairs seen up to |
+         * |---|---|---|
+         * | 1.0 | 32 | 15 times |
+         * | **2.0** | **64** | **255 times** |
+         * | 4.0 | 128 | 65,535 times |
+         * | 8.0 | 256 | **anything at all** |
+         *
+         * At 8.0 a pair the user typed fifteen times outranks *every* corpus pair including the
+         * strongest, which is not interpolation — it is replacement wearing interpolation's
+         * clothes. At 4.0 it overturns pairs seen 65,535 times in a 25.6M-token corpus, which
+         * is overwhelming evidence losing to fifteen observations.
+         *
+         * At 2.0 the ceiling is a corpus pair seen 255 times — about one occurrence in 100,000
+         * tokens, genuinely weak evidence — and beating that with fifteen personal sightings is
+         * exactly what "this keyboard has learned how *you* write" should mean.
+         *
+         * **The cost of that choice is 0.37 points of top-1 and 0.40 of top-3 against the
+         * peak**, measured, stated, and paid deliberately. Full tables in
+         * `docs/LEARNING_MEASUREMENTS.md`.
          */
-        const val DEFAULT_USER_WEIGHT: Double = 0.0
+        const val DEFAULT_USER_WEIGHT: Double = 2.0
 
         /**
          * 32 log-count units, which is a raw count of 15.
