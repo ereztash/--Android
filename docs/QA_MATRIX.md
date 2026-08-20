@@ -8,7 +8,7 @@ Status of every gate and check in the project. Three states only:
 
 There is no "ready except for". While any row is NOT RUN, the app is not release-ready.
 
-**Last updated: M2.**
+**Last updated: M4.**
 
 ---
 
@@ -53,6 +53,15 @@ There is no "ready except for". While any row is NOT RUN, the app is not release
 | GATE-XML-1 | Every XML resource parses | 9 XML files | `tools/positive_controls/xml/malformed.xml` | YES — named file, line and column |
 | M2-CTXBUF | `InputContextBuffer` desync/recovery semantics | 12 tests | — | n/a |
 | M2-BUILD | `:app` assembles (debug + netcontrol) | 2 APKs | — | n/a |
+| GATE-LEX-3 | The lexicon **inside the APK** hashes to what `lexicon/MANIFEST.json` says | 1 packaged asset, 4,607,433 bytes | `--inject-defect lexicon` | YES — hash + line-count findings |
+| GATE-API-1 | §1.2 `getInitial*` accessors appear only in the privacy boundary file | 26 source files, 6 rules | planted read outside the boundary | YES |
+| GATE-API-1 | Nothing typed reaches logcat or stdout | 26 source files | planted `Log.d` and `println` | YES — both fired |
+| M3-GRAPHEME | UAX #29 backspace widths | 30 assertions over 17 inputs | — (the platform-divergence tripwire) | n/a |
+| M3-GEOMETRY | Key rects tile each row exactly; every key centre hit-tests to itself; RTL mirrors | 3 layouts, every key in each | — | n/a |
+| M3-LAYOUT | Hebrew layout carries all 27 letters exactly once, incl. 5 final forms | 27 letters | — | n/a |
+| M4-PRIV-FETCH | **Initial text is never fetched for a restricted field, tested with a field that DID contain text** | 9 restricted input types × a real password string | — (asserts the provider was never invoked) | n/a |
+| M4-SWEEP | Exhaustive input-type sweep, unknown values fail closed | **4,096** text variations + **16** classes | — | n/a |
+| M4-LEARN | Person-name and postal-address fields suggest but never learn | 2 variations | — | n/a |
 
 ## MEASURED, reported with their denominator (not gates — measurements)
 
@@ -84,12 +93,15 @@ Everything below has not been exercised. None of it is described as working.
 | M2-CONFIGCHANGE | State survives rotation on API 30, where `configChanges` is not honoured | A real API 30 device |
 | M2-SPELLCHECK | System spell checker is actually suppressed | A real device |
 | M3-INPUT | Basic input actions, grapheme-correct backspace on device | A real device |
-| M4-PRIV | `EditorInfo` initial-text discard on a password field that *did* contain text | M4 |
 | M1-TYPO | Prefix-stripper typo-rejection / recall / false-accept rates (the spec's 88.4% at MIN_STEM 4) | A typo corpus and a correctly-constructed, prefix-free non-word control — M5 |
 | M1-DEVICE | Lexicon load time, memory and lookup latency on real hardware | A real device |
 | M1-KTIV | Ktiv male/haser coverage rate over all reform-affected lemmas | A list of affected lemmas, which this project does not have |
 | M5-ACC | top-1 / top-3 / false_auto_replace_rate against a hash-locked golden corpus | M5 |
 | M5-CTRL | Control column: already-correct words must show ~0% correction rate | M5 |
+| M4-OTP-ACC | OTP heuristic accuracy (precision/recall) | A labelled corpus of OTP fields, which does not exist and was not fabricated |
+| M4-DEVICE | That the framework really does hand over password plaintext, and that `setInitialSurroundingText("")` releases it | A real device; `android.jar` ships stubs only |
+| M3-TOUCH | A touch has ever been dispatched to `KeyboardView` on real hardware | A real device |
+| M3-A11Y | Keys are canvas-drawn with **no** virtual view nodes, so TalkBack cannot see them at all | M7 |
 | M7-A11Y | TalkBack navigation over virtual key nodes | A real device with TalkBack |
 | M7-LAT | p95 keystroke latency via `TraceSectionMetric` | A real device + host app + macrobenchmark |
 | M8-SIGN | Signed release AAB | Operator-provided signing secrets (NOTICE 4) |

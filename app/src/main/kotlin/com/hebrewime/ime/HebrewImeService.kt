@@ -10,6 +10,9 @@ import com.hebrewime.core.keyboard.EditCommand
 import com.hebrewime.core.keyboard.Key
 import com.hebrewime.core.keyboard.KeyPressPlanner
 import com.hebrewime.core.keyboard.Layouts
+import com.hebrewime.core.privacy.FieldDescriptor
+import com.hebrewime.core.privacy.SensitiveFieldPolicy
+import com.hebrewime.core.privacy.SessionStart
 import com.hebrewime.ime.view.KeyboardHostView
 import com.hebrewime.ime.view.KeyboardView
 
@@ -46,6 +49,15 @@ class HebrewImeService : InputMethodService() {
     private var currentLayoutId: String = Layouts.HEBREW
     private var shifted: Boolean = false
 
+    /**
+     * What this session is permitted to do. Never null once input has started; defaults to the
+     * most restrictive possible value so that any path reaching it before [onStartInput] is
+     * safe rather than permissive.
+     */
+    private var session: SessionStart = SensitiveFieldPolicy.beginSession(
+        FieldDescriptor(inputType = UNKNOWN_INPUT_TYPE), 0,
+    ) { null }
+
     private var keyboardView: KeyboardView? = null
 
     override fun onCreateInputView(): View {
@@ -63,23 +75,64 @@ class HebrewImeService : InputMethodService() {
         return host
     }
 
+    /**
+     * THE PRIVACY BOUNDARY.
+     *
+     * `TextView.onCreateInputConnection()` calls `outAttrs.setInitialSurroundingText(mText)`
+     * **unconditionally**, with no `inputType` check -- password fields included. So by the
+     * time this method is entered, `info` may already be holding up to 2048 characters of
+     * password plaintext that this app never asked for and cannot refuse.
+     *
+     * Two things happen here, in this order, and nothing else touches `info`'s text:
+     *
+     * 1. The initial text is passed to [SensitiveFieldPolicy.beginSession] as a **lazy
+     *    provider**. On a restricted field the provider is never invoked, so the plaintext is
+     *    never pulled into this process at all. "Read it and then discard it" would already
+     *    have copied it into a `CharSequence` for the GC to release whenever it liked, with
+     *    any crash or heap dump in between exposing it.
+     * 2. `setInitialSurroundingText("")` overwrites the copy the *framework* handed over,
+     *    dropping this process's reference to it rather than waiting for `info` to be
+     *    collected.
+     *
+     * `GATE-PRIV-1` enforces statically that the `getInitial*` accessors appear nowhere else
+     * in the codebase.
+     */
     override fun onStartInput(info: EditorInfo?, restarting: Boolean) {
         super.onStartInput(info, restarting)
-
-        // M2/M3 FAIL-CLOSED DEFAULT, replaced by SensitiveFieldPolicy in M4.
-        //
-        // TextView.onCreateInputConnection() calls outAttrs.setInitialSurroundingText(mText)
-        // unconditionally -- including for password fields, with no inputType check -- so this
-        // service is handed up to 2048 characters of plaintext it never asked for, and holds
-        // it the moment it reads `info`. Until the field classification exists, EVERY field is
-        // treated as restricted and the initial text is never read. The cost is a keyboard
-        // with no left context; the cost of the opposite default is password plaintext in a
-        // process that promised to hold none.
-        contextBuffer.reset(
-            initialTextBeforeCursor = null,
-            cursorPosition = info?.initialSelStart ?: 0,
-        )
         shifted = false
+
+        if (info == null) {
+            // No descriptor at all is the most suspicious case there is, not the most benign.
+            session = SensitiveFieldPolicy.beginSession(
+                FieldDescriptor(inputType = UNKNOWN_INPUT_TYPE), 0,
+            ) { null }
+            contextBuffer.reset(null, 0)
+            return
+        }
+
+        val descriptor = FieldDescriptor(
+            inputType = info.inputType,
+            imeOptions = info.imeOptions,
+            hintText = info.hintText,
+            fieldName = info.fieldName ?: info.label,
+            packageName = info.packageName,
+            // EditorInfo carries no maxLength, so the OTP heuristic's "short numeric field"
+            // signal is unavailable in production and only the keyword signal applies. Stated
+            // rather than quietly assumed: see docs/milestones/M4.md.
+            maxLength = null,
+        )
+
+        session = SensitiveFieldPolicy.beginSession(descriptor, info.initialSelStart) {
+            info.getInitialTextBeforeCursor(MAX_INITIAL_CONTEXT, 0)
+        }
+
+        if (session.isRestricted) {
+            // Drop the framework's own retained copy, rather than leaving it alive for as long
+            // as this EditorInfo is.
+            info.setInitialSurroundingText("")
+        }
+
+        contextBuffer.reset(session.initialTextBeforeCursor, session.cursorPosition)
     }
 
     override fun onFinishInput() {
@@ -157,10 +210,34 @@ class HebrewImeService : InputMethodService() {
         }
     }
 
+    /** True when this session may offer suggestions. Consulted by M5's candidate strip. */
+    fun maySuggest(): Boolean = session.maySuggest
+
+    /** True when this session may write to the personal dictionary. Consulted by M6. */
+    fun mayLearn(): Boolean = session.mayLearn
+
     private fun setShift(value: Boolean) {
         if (shifted != value) {
             shifted = value
             keyboardView?.invalidate()
         }
+    }
+
+    private companion object {
+        /**
+         * How much left context to read on a non-restricted field.
+         *
+         * EditorInfo documents 2048 as the memory-efficient length, and nothing this keyboard
+         * does needs more than a sentence. Read ONCE here, never per keystroke: per-keystroke
+         * reads would mean `getTextBeforeCursor`, a blocking Binder round-trip of up to
+         * 2000 ms, which is banned by GATE-API-1.
+         */
+        const val MAX_INITIAL_CONTEXT = 2048
+
+        /**
+         * An input type that matches no known class, so [SensitiveFieldPolicy] fails closed.
+         * Used before any field is known and when `EditorInfo` is null.
+         */
+        const val UNKNOWN_INPUT_TYPE = 0xf
     }
 }

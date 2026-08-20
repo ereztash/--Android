@@ -30,3 +30,22 @@ class PlantedTraps : android.inputmethodservice.InputMethodService() {
         ic.deleteSurroundingText(1, 0) // API-GATE-ALLOW: control fixture, proves suppression is visible
     }
 }
+
+// POSITIVE CONTROL additions for the M4 privacy rules. Deliberate defects.
+object PlantedPrivacyLeaks {
+
+    // §1.2 -- reading EditorInfo initial text outside the privacy boundary. On a password
+    // field this is plaintext the app was handed without asking.
+    fun leakInitialText(info: android.view.inputmethod.EditorInfo): CharSequence? {
+        return info.getInitialTextBeforeCursor(2048, 0)
+    }
+
+    // Anything typed reaching logcat.
+    fun leakToLogcat(typed: String) {
+        android.util.Log.d("ime", "user typed: $typed")
+    }
+
+    fun leakToStdout(typed: String) {
+        println(typed)
+    }
+}

@@ -102,13 +102,33 @@ class TestNetworkGate(unittest.TestCase):
 class TestForbiddenApiGate(unittest.TestCase):
     CONTROL = os.path.join(ROOT, "tools", "positive_controls", "forbidden_api")
 
-    def test_all_four_planted_traps_fire(self):
+    EXPECTED_RULES = (
+        "ims.session_override",   # §1.6 LinkageError at targetSdk>=34
+        "ic.return_branch",       # §1.3 branching on oneway return values
+        "bksp.hardcoded",         # §1.4 backspace width of 1
+        "ctx.blocking_fetch",     # §1.1 blocking getTextBeforeCursor
+        "priv.initial_text",      # §1.2 EditorInfo initial text outside the boundary
+        "priv.no_logging",        # typed text reaching logcat
+    )
+
+    def test_every_planted_trap_fires(self):
         code, data = run([PY, API, "--root", self.CONTROL, "--no-default-excludes", "--json"])
         self.assertEqual(code, 1)
         found = rules_of(data)
-        for rule in ("ims.session_override", "ic.return_branch",
-                     "bksp.hardcoded", "ctx.blocking_fetch"):
+        for rule in self.EXPECTED_RULES:
             self.assertIn(rule, found, f"planted trap {rule} was not detected")
+
+    def test_the_privacy_boundary_allowlist_is_narrow(self):
+        """The allowlist must exempt one file, not disable the rule.
+
+        The control lives outside the boundary file, so if the exemption were ever widened to
+        something like a directory, this would stop failing.
+        """
+        _, data = run([PY, API, "--root", self.CONTROL, "--no-default-excludes", "--json"])
+        hits = [f for f in data["detectors"][0]["findings"]
+                if f["rule"] == "priv.initial_text"]
+        self.assertEqual(len(hits), 1, "expected exactly one planted initial-text read")
+        self.assertNotIn("HebrewImeService", hits[0]["path"])
 
     def test_real_tree_clean(self):
         code, data = run([PY, API, "--root", ROOT, "--json"])

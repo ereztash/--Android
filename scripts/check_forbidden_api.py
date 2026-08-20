@@ -66,6 +66,26 @@ RULES: list[dict] = [
         "allow_paths": [],
     },
     {
+        "id": "priv.initial_text",
+        "pattern": re.compile(r"\bgetInitial(?:TextBeforeCursor|TextAfterCursor|"
+                              r"SurroundingText|SelectedText)\s*\("),
+        "message": "§1.2 EditorInfo initial text is password plaintext the app never asked "
+                   "for. It may be named only inside the privacy boundary "
+                   "(HebrewImeService.onStartInput), which passes it to SensitiveFieldPolicy "
+                   "as a lazy provider so a restricted field never reads it at all.",
+        # The one file allowed to touch it. Widening this list is a privacy decision, not a
+        # refactor.
+        "allow_paths": ["HebrewImeService.kt"],
+    },
+    {
+        "id": "priv.no_logging",
+        "pattern": re.compile(r"\bandroid\.util\.Log\b|\bLog\s*\.\s*[vdiwe]\s*\(|"
+                              r"(?<![.\w])println\s*\(|\bSystem\.(?:out|err)\s*\."),
+        "message": "nothing this app handles may reach logcat or stdout. A keyboard handles "
+                   "passwords, messages and searches; a debugging Log.d is how those leak.",
+        "allow_paths": [],
+    },
+    {
         "id": "ctx.blocking_fetch",
         "pattern": re.compile(r"\.getTextBeforeCursor\s*\(|\.getTextAfterCursor\s*\("),
         "message": "§1.1 blocking Binder round-trip, up to MAX_WAIT_TIME_MILLIS=2000. "
