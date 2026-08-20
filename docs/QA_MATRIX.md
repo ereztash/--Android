@@ -10,7 +10,7 @@ Status of every gate and check in the project. Four states only:
 **There is no "ready except for". While any row below is NOT RUN, the app is not
 release-ready — and it is not described as release-ready anywhere in this repository.**
 
-**Last updated: M12. Verdict: see [RELEASE_READINESS.md](RELEASE_READINESS.md) — NOT READY.**
+**Last updated: L1 (adaptive learning). Verdict: see [RELEASE_READINESS.md](RELEASE_READINESS.md) — NOT READY.**
 
 ---
 
@@ -26,8 +26,8 @@ release-ready — and it is not described as release-ready anywhere in this repo
 | minSdk / targetSdk | **31** / 36 — verified in all four built APKs |
 | **Device / emulator** | **NONE. No Android device or emulator exists in this environment, and none of the results below were obtained on one.** |
 
-Scale: 39 production Kotlin files, 26 test files, **179 JVM tests**, 8 gate scripts,
-**16 gates**, 5 positive-control fixtures. **Lint: 0 issues.**
+Scale: 44 production Kotlin files, 32 test files, **214 JVM tests**, 9 gate scripts,
+**18 gates**, 5 positive-control fixtures. **Lint: 0 issues.**
 
 ---
 
@@ -95,6 +95,8 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | GATE-ASSET-1 | The assets the app opens by name are the ones AGP packaged | 3 named assets, checked against the APK's own entry list | Expect a name AGP does not produce |
 | GATE-MANIFEST-1 | IME service declares `exported`, `BIND_INPUT_METHOD`, the action, the meta-data | 4 requirements | `exported` flipped to false |
 | GATE-R8-1 | R8 has not stripped what the system instantiates by name | 4 requirements on the minified build | Service declaration invalidated |
+| GATE-LEARN-1 | The learned model persists counts over integer ids and nothing that can hold text | 2 learning source files | An encoder that accepts a `String` |
+| GATE-LEARN-2 | Learning happens in exactly one place, guarded by `session.mayLearn` | 79 Kotlin source files | A second, unguarded call site |
 | GATE-BIGRAM-1 | The bigram table **inside the APK** is byte-identical to the one every prediction number was measured on, and its header agrees with the manifest | 1 asset, 2,985,642 bytes, 54,133 groups | One byte appended |
 | GATE-SIZE-1 | The release artifact stays inside a budget written down **after** measuring it | 3 budget entries | Assets measured 50% larger |
 | GATE-XML-1 | Every XML resource parses | 15 files | A comment containing `--` |
@@ -132,6 +134,11 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | M11-CTXBUF | Multi-word context and the span arithmetic a non-adjacent replacement depends on | 10 tests |
 | M11-WIRING | A `TypingContext` in, a ranked strip out — the two halves are actually connected | 6 tests |
 | M12-PERSONAL | The personal dictionary actually affects typing | 8 tests — control: without it the same word IS corrected |
+| L1-POLICY | Which fields may be learned from | 8 tests, 6 field classes + a 4,096-variation sweep — **control: a normal text field DOES learn, end to end** |
+| L1-ELIGIBLE | A once-seen pair is counted and never offered | control: a pair seen in 2 separate sessions IS offered |
+| L1-NEUTRAL | An empty user model changes nothing | **135,960 contexts** — control: a populated model does change the output |
+| L1-WIPE | The two encrypted stores are independently destroyable | 4 tests — control: a shared key WOULD have coupled the wipes |
+| L1-SENTINEL | The OOV sentinel is never offered and never costs a slot | asserted at 3 suggestions returned |
 | VERIF-SDK | §1 / §3 claims checked against `android.jar` + `api-versions.xml` | 31 claims: 28 confirmed, 0 contradicted, 3 not checkable |
 | VERIF-LEX | Lexicon sources byte + sha256 exact | 2 of 2 |
 
@@ -157,6 +164,11 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | M11-RECALL | Real-word error recall, shipped config | **64.58%** | 45,867 injected errors, test slice sha `9fc528ae…` |
 | M11-FALSE | Real-word false-alarm rate on untouched text | **0.26%** | 69,494 positions, same slice — control: a permissive detector scores 15.08% |
 | M11-COST | One real-word check | 3.7 µs | 20,000 calls, **JVM on the build host — NOT a device number** |
+| L1-ADAPT | Adaptive next-word, shipped config, vs static on the identical split | **+0.57 top-1 (+333), +0.45 top-3 (+262)**; offer rate 88.68% → 88.78% | 58,343 positions, 120 pseudo-users, slice `d8177a78…` |
+| L1-COLD | Cold start | +0.00 at 0 sentences of history, +0.14 at 10, +0.57 at 40 | same slice |
+| L1-PROTECT | What the once-seen protection costs | −0.32 top-1, −0.39 top-3 vs `minimumSessions=1` | same slice — **the cheaper setting is not shipped** |
+| L1-WITHHELD | Share of learned pairs that are eligible to be suggested | **5.8%** (mean 52 of 888 per pseudo-user) | 120 pseudo-users |
+| L1-OOV | Share of learned pairs touching the out-of-lexicon sentinel | 8.3% | 106,545 pairs |
 | M12-SIZE | Release artifact | APK 5,161,766 B; AAB 5,940,182 B | R8 cut DEX from 28,527,620 to 1,922,156 B. Assets are 3,023,216 B, of which the bigram table is 1,849,636 B |
 
 ## FAILED
@@ -225,6 +237,9 @@ recorded here. What follows is what a human watching the screen can attest to, a
 | M10-STRIP | Whether a suggestion has ever been tapped | A device |
 | M11-EDIT | The non-adjacent replacement — deleting to the cursor and committing a rewritten span — against a **real** `InputConnection` | A device. The span arithmetic is unit-tested; the Binder round-trip is not. |
 | M12-RELOAD | Whether the personal dictionary reload in `onStartInput` picks up a word added in Settings while the IME is running | A device with both components live |
+| L1-KEYSTORE | That two Keystore aliases really are independent on hardware, and that deleting one leaves the other usable | A device. The JVM test proves the property the aliases exist for; the Keystore lookup itself has been NOT RUN since M6. |
+| L1-SWITCH | Whether the learning switch, the status count and "forget what you learned" behave on screen | A device |
+| L1-DEBOUNCE | Whether a 3-second debounced encrypted write actually stays off the input path | A device. The interval is a judgement, not a measurement. |
 
 ### Requires operator action
 
@@ -248,3 +263,5 @@ recorded here. What follows is what a human watching the screen can attest to, a
 | M11-BASERATE | How often real Hebrew typing produces an error **inside** the confusion inventory | Needs a corpus of genuine human errors. Without it, 64.58% recall answers only "given the error is one this detector can express", and no precision figure can be computed from a 0.26% false-alarm rate. |
 | M11-KTIV-PAIR | Whether the `ו`/`י` pair is worth including | Available as `HebrewConfusions.KTIV_MALE` and **not measured**. It is the largest source of real-word pairs and mostly not a confusion at all. |
 | M12-PERSONAL-RANK | Whether ranking personal words above lexicon words is right | No corpus of personal dictionaries. Recorded as a design decision with no measurement behind it. |
+| L1-REALUSER | What adaptive learning is worth to **a person**, as opposed to a block of encyclopedia sentences | No corpus of one person's typing exists here. The pseudo-user protocol is a substitute and its central limitation — a Wikipedia article is not a person — is stated in `docs/LEARNING_MEASUREMENTS.md` rather than argued away. The **direction** of the bias is UNVERIFIED. |
+| L1-NOTICEABLE | Whether +0.57 points of top-1 is a difference anyone would notice | Roughly one extra correct first suggestion per 175 words. Needs real users; not simulable. |

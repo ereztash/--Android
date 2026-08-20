@@ -43,6 +43,9 @@ network permission, and three gates keep it that way.
 > as a suggestion engine entirely: no reading the surrounding text, no suggestions, no
 > autocorrect, no learning, no history. It types the characters and nothing else.
 >
+> Name and address fields are in between: you still get suggestions there, but nothing from them
+> is ever remembered.
+>
 > Name and address fields are treated in between: you still get suggestions, but nothing from
 > them is ever memorised.
 >
@@ -72,7 +75,23 @@ network permission, and three gates keep it that way.
 > with a key held in the Android Keystore, and you can delete every one of them — and the key —
 > in a single tap.
 >
-> Nothing is ever added automatically. The keyboard does not learn from what you type.
+> Nothing is ever added automatically.
+>
+> **If you want it to learn — and only if you say so**
+>
+> There is a switch in settings, off until you turn it on, that lets the keyboard notice which
+> words you tend to put next to each other and order its suggestions accordingly.
+>
+> What it counts stays on this phone, encrypted, and there is nowhere for it to go: this app has
+> no internet permission.
+>
+> It never stores what you wrote — only how often one word followed another, as numbers. A word
+> it does not recognise is recorded as "something unknown", never as letters, so a name or a
+> code you type is not kept even in encrypted form. It never learns in password, payment, email,
+> phone, name or address fields. And something you typed only once is never suggested back to
+> you: a pair has to come back in a later message before the keyboard will offer it.
+>
+> One tap forgets all of it, along with the key that unlocks it.
 >
 > **Open about what it does**
 >

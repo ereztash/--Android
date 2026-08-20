@@ -27,8 +27,11 @@ package com.hebrewime.core.learning
  *
  * **The cost is real and is not hidden: this layer will never learn your friends' names.** The
  * personal dictionary is the user-initiated path for that, it already feeds completions, and it
- * asks first. Measured, [OOV] participates in a large share of learned pairs; the number is in
- * `docs/LEARNING_MEASUREMENTS.md`.
+ * asks first.
+ *
+ * Measured on the test slice, **8.3% of learned pairs touch the sentinel** — smaller than it
+ * feels like it should be, because Hebrew Wikipedia is mostly in-lexicon. Real phone typing has
+ * more names and handles in it, so the real share is higher by an amount that is NOT MEASURED.
  *
  * ### Eligibility is not the same as knowledge
  * [record] counts a pair immediately. [logCountOf] refuses to *report* it until it has been
@@ -221,10 +224,13 @@ class UserNgramModel(
          *
          * At 16 bytes per entry in the serialized form that is 640 KB before compression, and
          * roughly 3 MB of `HashMap` overhead resident — the same order as the shipped bigram
-         * table's 2.95 MiB, which the app already carries. Measured against the simulated-user
-         * protocol, a pseudo-user producing 80 sentences generates far fewer than this, so the
-         * cap is a bound on pathological use rather than a limit anyone reaches normally; the
-         * observed distribution is in `docs/LEARNING_MEASUREMENTS.md`.
+         * table's 2.95 MiB, which the app already carries.
+         *
+         * Measured: a pseudo-user producing 80 sentences learns a mean of 888 distinct pairs
+         * and at most 1,341, which is **3.4% of this cap**. So it bounds pathological use
+         * rather than normal use, and `LearningShapeTest` fails if a simulated user ever
+         * reaches it — because at that point the reported accuracy would silently include
+         * eviction effects.
          */
         const val DEFAULT_CAPACITY: Int = 40_000
 

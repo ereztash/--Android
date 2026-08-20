@@ -38,7 +38,21 @@ claim that GATE-NET-1, GATE-NET-2 and GATE-NET-3 exist to keep true on every pus
 | Photos / videos / audio / files | No | No | Not accessed |
 | App activity / diagnostics | No | No | No analytics, no crash reporting, no telemetry of any kind |
 
-### The one thing the app stores
+### Two things the app stores
+
+Until adaptive learning existed this section said "the one thing". The build spec also said the
+keyboard would never learn passively from keystrokes. **The operator has explicitly approved
+changing that**, and it is changed here rather than left as a stale promise the code no longer
+keeps — a document that is out of date in the app's favour is the failure mode this project
+takes most seriously.
+
+What has **not** changed is the declaration itself. Both stores are processed and kept locally,
+so under the rule quoted above neither requires disclosure. That answer stays honest only while
+the app genuinely has no way to send anything, and **it becomes false the instant any SDK with
+telemetry enters the build** — which is what GATE-NET-1, GATE-NET-2 and GATE-NET-3 exist to
+prevent on every push.
+
+### 1. The personal dictionary
 
 The **personal dictionary**: single words the user typed into the settings screen themselves.
 
@@ -49,14 +63,46 @@ The **personal dictionary**: single words the user typed into the settings scree
 - **Deletable in one action**, which destroys the Keystore key as well as the file, so the
   stored bytes become unopenable by anyone including this app.
 
-Since M12 those words also affect typing: the keyboard stops calling them misspellings and
-offers them as completions. That is the point of the feature, and it changes nothing about
+Those words also affect typing: the keyboard stops calling them misspellings and offers them as
+completions. That is the point of the feature, and it changes nothing about
 where the data lives — the words are read from the same encrypted file into memory, and never
 sent anywhere, because the app has no way to send anything.
 
-Under the rule quoted above this is local processing and does **not** require disclosure. It is
-described here, and in the app's own settings screen, because the user should know what is
-stored regardless of what a form requires.
+### 2. What the keyboard has learned about how you write
+
+**Off by default.** Nothing is learned, stored or read unless the user turns it on in settings.
+That default is what lets the store listing say this keyboard does not learn from your typing,
+without an asterisk, for everyone who never opens that screen.
+
+When it is on, the app stores **counts over pairs of word ids** — how often one word followed
+another — and nothing else:
+
+- **It cannot store what you wrote.** The persisted record is four integers:
+  `(firstWordId, secondWordId, count, sessions)`. There is no encoder in the codec that accepts
+  a `String` or a `CharSequence`, so a sentence or a keystroke log is not something the code
+  declines to write; it is something it has no way to write. `GATE-LEARN-1` audits that on every
+  push, with a positive control that plants a text-accepting encoder and must go red.
+- **A word not in the dictionary is stored as a single sentinel id**, never as characters. A
+  name, a handle, an address or a code the user types is therefore recorded as "something
+  unknown appeared here" and can never be surfaced, because the app never held its letters. The
+  cost is that this feature will never learn your friends' names; the personal dictionary above
+  is the user-initiated path for that.
+- **A pair seen only once is never suggested back.** Eligibility requires the pair to reappear in
+  a *separate* session — a later field, not a repetition inside one message. Measured, **94.2% of
+  what is learned is never eligible to be suggested**; see
+  [`docs/LEARNING_MEASUREMENTS.md`](LEARNING_MEASUREMENTS.md).
+- **It never learns in a field it should not.** Password, payment, email, URI, phone and
+  OTP-shaped fields are excluded, and so are person-name and postal-address fields, which still
+  get suggestions but are never memorised. `GATE-LEARN-2` checks statically that the single
+  learning call site is guarded, with a control that plants an unguarded one.
+- Stored **encrypted with AES-GCM** under a Keystore-backed key, with a **different key alias**
+  from the personal dictionary — so "forget what you learned" and "delete my dictionary" destroy
+  one each and never both.
+- **Deletable in one action**, which destroys the key as well as the file.
+
+Under the rule quoted above both of these are local processing and do **not** require
+disclosure. They are described here, and in the app's own settings screen, because the user
+should know what is stored regardless of what a form requires.
 
 ### What is held in memory, and never written down
 

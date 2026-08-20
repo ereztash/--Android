@@ -34,6 +34,12 @@ limits are stated at the bottom of each measurements document rather than left t
 
 **Nothing is ever replaced automatically.** Every correction is a tap.
 
+It can also learn how *you* write — counts of which words you put next to each other, stored
+encrypted on the phone. **Off by default**, worth +0.57 points of top-1 next-word accuracy under
+a simulated-user protocol whose limits are stated, and built so that 94.2% of what it learns is
+never eligible to be suggested back. See
+[docs/LEARNING_MEASUREMENTS.md](docs/LEARNING_MEASUREMENTS.md).
+
 ## The rule this repo is built around
 
 > A gate that has never failed has not been shown to be a gate.
@@ -63,7 +69,7 @@ GATE-CRYPTO-1    PASS     control red (FAIL)   forbidden_api=50
 GATE-DENOM-1     PROVEN   control red (PASS-PARTIAL)
 ```
 
-16 gates, 180 JVM tests. **Status: [NOT RELEASE-READY](docs/RELEASE_READINESS.md)** — nothing
+18 gates, 214 JVM tests. **Status: [NOT RELEASE-READY](docs/RELEASE_READINESS.md)** — nothing
 has ever run on an Android device, and the release artifact is unsigned.
 
 Two of the sixteen — `GATE-LEX-2` and `GATE-LEX-1`'s reproducibility detector — need the 37 MB
@@ -149,6 +155,9 @@ docs/     VERIFICATION.md, LICENSES.md, OPERATOR_NOTICES.md, QA_MATRIX.md, miles
 - **[docs/PREDICTION_MEASUREMENTS.md](docs/PREDICTION_MEASUREMENTS.md)** — completion and
   next-word accuracy, measured on a corpus **proven** disjoint from the language model's
   training data by a script that refuses to write when the byte ranges intersect.
+- **[docs/LEARNING_MEASUREMENTS.md](docs/LEARNING_MEASUREMENTS.md)** — adaptive learning: what
+  it is worth, what the once-seen protection costs, and why the interpolation weight is not the
+  one that scored best.
 - **[docs/CONFUSION_MEASUREMENTS.md](docs/CONFUSION_MEASUREMENTS.md)** — `אם` vs `עם`: recall
   and false alarms together, thresholds chosen on a dev slice that shares no sentence with the
   slice they were reported against, and the harness bug that nearly settled the architecture
