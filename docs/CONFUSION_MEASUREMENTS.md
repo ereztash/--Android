@@ -473,3 +473,61 @@ Additional conditions, so that "it passed" cannot be manufactured:
   budget are not negotiable for this.
 - **A failure is a result.** The 33-point ceiling is proven; that a *compact* table can capture
   a useful part of it is not, and this rule exists precisely because those are different claims.
+
+
+## D1 VERDICT: FAILED, and the reason is structural
+
+Distillation into a shipped lookup table does not work. Not "does not work at this budget" —
+does not work.
+
+### Why blindness is where it is
+
+Of the 10,542 blind positions on `confusion_test`:
+
+| | count | share |
+|---|---|---|
+| the pair exists but was **pruned** at count 1–4 | 5,637 | 53.5% |
+| the corpus contains it **nowhere at all** | 4,905 | 46.5% |
+
+So barely half is even addressable by restoring pruned counts, and those pruned pairs number
+**6,168,534** — 23 MiB at nine bytes each even when restricted to the top 500 confusable forms,
+against 576,703 bytes of asset budget. Forty times over.
+
+### And capping it does not rescue it
+
+| table | entries | size | blind positions covered |
+|---|---|---|---|
+| top 100 forms × 200 neighbours | 20,000 | 176 KB | 53 / 10,542 — **0.5%** |
+| top 300 × 200 | 60,000 | 527 KB | 191 — **1.8%** |
+| top 300 × 400 | 120,000 | 1,055 KB | 323 — 3.1% |
+| top 1,000 × 200 | 200,000 | 1,758 KB | 574 — 5.4% |
+
+The largest table that fits reaches 1.8%. Three times over budget reaches 5.4%.
+
+### The reason, which is the actually useful output of D1
+
+**Blindness lives in the long tail, and a lookup table covers the head.** Those are the same
+sentence. A position is blind precisely because its context is rare; the frequent contexts have
+counts and were never blind. Enlarging a memorisation table walks *down* the frequency curve,
+which is where the returns are worst by construction.
+
+The 33-point ceiling DictaBERT demonstrated is real and is **not reachable by memorisation**.
+BERT reaches it by *generalising* — it has never seen most of those exact contexts either. That
+is the capability a count table structurally lacks, and no amount of budget changes it.
+
+**This is the finding.** It closes a direction that looked obviously right, and it cost two
+measurements rather than a week of building a table that would have covered 1.8%.
+
+### What remains open
+
+- **A small neural student.** Distil DictaBERT into a few-hundred-KB model that *generalises*
+  rather than memorises. This is the only path measured to be capable of the ceiling. It needs
+  an on-device runtime (TFLite or ONNX, several MB), per-keystroke inference inside the latency
+  budget, and real ML work. Unlike the table, it is not ruled out — it is unquantified.
+- **Feature-based, not example-based.** A tiny model over character n-gram features of the
+  neighbours would generalise somewhat at a fraction of the size. Cheaper to try, smaller
+  ceiling, entirely unmeasured.
+- **Accept 64.58%.** Now a known distance from a known ceiling, rather than a number with no
+  context, which is worth more than the figure alone.
+
+None of these is started. D1 stopped where its rule said to stop.
