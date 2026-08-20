@@ -27,8 +27,13 @@ object PredictionDescriptions {
         SuggestionKind.COMPLETION -> "${prediction.word}, completion"
         SuggestionKind.CORRECTION -> "${prediction.word}, correction"
         SuggestionKind.NEXT_WORD -> "${prediction.word}, next word"
+        // The one kind that changes text the user cannot see under the cursor, so it is the
+        // one kind whose description has to name what it would replace.
+        SuggestionKind.REAL_WORD_ERROR ->
+            "${prediction.word}, replaces ${prediction.replaces.orEmpty()} earlier in the " +
+                "sentence"
     }
 
-    /** Every kind this object can name, so a test can state a denominator of 3. */
+    /** Every kind this object can name, so a test can state a denominator. */
     val describedKinds: Set<SuggestionKind> get() = SuggestionKind.entries.toSet()
 }

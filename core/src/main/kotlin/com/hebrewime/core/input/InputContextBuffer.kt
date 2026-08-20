@@ -194,6 +194,73 @@ class InputContextBuffer(
             return word.ifEmpty { null }
         }
 
+    /**
+     * The last [count] completed words, most recent first, stopping at a sentence boundary.
+     *
+     * Real-word error detection needs a word on **each** side of the one being checked, and the
+     * word being checked is therefore never the one the user is typing — it is the second most
+     * recent completed word, whose right-hand neighbour is the most recent one. Measured, that
+     * is worth 19.6 points of recall over checking with left context alone; see
+     * `docs/CONFUSION_MEASUREMENTS.md`.
+     *
+     * Returns fewer than [count] words, possibly none, when the text runs out or a boundary
+     * intervenes. Empty when [precedingContextKnown] is false: the same rule as [previousWord],
+     * for the same reason.
+     */
+    fun completedWords(count: Int): List<String> {
+        if (!precedingContextKnown || count <= 0) return emptyList()
+        val out = ArrayList<String>(count)
+        var end = wordStart.coerceIn(0, before.length)
+        while (out.size < count) {
+            while (end > 0 && !isWordChar(before[end - 1])) {
+                val c = before[end - 1]
+                if (c in SENTENCE_BOUNDARY_CHARS) return out
+                if (c == '-' && end >= 2 && before[end - 2] == '-') return out
+                end--
+            }
+            if (end == 0) return out
+            var start = end
+            while (start > 0 && isWordChar(before[start - 1])) start--
+            out.add(before.substring(start, end))
+            end = start
+        }
+        return out
+    }
+
+    /**
+     * Everything from the start of the [n]th most recent completed word up to the cursor, or
+     * null when that word is not known.
+     *
+     * This is what makes it possible to replace a word that is **not** adjacent to the cursor.
+     * `InputConnection` can only delete a run immediately before the cursor, so correcting
+     * `אם` in `דיברתי אם המורה ` means deleting `אם המורה ` and committing `עם המורה ` — one
+     * batched edit, with the intervening text preserved exactly as the user typed it rather
+     * than reconstructed from a model of it.
+     *
+     * @param n 1 is the most recent completed word.
+     */
+    fun tailFromCompletedWord(n: Int): String? {
+        if (!precedingContextKnown || n <= 0) return null
+        var end = wordStart.coerceIn(0, before.length)
+        var start = -1
+        var found = 0
+        while (found < n) {
+            while (end > 0 && !isWordChar(before[end - 1])) {
+                val c = before[end - 1]
+                if (c in SENTENCE_BOUNDARY_CHARS) return null
+                if (c == '-' && end >= 2 && before[end - 2] == '-') return null
+                end--
+            }
+            if (end == 0) return null
+            start = end
+            while (start > 0 && isWordChar(before[start - 1])) start--
+            found++
+            end = start
+        }
+        if (start < 0) return null
+        return before.substring(start)
+    }
+
     private fun isWordChar(c: Char): Boolean =
         HebrewText.isHebrewLetter(c) || HebrewText.isCombiningMark(c)
 

@@ -83,6 +83,24 @@ class BigramModel private constructor(
 
     fun hasContinuations(firstWord: Int): Boolean = groupIndexOf(firstWord) >= 0
 
+    /**
+     * Smallest log-count in the table, or 0 when it is empty.
+     *
+     * Not a curiosity: the builder prunes at a minimum count, and the encoding is
+     * `round(log2(count + 1) * 8)`, so this is the smallest evidence any stored pair can carry.
+     * Every threshold below it is the same rule — "the corpus saw this pair at all" — and a
+     * caller choosing a margin needs to know where that floor is rather than tuning underneath
+     * it and believing the number meant something. `BigramFloorTest` pins it.
+     */
+    fun minimumLogCount(): Int {
+        var min = Int.MAX_VALUE
+        for (b in continuationLog) {
+            val v = b.toInt() and 0xff
+            if (v < min) min = v
+        }
+        return if (min == Int.MAX_VALUE) 0 else min
+    }
+
     private fun groupIndexOf(firstWord: Int): Int {
         var lo = 0
         var hi = groupWord.size - 1

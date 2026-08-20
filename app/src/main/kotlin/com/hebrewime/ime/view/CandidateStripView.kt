@@ -26,6 +26,13 @@ import com.hebrewime.core.prediction.SuggestionKind
  * corrections to accessibility services — colour alone would carry the distinction only to a
  * sighted user with normal colour vision.
  *
+ * ### A real-word error names the word it would replace
+ * [SuggestionKind.REAL_WORD_ERROR] is the one kind that rewrites text **away from the cursor**
+ * — `אם` two words back, in a sentence the user has moved on from. Showing it as a bare word
+ * would ask someone to accept a change to something they cannot see, so its label carries the
+ * replaced word alongside the replacement: `עם (אם)`. The parenthesised original is what makes
+ * the tap predictable.
+ *
  * Holds no state that matters: the suggestions are pushed in by the service and the view is
  * destroyed and recreated on every configuration change.
  */
@@ -120,10 +127,12 @@ class CandidateStripView(context: Context) : View(context) {
             if (i == pressedIndex) {
                 canvas.drawRect(slot.left, 0f, slot.right, height.toFloat(), pressed)
             }
-            val paint =
-                if (slot.prediction.kind == SuggestionKind.CORRECTION) correctionLabel else label
+            val kind = slot.prediction.kind
+            val paint = if (
+                kind == SuggestionKind.CORRECTION || kind == SuggestionKind.REAL_WORD_ERROR
+            ) correctionLabel else label
             canvas.drawText(
-                slot.prediction.word,
+                labelOf(slot.prediction),
                 (slot.left + slot.right) / 2f,
                 baseline,
                 paint,
@@ -133,6 +142,14 @@ class CandidateStripView(context: Context) : View(context) {
             }
         }
     }
+
+    /** What is drawn for a candidate. See the class docs for why one kind is not just a word. */
+    private fun labelOf(prediction: Prediction): String =
+        if (prediction.kind == SuggestionKind.REAL_WORD_ERROR && prediction.replaces != null) {
+            "${prediction.word} (${prediction.replaces})"
+        } else {
+            prediction.word
+        }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (slots.isEmpty()) return false

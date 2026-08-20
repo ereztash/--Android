@@ -1,5 +1,6 @@
 package com.hebrewime.core.prediction
 
+import com.hebrewime.core.confusion.RealWordErrorDetector
 import com.hebrewime.core.correction.CorrectionEngine
 import com.hebrewime.core.correction.HebrewFrequency
 import com.hebrewime.core.correction.LexiconTrie
@@ -16,6 +17,16 @@ enum class SuggestionKind {
 
     /** The word is finished and this is what usually comes next. */
     NEXT_WORD,
+
+    /**
+     * An earlier word is spelled correctly and is still wrong for its sentence.
+     *
+     * `אם` where `עם` was meant. Distinct from [CORRECTION] because nothing about the word
+     * itself is wrong, because the evidence is the surrounding words rather than the letters,
+     * and because it replaces a word that is **not** under the cursor — see
+     * [Prediction.wordsBack].
+     */
+    REAL_WORD_ERROR,
 }
 
 data class Prediction(
@@ -24,7 +35,43 @@ data class Prediction(
     val kind: SuggestionKind,
     /** Higher is better. Only comparable within a [kind]. */
     val score: Double,
+    /**
+     * Which word this replaces. 0 is the word under the cursor; *n* is the *n*th most recent
+     * **completed** word.
+     *
+     * Non-zero only for [SuggestionKind.REAL_WORD_ERROR], and the caller must honour it: a
+     * suggestion applied to the wrong word rewrites text the user did not ask to change.
+     */
+    val wordsBack: Int = 0,
+    /**
+     * The word this replaces, when it is not the word under the cursor.
+     *
+     * Set only for [SuggestionKind.REAL_WORD_ERROR]. A suggestion that silently rewrites a word
+     * further up the sentence has to be able to say *which* word, or the strip is asking the
+     * user to accept a change they cannot see.
+     */
+    val replaces: String? = null,
 )
+
+/**
+ * What is known about the text around the cursor.
+ *
+ * Real-word error detection needs a word on each side of the one being checked, so the engine
+ * needs more than the immediately preceding word — but it must never *assume* more than it
+ * has. Missing entries are simply absent, and the engine does less rather than guessing.
+ */
+data class TypingContext(
+    /** What the user has typed of the word in progress. Empty means they just finished one. */
+    val current: String,
+    /**
+     * Completed words before it, **most recent first**. Empty when the preceding context is
+     * unknown — after a desync, in a field whose initial text was withheld, or at the start of
+     * a sentence.
+     */
+    val completed: List<String> = emptyList(),
+) {
+    val previous: String? get() = completed.firstOrNull()
+}
 
 /**
  * Completion, correction and next-word prediction over the same lexicon.
@@ -54,6 +101,12 @@ class PredictiveEngine(
     private val bigrams: BigramModel = BigramModel.EMPTY,
     private val corrections: CorrectionEngine,
     private val config: Config = Config(),
+    /**
+     * Finds words that are spelled correctly and still wrong. Optional, so an engine can be
+     * built without one — and so the M10 measurements can be reproduced exactly as they were
+     * taken, without M11 changing them.
+     */
+    private val realWordErrors: RealWordErrorDetector? = null,
 ) {
 
     data class Config(
@@ -154,7 +207,48 @@ class PredictiveEngine(
      *   start of a field, in which case next-word prediction is simply unavailable rather than
      *   guessed.
      */
-    fun predict(currentWord: String, previousWord: String?): List<Prediction> {
+    fun predict(currentWord: String, previousWord: String?): List<Prediction> =
+        predict(TypingContext(currentWord, listOfNotNull(previousWord)))
+
+    /**
+     * Suggestions for the current input position, given everything known about the context.
+     *
+     * A real-word error, when there is one, takes the first slot. It is the only kind here that
+     * asserts something is *wrong* with text the user has already written, and burying that
+     * behind two completions would mean the keyboard noticed and did not say so. It also
+     * replaces a word that is not under the cursor, so the caller must honour
+     * [Prediction.wordsBack].
+     */
+    fun predict(context: TypingContext): List<Prediction> {
+        val ordinary = predictCurrentWord(context.current, context.previous)
+        val flagged = realWordError(context) ?: return ordinary
+        return (listOf(flagged) + ordinary).take(config.limit)
+    }
+
+    /**
+     * Checks the **second** most recent completed word, whose neighbours are both known.
+     *
+     * Not the most recent one: at that position the right-hand neighbour has not been typed
+     * yet, and left context alone is worth 44.78% recall against 64.42% with both sides. One
+     * check per word, made once, at the moment the evidence is complete.
+     */
+    private fun realWordError(context: TypingContext): Prediction? {
+        val detector = realWordErrors ?: return null
+        val target = context.completed.getOrNull(1) ?: return null
+        val right = context.completed.getOrNull(0)
+        val left = context.completed.getOrNull(2)
+        val finding = detector.check(left, target, right) ?: return null
+        return Prediction(
+            word = finding.suggested,
+            wordIndex = finding.suggestedIndex,
+            kind = SuggestionKind.REAL_WORD_ERROR,
+            score = finding.advantage.toDouble(),
+            wordsBack = 2,
+            replaces = finding.typed,
+        )
+    }
+
+    private fun predictCurrentWord(currentWord: String, previousWord: String?): List<Prediction> {
         val word = HebrewText.stripPoints(currentWord)
         val previousIndex = previousWord
             ?.let { HebrewText.stripPoints(it) }

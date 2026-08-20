@@ -276,3 +276,118 @@ class PreviousWordTest {
         assertTrue(line.contains("|--"), "the builder also splits on --, and so must the buffer")
     }
 }
+
+/**
+ * The multi-word accessors that real-word error detection and its edit depend on.
+ *
+ * [InputContextBuffer.tailFromCompletedWord] is load-bearing for a **destructive** operation:
+ * the service deletes exactly what it returns and commits a rewritten version. An off-by-one
+ * here does not produce a bad suggestion, it eats a character of text the user typed.
+ *
+ * Denominator: 10 tests.
+ */
+class CompletedWordsTest {
+
+    @Test
+    fun returnsCompletedWordsMostRecentFirst() {
+        val b = InputContextBuffer()
+        b.reset("", 0)
+        b.onTextCommitted("אני הלכתי אם חבר ")
+        assertEquals(listOf("חבר", "אם", "הלכתי"), b.completedWords(3))
+        assertEquals(listOf("חבר", "אם", "הלכתי", "אני"), b.completedWords(4))
+    }
+
+    @Test
+    fun theWordBeingTypedIsNotCompleted() {
+        val b = InputContextBuffer()
+        b.reset("", 0)
+        b.onTextCommitted("אני הלכתי אם חב")
+        assertEquals("חב", b.currentWord)
+        assertEquals(listOf("אם", "הלכתי", "אני"), b.completedWords(3))
+    }
+
+    @Test
+    fun returnsFewerWordsRatherThanInventingThem() {
+        val b = InputContextBuffer()
+        b.reset("", 0)
+        b.onTextCommitted("שלום ")
+        assertEquals(listOf("שלום"), b.completedWords(3))
+    }
+
+    @Test
+    fun stopsAtASentenceBoundary() {
+        val b = InputContextBuffer()
+        b.reset("", 0)
+        b.onTextCommitted("ראשון שני. שלישי רביעי ")
+        assertEquals(
+            listOf("רביעי", "שלישי"), b.completedWords(4),
+            "the full stop ends the window; the bigram model never saw across one",
+        )
+    }
+
+    @Test
+    fun emptyWhenTheContextIsNotKnown() {
+        val b = InputContextBuffer()
+        b.reset(null, 40)
+        assertEquals(emptyList(), b.completedWords(3))
+
+        val desynced = InputContextBuffer()
+        desynced.reset("אני הלכתי אם חבר ", 17)
+        assertEquals(3, desynced.completedWords(3).size)
+        desynced.onSelectionUpdated(2, 2)
+        assertEquals(emptyList(), desynced.completedWords(3))
+    }
+
+    @Test
+    fun tailStartsAtTheChosenWordAndRunsToTheCursor() {
+        val b = InputContextBuffer()
+        b.reset("", 0)
+        b.onTextCommitted("דיברתי אם המורה ")
+        assertEquals("המורה ", b.tailFromCompletedWord(1))
+        assertEquals("אם המורה ", b.tailFromCompletedWord(2))
+        assertEquals("דיברתי אם המורה ", b.tailFromCompletedWord(3))
+    }
+
+    @Test
+    fun tailIncludesAPartiallyTypedWord() {
+        val b = InputContextBuffer()
+        b.reset("", 0)
+        b.onTextCommitted("דיברתי אם המורה של")
+        assertEquals(
+            "אם המורה של", b.tailFromCompletedWord(2),
+            "the edit has to carry the in-progress word over, not truncate it",
+        )
+    }
+
+    @Test
+    fun tailPreservesWhateverStandsBetweenTheWords() {
+        // The service commits this back verbatim. Anything lost here is text the user typed.
+        val b = InputContextBuffer()
+        b.reset("", 0)
+        b.onTextCommitted("דיברתי אם   המורה, ")
+        assertEquals("אם   המורה, ", b.tailFromCompletedWord(2))
+    }
+
+    @Test
+    fun tailIsNullWhenThereAreNotEnoughWords() {
+        val b = InputContextBuffer()
+        b.reset("", 0)
+        b.onTextCommitted("שלום ")
+        assertNull(b.tailFromCompletedWord(2))
+        assertNull(b.tailFromCompletedWord(9))
+    }
+
+    @Test
+    fun tailIsNullAcrossASentenceBoundaryAndWhenContextIsUnknown() {
+        val b = InputContextBuffer()
+        b.reset("", 0)
+        b.onTextCommitted("ראשון. שני שלישי ")
+        assertEquals("שני שלישי ", b.tailFromCompletedWord(2))
+        assertNull(b.tailFromCompletedWord(3), "reaching past the full stop must not silently "
+            + "return a span the model was never trained across")
+
+        val unknown = InputContextBuffer()
+        unknown.reset(null, 10)
+        assertNull(unknown.tailFromCompletedWord(1))
+    }
+}

@@ -2,6 +2,7 @@ package com.hebrewime.ime.correction
 
 import android.content.Context
 import androidx.tracing.Trace
+import com.hebrewime.core.confusion.RealWordErrorDetector
 import com.hebrewime.core.correction.CorrectionEngine
 import com.hebrewime.core.correction.HebrewFrequency
 import com.hebrewime.core.correction.LexiconTrie
@@ -10,6 +11,7 @@ import com.hebrewime.core.lexicon.HebrewLexicon
 import com.hebrewime.core.prediction.BigramModel
 import com.hebrewime.core.prediction.Prediction
 import com.hebrewime.core.prediction.PredictiveEngine
+import com.hebrewime.core.prediction.TypingContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -144,6 +146,11 @@ class CorrectionController(
                     // Defaults, whose bigramWeight was chosen from the sweep in
                     // docs/PREDICTION_MEASUREMENTS.md and not before it.
                     config = PredictiveEngine.Config(),
+                    // Real-word errors: `אם` where `עם` was meant. Costs no asset bytes --
+                    // confusion sets are generated from the lexicon on demand -- and reuses
+                    // the same bigram table. Its thresholds come from a dev slice that shares
+                    // no sentence with the slice they were then measured on.
+                    realWordErrors = RealWordErrorDetector(lexicon, bigrams),
                 )
                 loaded = Loaded(
                     lexiconWords = lexicon.size,
@@ -171,23 +178,21 @@ class CorrectionController(
      * Request suggestions for the current input position, cancelling any request still
      * outstanding.
      *
-     * @param currentWord the word in progress. Empty means the user just finished one, and the
-     *   answer is a next-word prediction rather than a completion.
-     * @param previousWord the completed word before it, or null when the preceding context is
-     *   not known — after a desync, or in a field whose initial text was withheld. Null means
-     *   next-word prediction is unavailable, not that it should be guessed.
+     * @param context what is known about the text around the cursor. Missing entries are
+     *   absent rather than guessed: `InputContextBuffer` reports nothing after a desync, in a
+     *   field whose initial text was withheld, or across a sentence boundary, and the engine
+     *   then simply does less.
      * @param onResult delivered on the main thread. Never called if the request is cancelled.
      */
     fun requestPredictions(
-        currentWord: String,
-        previousWord: String?,
+        context: TypingContext,
         allowed: Boolean,
         onResult: (List<Prediction>) -> Unit,
     ) {
         inFlight?.cancel()
         if (!allowed) {
             // A restricted field. Not "compute and discard" -- nothing is computed at all, so
-            // the words never reach the engine, the trie, or any allocation that outlives
+            // the context never reaches the engine, the trie, or any allocation that outlives
             // this call.
             onResult(emptyList())
             return
@@ -201,7 +206,7 @@ class CorrectionController(
         inFlight = scope.launch {
             Trace.beginSection(TRACE_SUGGEST)
             val result = try {
-                ready.predict(currentWord, previousWord)
+                ready.predict(context)
             } finally {
                 Trace.endSection()
             }

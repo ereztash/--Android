@@ -36,6 +36,9 @@ tasks.withType<Test>().configureEach {
     systemProperty("golden.dir", rootProject.file("lexicon/golden").absolutePath)
     systemProperty("bigram.file", rootProject.file("lexicon/assets/he_bigrams.bin.gz").absolutePath)
     systemProperty("eval.dir", rootProject.file("lexicon/eval").absolutePath)
+    // The confusion margin is swept on the dev slice and reported on the test slice, which
+    // share no sentence -- see scripts/slice_eval_corpus.py, which proves it before writing.
+    systemProperty("runConfusionSweep", project.findProperty("runConfusionSweep")?.toString() ?: "")
     // The correction measurement loads the whole lexicon, builds a trie over it and runs
     // thousands of queries. The default heap is not enough.
     maxHeapSize = "3g"

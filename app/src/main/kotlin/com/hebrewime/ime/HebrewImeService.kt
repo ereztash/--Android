@@ -13,6 +13,7 @@ import com.hebrewime.core.keyboard.KeyPressPlanner
 import com.hebrewime.core.keyboard.Layouts
 import com.hebrewime.core.prediction.Prediction
 import com.hebrewime.core.prediction.SuggestionKind
+import com.hebrewime.core.prediction.TypingContext
 import com.hebrewime.core.privacy.FieldDescriptor
 import com.hebrewime.core.privacy.SensitiveFieldPolicy
 import com.hebrewime.core.privacy.SessionStart
@@ -301,14 +302,20 @@ class HebrewImeService : InputMethodService() {
             candidateStrip?.setCandidates(emptyList())
             return
         }
-        val word = contextBuffer.currentWord
-        val previous = contextBuffer.previousWord
-        if (word.isEmpty() && previous == null) {
+        // Three completed words: the one being checked for a real-word error, and one on each
+        // side of it. `completedWords` stops at a sentence boundary and returns nothing at all
+        // when the preceding context is unknown, so a short list here means "less is known",
+        // never "assume the rest".
+        val context = TypingContext(
+            current = contextBuffer.currentWord,
+            completed = contextBuffer.completedWords(CONTEXT_WORDS),
+        )
+        if (context.current.isEmpty() && context.completed.isEmpty()) {
             correction.cancelOutstanding()
             candidateStrip?.setCandidates(emptyList())
             return
         }
-        correction.requestPredictions(word, previous, allowed = session.maySuggest) { predicted ->
+        correction.requestPredictions(context, allowed = session.maySuggest) { predicted ->
             candidateStrip?.setCandidates(predicted)
         }
     }
@@ -330,6 +337,11 @@ class HebrewImeService : InputMethodService() {
     private fun applySuggestion(prediction: Prediction) {
         val ic = currentInputConnection ?: return
         val original = contextBuffer.currentWord
+
+        if (prediction.wordsBack > 0) {
+            applyToEarlierWord(prediction, ic)
+            return
+        }
 
         if (prediction.kind == SuggestionKind.NEXT_WORD) {
             // Offered only when the current word is empty. If something has been typed since
@@ -355,6 +367,42 @@ class HebrewImeService : InputMethodService() {
         }
         contextBuffer.onCharsDeleted(original.length)
         contextBuffer.onTextCommitted(prediction.word)
+        lastReplacement = null
+        candidateStrip?.setCandidates(emptyList())
+    }
+
+    /**
+     * Replace a word that is **not** under the cursor, for a real-word error.
+     *
+     * `InputConnection` can only delete a run immediately before the cursor, so correcting
+     * `אם` in `דיברתי אם המורה ` means deleting `אם המורה ` and committing `עם המורה `. The
+     * text between the corrected word and the cursor is carried over **verbatim** from the
+     * buffer rather than reconstructed, so whatever the user typed there — spacing,
+     * punctuation, a word this IME has no opinion about — survives the edit untouched.
+     *
+     * Bails out rather than guessing whenever the buffer's view has moved on: if the word at
+     * that position is no longer the one the finding was about, the suggestion describes text
+     * that is no longer there, and applying it would rewrite something the user did not ask to
+     * change.
+     */
+    private fun applyToEarlierWord(prediction: Prediction, ic: InputConnection) {
+        val replaced = prediction.replaces
+        val tail = contextBuffer.tailFromCompletedWord(prediction.wordsBack)
+        if (replaced == null || tail == null || !tail.startsWith(replaced)) {
+            candidateStrip?.setCandidates(emptyList())
+            return
+        }
+        val rewritten = prediction.word + tail.substring(replaced.length)
+
+        ic.beginBatchEdit()
+        try {
+            ic.deleteSurroundingTextInCodePoints(tail.codePointCount(), 0)
+            ic.commitText(rewritten, 1)
+        } finally {
+            ic.endBatchEdit()
+        }
+        contextBuffer.onCharsDeleted(tail.length)
+        contextBuffer.onTextCommitted(rewritten)
         lastReplacement = null
         candidateStrip?.setCandidates(emptyList())
     }
@@ -386,6 +434,16 @@ class HebrewImeService : InputMethodService() {
          * 2000 ms, which is banned by GATE-API-1.
          */
         const val MAX_INITIAL_CONTEXT = 2048
+
+        /**
+         * How many completed words to hand the engine.
+         *
+         * Three, because real-word error detection checks the middle of a window: the word
+         * before the one being checked, the word itself, and the word after it. Asking for
+         * more would cost a scan for context nothing uses — the bigram model's entire memory
+         * is two words.
+         */
+        const val CONTEXT_WORDS = 3
 
         /**
          * An input type that matches no known class, so [SensitiveFieldPolicy] fails closed.

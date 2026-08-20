@@ -93,14 +93,47 @@
   ],
   "sample": {
     "file": "lexicon/eval/hewiki_eval_sample.txt.gz",
-    "why": "The full corpus is 28 MB and is not committed; this deterministic slice is what the tests read. Re-cut it with scripts/slice_eval_corpus.py after rebuilding the corpus.",
-    "rule": "sentences of 4..40 tokens, every 37th, first 6000",
-    "parent_sha256": "a1c14bb99932d38d8426b9455ca72385201db9ce2e197dca4b72cd82c55568da",
+    "offset": 0,
+    "used_by": "M10 prediction: the weight sweep, the ordering sweep, and the locked accuracy floors.",
     "sentences": 6000,
     "tokens": 85840,
-    "eligible_in_parent": 732360,
-    "sentences_in_parent": 799319,
     "sha256": "cedfb5be743bc15c2b3db381011e2c74f31f512e9373ed4038f198dcb4b3d299",
     "uncompressed_bytes": 884788
+  },
+  "slices": {
+    "why": "The full corpus is 28 MB and is not committed; these deterministic slices are what the tests read. Re-cut them with scripts/slice_eval_corpus.py after rebuilding the corpus.",
+    "rule": "sentences of 4..40 tokens, every 37th from a per-slice offset, first 6000",
+    "parent_sha256": "a1c14bb99932d38d8426b9455ca72385201db9ce2e197dca4b72cd82c55568da",
+    "eligible_in_parent": 732360,
+    "sentences_in_parent": 799319,
+    "pairwise_overlaps": 0,
+    "proven_by": "scripts/slice_eval_corpus.py compares the index sets and refuses to write when any two slices intersect",
+    "sample": {
+      "file": "lexicon/eval/hewiki_eval_sample.txt.gz",
+      "offset": 0,
+      "used_by": "M10 prediction: the weight sweep, the ordering sweep, and the locked accuracy floors.",
+      "sentences": 6000,
+      "tokens": 85840,
+      "sha256": "cedfb5be743bc15c2b3db381011e2c74f31f512e9373ed4038f198dcb4b3d299",
+      "uncompressed_bytes": 884788
+    },
+    "confusion_dev": {
+      "file": "lexicon/eval/hewiki_confusion_dev.txt.gz",
+      "offset": 1,
+      "used_by": "M11 real-word errors: the margin sweep. Thresholds are chosen here and nowhere else.",
+      "sentences": 6000,
+      "tokens": 87247,
+      "sha256": "7f6986d675742f95aa6feb16de127d8874fb565fd9ac5d2a2586cf83eb44bff6",
+      "uncompressed_bytes": 896487
+    },
+    "confusion_test": {
+      "file": "lexicon/eval/hewiki_confusion_test.txt.gz",
+      "offset": 2,
+      "used_by": "M11 real-word errors: the reported recall and false-alarm numbers, measured once with the thresholds already fixed.",
+      "sentences": 6000,
+      "tokens": 86882,
+      "sha256": "9fc528ae547f0bfab6d2893383d388a007abd7dbaedcb20e266f934dbc0d32ff",
+      "uncompressed_bytes": 891742
+    }
   }
 }
