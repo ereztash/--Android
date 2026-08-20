@@ -30,10 +30,23 @@ object KeystoreKeyProvider {
     private const val ANDROID_KEYSTORE = "AndroidKeyStore"
     const val KEY_ALIAS = "com.hebrewime.personal_dictionary.v1"
 
+    /**
+     * The learned n-gram model's key. **Deliberately a different alias.**
+     *
+     * The two stores are different promises to the user. "Delete my dictionary" must not
+     * silently destroy what the keyboard learned, and "forget what you learned" must not
+     * silently destroy the words someone typed in by hand. Sharing one alias would make each
+     * wipe secretly destroy the other, because [delete] removes the key and the key is what
+     * makes the ciphertext readable.
+     *
+     * `LearningWipeTest` asserts that independence rather than trusting this comment.
+     */
+    const val LEARNING_KEY_ALIAS = "com.hebrewime.user_ngrams.v1"
+
     /** Fetch the key, creating it on first use. */
-    fun getOrCreate(): SecretKey {
+    fun getOrCreate(alias: String = KEY_ALIAS): SecretKey {
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
-        (keyStore.getEntry(KEY_ALIAS, null) as? KeyStore.SecretKeyEntry)?.let {
+        (keyStore.getEntry(alias, null) as? KeyStore.SecretKeyEntry)?.let {
             return it.secretKey
         }
         val generator = KeyGenerator.getInstance(
@@ -41,7 +54,7 @@ object KeystoreKeyProvider {
         )
         generator.init(
             KeyGenParameterSpec.Builder(
-                KEY_ALIAS,
+                alias,
                 KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
             )
                 .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
@@ -52,8 +65,8 @@ object KeystoreKeyProvider {
         return generator.generateKey()
     }
 
-    fun exists(): Boolean =
-        KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }.containsAlias(KEY_ALIAS)
+    fun exists(alias: String = KEY_ALIAS): Boolean =
+        KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }.containsAlias(alias)
 
     /**
      * Destroy the key.
@@ -62,8 +75,8 @@ object KeystoreKeyProvider {
      * leaves bytes on flash that no app can reliably overwrite; deleting the key makes those
      * bytes permanently unopenable, including by this app.
      */
-    fun delete() {
+    fun delete(alias: String = KEY_ALIAS) {
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
-        if (keyStore.containsAlias(KEY_ALIAS)) keyStore.deleteEntry(KEY_ALIAS)
+        if (keyStore.containsAlias(alias)) keyStore.deleteEntry(alias)
     }
 }

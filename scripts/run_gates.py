@@ -31,6 +31,7 @@ def _gates(strict: bool) -> list[dict]:
     xml = os.path.join(ROOT, "scripts", "check_xml.py")
     trace = os.path.join(ROOT, "scripts", "check_trace_sections.py")
     size = os.path.join(ROOT, "scripts", "check_size.py")
+    learn = os.path.join(ROOT, "scripts", "check_learning.py")
     apk = os.path.join(ROOT, "scripts", "check_apk.py")
     debug_apk = os.path.join(ROOT, "app", "build", "outputs", "apk", "debug", "app-debug.apk")
     netc_apk = os.path.join(ROOT, "app", "build", "outputs", "apk", "netcontrol",
@@ -166,6 +167,23 @@ def _gates(strict: bool) -> list[dict]:
                         "--inject-defect", "service", "--json"],
             "control_desc": "the IME service declaration invalidated in the release manifest",
             "requires": [release_apk],
+        },
+        {
+            "id": "GATE-LEARN-1",
+            "what": "the learned model persists counts over integer ids and nothing that can "
+                    "hold text",
+            "real": [PY, learn, "--root", ROOT, "--json"] + s,
+            "control": [PY, learn, "--root", ROOT, "--inject-defect", "schema", "--json"],
+            "control_desc": "a planted encoder that accepts a String -- the change that turns "
+                            "a count store into a keystroke log",
+        },
+        {
+            "id": "GATE-LEARN-2",
+            "what": "learning happens in exactly one place, guarded by session.mayLearn",
+            "real": [PY, learn, "--root", ROOT, "--json"] + s,
+            "control": [PY, learn, "--root", ROOT, "--inject-defect", "guard", "--json"],
+            "control_desc": "a planted second call site with no guard: it compiles, it looks "
+                            "reasonable, and it learns from password fields",
         },
         {
             "id": "GATE-SIZE-1",

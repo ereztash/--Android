@@ -193,6 +193,10 @@ class HebrewImeService : InputMethodService() {
 
     override fun onFinishInput() {
         super.onFinishInput()
+        // One focused field is one learning session. That is what makes
+        // UserNgramModel.minimumSessions mean "the user came back to this pair later" rather
+        // than "the user repeated it in one message".
+        correction.endLearningSession()
         contextBuffer.clear()
         correction.cancelOutstanding()
         candidateStrip?.setCandidates(emptyList())
@@ -228,6 +232,9 @@ class HebrewImeService : InputMethodService() {
     private fun handleKey(key: Key) {
         val commands = KeyPressPlanner.plan(key, contextBuffer, shifted)
         val ic = currentInputConnection ?: return
+        // Captured before the edit so a word boundary can be detected afterwards: a word that
+        // was in progress and is no longer is a word the user finished.
+        val wordInProgress = contextBuffer.currentWord
 
         // One batch per press, so a multi-command press is a single editor update rather than
         // a visible flicker. The return values of begin/endBatchEdit are meaningless and are
@@ -238,7 +245,41 @@ class HebrewImeService : InputMethodService() {
         } finally {
             ic.endBatchEdit()
         }
+        learnCompletedWord(wordInProgress)
         refreshSuggestions()
+    }
+
+    /**
+     * THE LEARNING BOUNDARY.
+     *
+     * This is the only place in the app that feeds the adaptive layer, and it is guarded by
+     * `session.mayLearn` — the flag `SensitiveFieldPolicy` has exposed since M4 and nothing
+     * read until now. `mayLearn` is **stricter than `maySuggest`**: it is false for every
+     * restricted field, and additionally false for person-name and postal-address fields, which
+     * still get suggestions but are never memorised. Writing those into a persistent model
+     * would turn a transient field into a stored record of who someone knows and where they
+     * live.
+     *
+     * The second condition, the user's opt-in, is checked inside
+     * [CorrectionController.learn]. The two are deliberately in different places: an opt-in
+     * that silently covered password fields would be worthless, and a field policy applied to
+     * people who never opted in would be a broken promise. Either one being false is enough.
+     *
+     * A pair is learned only when a word actually completes — [wordInProgress] was non-empty
+     * and the buffer's current word is now empty — so mid-word keystrokes teach nothing and a
+     * word abandoned by backspacing teaches nothing either.
+     *
+     * `GATE-LEARN-2` asserts statically that this guard exists and that no other file calls
+     * `learn`.
+     */
+    private fun learnCompletedWord(wordInProgress: String) {
+        if (!session.mayLearn) return
+        if (wordInProgress.isEmpty() || contextBuffer.currentWord.isNotEmpty()) return
+        val completed = contextBuffer.completedWords(2)
+        if (completed.size < 2) return
+        // completedWords is most-recent-first, so this is (the word before, the word just
+        // finished) -- the order the model is keyed on.
+        correction.learn(completed[1], completed[0])
     }
 
     private fun execute(command: EditCommand, ic: InputConnection) {

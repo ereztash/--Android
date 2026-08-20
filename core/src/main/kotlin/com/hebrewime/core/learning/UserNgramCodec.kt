@@ -33,7 +33,27 @@ object UserNgramCodec {
     const val VERSION: Byte = 1
     const val BYTES_PER_PAIR = 16
 
-    class CorruptedException(message: String) : Exception(message)
+    /** Why a blob was refused. Enumerated, not free text — see [CorruptedException]. */
+    enum class Reason { VERSION, TRUNCATED_HEADER, NEGATIVE_COUNT, LENGTH_MISMATCH }
+
+    /**
+     * A refusal, carrying a [Reason] and two integers rather than a formatted message.
+     *
+     * A `String` parameter anywhere in this file is refused by `GATE-LEARN-1`, and when the
+     * gate first ran it was this constructor that made it red. The rule could have been
+     * narrowed to allow exception messages — they are not persisted, and logging is separately
+     * banned — but a narrow rule with an exception in it is a rule the next person adds a
+     * second exception to. The code changed instead.
+     *
+     * It is also simply better here: a decode failure is now one of four enumerated states with
+     * numbers attached, so nothing in the failure path formats a string out of bytes that came
+     * from a file this app did not write.
+     */
+    class CorruptedException(
+        val reason: Reason,
+        val found: Int = 0,
+        val expected: Int = 0,
+    ) : Exception("$reason found=$found expected=$expected")
 
     fun encode(model: UserNgramModel): ByteArray {
         val entries = model.entries()
@@ -58,15 +78,15 @@ object UserNgramCodec {
         val model = UserNgramModel(minimumSessions, capacity)
         if (bytes.isEmpty()) return model
         if (bytes[0] != VERSION) {
-            throw CorruptedException("user model version ${bytes[0]}, expected $VERSION")
+            throw CorruptedException(Reason.VERSION, bytes[0].toInt(), VERSION.toInt())
         }
-        if (bytes.size < 5) throw CorruptedException("user model truncated at the header")
+        if (bytes.size < 5) throw CorruptedException(Reason.TRUNCATED_HEADER, bytes.size, 5)
         val count = readInt(bytes, 1)
-        if (count < 0) throw CorruptedException("user model declares $count pairs")
+        if (count < 0) throw CorruptedException(Reason.NEGATIVE_COUNT, count, 0)
         val expected = 1 + 4 + count.toLong() * BYTES_PER_PAIR
         if (bytes.size.toLong() != expected) {
             throw CorruptedException(
-                "user model is ${bytes.size} bytes, $count pairs implies $expected"
+                Reason.LENGTH_MISMATCH, bytes.size, expected.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
             )
         }
         var p = 5

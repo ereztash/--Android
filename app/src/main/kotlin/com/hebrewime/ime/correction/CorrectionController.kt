@@ -8,12 +8,15 @@ import com.hebrewime.core.correction.HebrewFrequency
 import com.hebrewime.core.correction.LexiconTrie
 import com.hebrewime.core.correction.NeutralCostModel
 import com.hebrewime.core.dictionary.PersonalDictionary
+import com.hebrewime.core.learning.UserNgramModel
 import com.hebrewime.core.lexicon.HebrewLexicon
 import com.hebrewime.core.prediction.BigramModel
 import com.hebrewime.core.prediction.Prediction
 import com.hebrewime.core.prediction.PredictiveEngine
 import com.hebrewime.core.prediction.TypingContext
 import com.hebrewime.dictionary.PersonalDictionaryRepository
+import com.hebrewime.learning.LearningPreferences
+import com.hebrewime.learning.UserModelRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -78,6 +81,20 @@ class CorrectionController(
     private var personal: PersonalDictionary = PersonalDictionary()
     private val personalStore = PersonalDictionaryRepository(context)
 
+    /**
+     * What this installation has learned. Empty and never written to unless the user opted in.
+     *
+     * Held here rather than on the service because it has to outlive an input session and be
+     * rebuilt into the engine, exactly like the personal dictionary.
+     */
+    private var userModel: UserNgramModel = UserNgramModel.empty()
+    private val userStore = UserModelRepository(context, scope)
+
+    /** True when the user turned adaptive learning on. Re-read on every session start. */
+    @Volatile
+    var learningEnabled: Boolean = false
+        private set
+
     private class Artifacts(
         val lexicon: HebrewLexicon,
         val trie: LexiconTrie,
@@ -102,6 +119,7 @@ class CorrectionController(
         val bigramGroups: Int,
         val bigramPairs: Int,
         val personalWords: Int,
+        val learnedPairs: Int,
     )
 
     /**
@@ -143,14 +161,17 @@ class CorrectionController(
                     BigramModel.EMPTY
                 }
                 personal = readPersonalDictionary()
+                learningEnabled = LearningPreferences.isEnabled(context)
+                userModel = if (learningEnabled) readUserModel() else UserNgramModel.empty()
                 artifacts = Artifacts(lexicon, trie, frequency, bigrams)
-                engine = build(artifacts!!, personal)
+                engine = build(artifacts!!, personal, userModel)
                 loaded = Loaded(
                     lexiconWords = lexicon.size,
                     trieNodes = trie.nodeCount,
                     bigramGroups = bigrams.groupCount,
                     bigramPairs = bigrams.bigramCount,
                     personalWords = personal.size,
+                    learnedPairs = userModel.pairCount,
                 )
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -227,7 +248,7 @@ class CorrectionController(
             val fresh = readPersonalDictionary()
             if (fresh.size == personal.size && fresh.all() == personal.all()) return@launch
             personal = fresh
-            engine = build(ready, fresh)
+            engine = build(ready, fresh, userModel)
             loaded = loaded?.copy(personalWords = fresh.size)
         }
     }
@@ -244,7 +265,86 @@ class CorrectionController(
             PersonalDictionary()
         }
 
-    private fun build(a: Artifacts, personal: PersonalDictionary) = PredictiveEngine(
+    /**
+     * Record that [second] followed [first], if this installation is allowed to.
+     *
+     * **The caller must already have checked `SessionStart.mayLearn`.** Two independent
+     * conditions have to hold before a single pair is counted — the user opted in, and the
+     * field is one that may be learned from — and they are checked in different places on
+     * purpose: an opt-in that silently covered password fields would be worthless, and a field
+     * policy that applied to people who never opted in would be a broken promise.
+     *
+     * `GATE-LEARN-2` checks statically that the one call site is guarded.
+     */
+    fun learn(first: String, second: String) {
+        if (!learningEnabled) return
+        val ready = artifacts ?: return
+        val model = userModel
+        scope.launch {
+            model.record(idFor(ready, first), idFor(ready, second))
+            userStore.scheduleSave(model)
+        }
+    }
+
+    /**
+     * End the learning session, so the next sighting of a pair counts separately.
+     *
+     * Called from `onFinishInput`. One focused field is one session, which is what makes
+     * `UserNgramModel.minimumSessions` mean "came back later" rather than "was repeated".
+     */
+    fun endLearningSession() {
+        if (!learningEnabled) return
+        val model = userModel
+        scope.launch { model.endSession() }
+    }
+
+    /** Turn learning on or off, rebuilding the engine and loading or dropping the model. */
+    fun setLearningEnabled(enabled: Boolean) {
+        LearningPreferences.setEnabled(context, enabled)
+        learningEnabled = enabled
+        val ready = artifacts ?: return
+        scope.launch {
+            userModel = if (enabled) readUserModel() else UserNgramModel.empty()
+            engine = build(ready, personal, userModel)
+            loaded = loaded?.copy(learnedPairs = userModel.pairCount)
+        }
+    }
+
+    /** Forget everything learned, in memory and on disk, and drop the key. */
+    suspend fun forgetLearned() {
+        userStore.wipe()
+        userModel.clear()
+        userModel = UserNgramModel.empty()
+        artifacts?.let { engine = build(it, personal, userModel) }
+        loaded = loaded?.copy(learnedPairs = 0)
+    }
+
+    /**
+     * The id a token is learned under: its lexicon index, or `UserNgramModel.OOV`.
+     *
+     * The single place the out-of-lexicon decision is applied in the app, and it mirrors what
+     * the measurement harness does — so the reported numbers describe this code rather than a
+     * model the product does not have.
+     */
+    private fun idFor(a: Artifacts, word: String): Int {
+        val index = a.lexicon.indexOf(word)
+        return if (index >= 0) index else UserNgramModel.OOV
+    }
+
+    private suspend fun readUserModel(): UserNgramModel =
+        try {
+            userStore.load()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (unreadable: Throwable) {
+            UserNgramModel()
+        }
+
+    private fun build(
+        a: Artifacts,
+        personal: PersonalDictionary,
+        learned: UserNgramModel,
+    ) = PredictiveEngine(
         lexicon = a.lexicon,
         trie = a.trie,
         frequency = a.frequency,
@@ -269,6 +369,9 @@ class CorrectionController(
         // then measured on.
         realWordErrors = RealWordErrorDetector(a.lexicon, a.bigrams),
         personal = personal,
+        // Empty unless the user opted in, and an empty model is arithmetically identical to no
+        // model at all -- LearningNeutralityTest asserts that over 135,960 contexts.
+        userModel = learned,
     )
 
     /** Cancel outstanding work. Called when the input session changes or the IME is destroyed. */
@@ -279,6 +382,7 @@ class CorrectionController(
 
     fun shutdown() {
         scope.cancel()
+        userModel = UserNgramModel.empty()
         engine = null
         artifacts = null
         personal = PersonalDictionary()

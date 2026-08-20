@@ -165,12 +165,20 @@ class UserNgramModelTest {
         val m = UserNgramModel(minimumSessions = 1)
         m.record(1, 2)
         val good = UserNgramCodec.encode(m)
-        assertFailsWith<UserNgramCodec.CorruptedException> {
-            UserNgramCodec.decode(good.copyOf(good.size - 1))
-        }
+        assertEquals(
+            UserNgramCodec.Reason.LENGTH_MISMATCH,
+            assertFailsWith<UserNgramCodec.CorruptedException> {
+                UserNgramCodec.decode(good.copyOf(good.size - 1))
+            }.reason,
+        )
         val wrongVersion = good.copyOf().also { it[0] = 9 }
-        assertFailsWith<UserNgramCodec.CorruptedException> {
-            UserNgramCodec.decode(wrongVersion)
-        }
+        assertEquals(
+            UserNgramCodec.Reason.VERSION,
+            assertFailsWith<UserNgramCodec.CorruptedException> {
+                UserNgramCodec.decode(wrongVersion)
+            }.reason,
+            "a refusal names an enumerated reason, so nothing formats a string out of bytes " +
+                "this app did not write",
+        )
     }
 }
