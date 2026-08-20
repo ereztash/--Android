@@ -8,7 +8,7 @@ Status of every gate and check in the project. Three states only:
 
 There is no "ready except for". While any row is NOT RUN, the app is not release-ready.
 
-**Last updated: M1.**
+**Last updated: M2.**
 
 ---
 
@@ -23,6 +23,7 @@ There is no "ready except for". While any row is NOT RUN, the app is not release
 | Kotlin | 2.2.21 |
 | Android SDK | Platform 36 (`platform-36_r02`), build-tools 36.0.0 |
 | Device / emulator | **NONE. No Android device or emulator exists in this environment.** |
+| Compose | BOM 2026.06.01 (Compose 1.11.4) — 2026.08.00 needs AGP 9.1+ and compileSdk 37 |
 
 ---
 
@@ -46,6 +47,12 @@ There is no "ready except for". While any row is NOT RUN, the app is not release
 | M1-XCHECK | Kotlin shipped path agrees with the Python measurement | 75,000 tokens × 5 settings | — (equality test) | n/a — exact agreement at all 5 |
 | M1-SORT | Lexicon blob really is byte-sorted (binary search correctness) | 355,587 entries compared | — | n/a |
 | M1-ROUNDTRIP | Every index round-trips through `indexOf`/`wordAt` | 355,587 entries | — | n/a |
+| GATE-NET-2 | Built APK has no network capability — merged manifest | 1 permission entry examined | **A real assembled `netcontrol` APK** carrying INTERNET + ACCESS_NETWORK_STATE | YES — both permissions flagged |
+| GATE-NET-2 | Built APK has no network capability — DEX | 16 descriptors across 8 DEX files, 28,339,184 bytes | same real APK, adding `java.net.HttpURLConnection` | YES — 2 novel descriptors flagged |
+| GATE-MANIFEST-1 | IME service declares exported, BIND_INPUT_METHOD, the action and the meta-data | 4 requirements | `--inject-defect service` (exported → false) | YES |
+| GATE-XML-1 | Every XML resource parses | 9 XML files | `tools/positive_controls/xml/malformed.xml` | YES — named file, line and column |
+| M2-CTXBUF | `InputContextBuffer` desync/recovery semantics | 12 tests | — | n/a |
+| M2-BUILD | `:app` assembles (debug + netcontrol) | 2 APKs | — | n/a |
 
 ## MEASURED, reported with their denominator (not gates — measurements)
 
@@ -61,9 +68,9 @@ not adjusted away.
 
 ## NOT MEASURED (reported as such — not counted as passing)
 
-| ID | Check | Why |
-|---|---|---|
-| GATE-NET-1 manifest detector | denominator = 0 | No `AndroidManifest.xml` exists yet. Becomes a real measurement at M2. Overall gate status is therefore **PASS-PARTIAL**, not PASS. |
+None at M2. GATE-NET-1's manifest detector moved from denominator 0 to 1 when `:app` landed,
+so GATE-NET-1 is now a full PASS rather than PASS-PARTIAL. Its deps detector now examines
+**117** resolved coordinates, up from 6.
 
 ## NOT RUN
 
@@ -72,7 +79,10 @@ Everything below has not been exercised. None of it is described as working.
 | ID | Check | What it needs |
 |---|---|---|
 | GATE-NET-2 | DEX/bytecode network scan of the built artifact | An assembled APK/AAB (M8) |
-| M2-ENABLE | IME can be enabled and selected | A real device |
+| M2-ENABLE | IME can be enabled and selected from system settings | A real device |
+| M2-INSETS | Bottom key row clears the gesture bar at targetSdk 36 | A real device with gesture navigation |
+| M2-CONFIGCHANGE | State survives rotation on API 30, where `configChanges` is not honoured | A real API 30 device |
+| M2-SPELLCHECK | System spell checker is actually suppressed | A real device |
 | M3-INPUT | Basic input actions, grapheme-correct backspace on device | A real device |
 | M4-PRIV | `EditorInfo` initial-text discard on a password field that *did* contain text | M4 |
 | M1-TYPO | Prefix-stripper typo-rejection / recall / false-accept rates (the spec's 88.4% at MIN_STEM 4) | A typo corpus and a correctly-constructed, prefix-free non-word control — M5 |
