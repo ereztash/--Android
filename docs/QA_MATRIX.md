@@ -215,11 +215,19 @@ typing into WhatsApp. This one exercised everything built after the first sessio
 | M10-STRIP | The candidate strip renders and is populated | Three candidates with dividers, right-to-left, best on the right | **OBSERVED** |
 | M10-NEXTWORD | Next-word prediction from the bigram table | After `גבינה`: **רכה**, **צרפתית** | **OBSERVED** |
 | M11-REALWORD | **Context-dependent real-word error detection** | `אני אוהב עוגת שוקולד **אם** גבינה` → offered **`עם (אם)`**, in the correction colour, ranked first | **OBSERVED** |
+| M11-GENERALISES | A **second, different** confusion caught on device | `אני אוהב **עת** ברצלונה` → offered **`את (עת)`** | **OBSERVED** |
 | M11-COLOUR | Corrections are visually distinguished from ordinary suggestions | The real-word suggestion rendered amber, the two next-word suggestions white | **OBSERVED** |
 | M5-LOAD | The lexicon, trie and bigram table load from APK assets on a device | Suggestions could not appear otherwise | **OBSERVED** |
 
 The `אם`/`עם` case is the one the operator named when commissioning this feature. It had never
 run outside a JVM until this session.
+
+The second catch matters more than the first for a reason worth stating: `אם`/`עם` and
+`עת`/`את` are **not two entries in a list**. `HebrewConfusions` generates candidates from
+letters realised identically in Modern Israeli Hebrew — `א↔ע`, `ח↔כ`, `כ↔ק`, `ת↔ט`, `ב↔ו`,
+`ס↔ש` — so both are the same `א↔ע` substitution, produced rather than enumerated. One catch
+could have been a lucky lookup; two from different words through the same rule is the mechanism
+working.
 
 **What this session did NOT establish:**
 
