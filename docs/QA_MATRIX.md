@@ -206,6 +206,32 @@ recorded here. What follows is what a human watching the screen can attest to, a
 | M2-INSTALL | The APK installs and the keyboard renders on a real panel | Screenshots | **OBSERVED** |
 | M3-LAYOUT-BUG | The layout was **wrong** on screen | *"כאילו זו מראה"* — the report that produced M9 | **OBSERVED, and fixed** |
 
+**Second device session, 2026-08-21, from the build at `4a19a90`** — the operator's phone again,
+typing into WhatsApp. This one exercised everything built after the first session:
+
+| ID | Check | Evidence | Now |
+|---|---|---|---|
+| M9-LAYOUT | The **corrected** layout on a real panel | Top row reads `ק ר א ט ו ן ם פ` left-to-right, matching a physical SI-1452 keyboard | **OBSERVED** |
+| M10-STRIP | The candidate strip renders and is populated | Three candidates with dividers, right-to-left, best on the right | **OBSERVED** |
+| M10-NEXTWORD | Next-word prediction from the bigram table | After `גבינה`: **רכה**, **צרפתית** | **OBSERVED** |
+| M11-REALWORD | **Context-dependent real-word error detection** | `אני אוהב עוגת שוקולד **אם** גבינה` → offered **`עם (אם)`**, in the correction colour, ranked first | **OBSERVED** |
+| M11-COLOUR | Corrections are visually distinguished from ordinary suggestions | The real-word suggestion rendered amber, the two next-word suggestions white | **OBSERVED** |
+| M5-LOAD | The lexicon, trie and bigram table load from APK assets on a device | Suggestions could not appear otherwise | **OBSERVED** |
+
+The `אם`/`עם` case is the one the operator named when commissioning this feature. It had never
+run outside a JVM until this session.
+
+**What this session did NOT establish:**
+
+- **Why the previous build produced no suggestions at all is UNCONFIRMED.** Between that build
+  and this one the warm-up's heap floor was halved (see `docs/LEARNING_MEASUREMENTS.md`
+  and the L2 commit) and nothing else on the suggestion path changed, which makes memory
+  pressure the leading explanation — but the in-app diagnostic that would settle it has not
+  been read yet. Recorded as the leading hypothesis, not as a finding.
+- Latency, rotation, TalkBack, Keystore and packet capture remain untested.
+- Adaptive learning is off by default and was not enabled in this session, so nothing about it
+  has run on a device.
+
 **What that session did NOT establish, and is not credited with:**
 
 - It ran a build from **before M10, M11 and M12 existed.** Prediction, real-word error
@@ -234,8 +260,8 @@ recorded here. What follows is what a human watching the screen can attest to, a
 | M7-TALKBACK | Whether the virtual view nodes are usable with TalkBack | A device with TalkBack |
 | M7-CONTRAST | Perceptual legibility of key colours on a real panel | A device |
 | M8-NETCAPTURE | A packet capture confirming no traffic | A device |
-| M10-STRIP | Whether a suggestion has ever been tapped | A device |
-| M11-EDIT | The non-adjacent replacement — deleting to the cursor and committing a rewritten span — against a **real** `InputConnection` | A device. The span arithmetic is unit-tested; the Binder round-trip is not. |
+| M10-TAP | Whether a suggestion has ever been **tapped** — the strip is now known to render and populate, but nothing has ever been accepted from it | A device. Note that this keyboard **never** replaces text automatically (see `shouldAutoReplace`, deliberately never called), so an uncorrected message proves nothing about the suggestion: it may simply not have been tapped. |
+| M11-EDIT | The non-adjacent replacement — deleting to the cursor and committing a rewritten span — against a **real** `InputConnection`. The suggestion is now known to be *offered* on a device; what has never been exercised is what happens when it is **accepted**. | A device. The span arithmetic is unit-tested; the Binder round-trip is not. |
 | M12-RELOAD | Whether the personal dictionary reload in `onStartInput` picks up a word added in Settings while the IME is running | A device with both components live |
 | L1-KEYSTORE | That two Keystore aliases really are independent on hardware, and that deleting one leaves the other usable | A device. The JVM test proves the property the aliases exist for; the Keystore lookup itself has been NOT RUN since M6. |
 | L1-SWITCH | Whether the learning switch, the status count and "forget what you learned" behave on screen | A device |
