@@ -224,3 +224,62 @@ here that the numbers are about Hebrew and not about a particular 6,000 sentence
 ./gradlew :core:test --tests '*BigramFloorTest*'
 ./gradlew :core:test --tests '*ConfusionSweepTest*' -PrunConfusionSweep=1
 ```
+
+
+---
+
+## The limit of the adjacent window — found on a phone, not in a test
+
+The operator typed `אני אוהב עוגת גבינה אם הרבה שוקולד` and observed that a *reader* cannot tell
+whether `אם` or `עם` was meant until the word after `הרבה` arrives.
+
+**That case does fire**, and the reason deserves to be stated plainly rather than claimed as a
+success:
+
+| window | left | right | total |
+|---|---|---|---|
+| `גבינה` **`אם`** `הרבה` | 0 | 0 | **0** |
+| `גבינה` **`עם`** `הרבה` | 0 | 51 | **51** |
+
+`עם הרבה` is a common collocation and `אם הרבה` never occurs in the corpus, so the statistics
+reached the right answer **before** the deciding word was typed. That is luck of collocation,
+not understanding. The mechanism was not doing what the example required and got it right
+anyway, which is exactly the kind of thing that should be written down rather than enjoyed.
+
+### How often the window is genuinely blind
+
+Measured on `hewiki_confusion_test.txt.gz`, 6,000 sentences:
+
+| | count | share |
+|---|---|---|
+| words with a confusable variant | 35,291 | — |
+| window has some evidence to weigh | 24,637 | 69.8% |
+| **both candidates score zero on both neighbours** | **10,654** | **30.2%** |
+
+In that 30.2% no margin, weight or threshold can help: there is no signal in the window to
+weigh. Only context further away could decide, and `BigramModel` stores **adjacent pairs only**,
+so that context is not representable at all. This is a structural limit of the model, not a
+tuning decision, and it is why the recall ceiling in this document is where it is.
+
+`WindowBlindnessTest` pins 30.2% as a characterisation, so that a future model claiming a wider
+window has a number to beat rather than an impression to appeal to.
+
+### What would actually close it, and what it costs
+
+Not "semantic understanding" in the neural sense — that means a model this app cannot carry:
+the whole APK is 5.2 MB, the build has no network permission by design, and `GATE-NET-1/2/3`
+exist to keep it that way.
+
+What is achievable is a **wider n-gram**, which buys part of the same effect statistically:
+
+| approach | what it adds | rough cost |
+|---|---|---|
+| skip-bigrams at distance 2 | lets `שוקולד` bear on `אם` | a second table, ~2–3 MB |
+| trigrams | full three-word context | larger still, and sparser at the same threshold |
+
+Either would push the APK past `GATE-SIZE-1`'s 6,500,000-byte ceiling, which is a threshold, and
+**thresholds in this repository do not move to accommodate a feature**. Raising it is an
+operator decision, and the alternative — pruning harder to fit — trades away exactly the rare
+pairs that the blind 30.2% consists of.
+
+Recorded as an open decision. Not taken.

@@ -217,6 +217,8 @@ typing into WhatsApp. This one exercised everything built after the first sessio
 | M11-REALWORD | **Context-dependent real-word error detection** | `אני אוהב עוגת שוקולד **אם** גבינה` → offered **`עם (אם)`**, in the correction colour, ranked first | **OBSERVED** |
 | M11-GENERALISES | A **second, different** confusion caught on device | `אני אוהב **עת** ברצלונה` → offered **`את (עת)`** | **OBSERVED** |
 | M11-COLOUR | Corrections are visually distinguished from ordinary suggestions | The real-word suggestion rendered amber, the two next-word suggestions white | **OBSERVED** |
+| M11-EDIT | **Accepting** a real-word suggestion: deleting a span two words back and committing a rewrite, against a real `InputConnection` | The operator tapped it: *"ואני ניסיתי, וזה עובד ללחוץ על להחליף מילה"* | **OBSERVED** |
+| M10-TAP | A suggestion has been tapped at all | Same | **OBSERVED** |
 | M5-LOAD | The lexicon, trie and bigram table load from APK assets on a device | Suggestions could not appear otherwise | **OBSERVED** |
 
 The `אם`/`עם` case is the one the operator named when commissioning this feature. It had never
@@ -268,8 +270,6 @@ working.
 | M7-TALKBACK | Whether the virtual view nodes are usable with TalkBack | A device with TalkBack |
 | M7-CONTRAST | Perceptual legibility of key colours on a real panel | A device |
 | M8-NETCAPTURE | A packet capture confirming no traffic | A device |
-| M10-TAP | Whether a suggestion has ever been **tapped** — the strip is now known to render and populate, but nothing has ever been accepted from it | A device. Note that this keyboard **never** replaces text automatically (see `shouldAutoReplace`, deliberately never called), so an uncorrected message proves nothing about the suggestion: it may simply not have been tapped. |
-| M11-EDIT | The non-adjacent replacement — deleting to the cursor and committing a rewritten span — against a **real** `InputConnection`. The suggestion is now known to be *offered* on a device; what has never been exercised is what happens when it is **accepted**. | A device. The span arithmetic is unit-tested; the Binder round-trip is not. |
 | M12-RELOAD | Whether the personal dictionary reload in `onStartInput` picks up a word added in Settings while the IME is running | A device with both components live |
 | L1-KEYSTORE | That two Keystore aliases really are independent on hardware, and that deleting one leaves the other usable | A device. The JVM test proves the property the aliases exist for; the Keystore lookup itself has been NOT RUN since M6. |
 | L1-SWITCH | Whether the learning switch, the status count and "forget what you learned" behave on screen | A device |
