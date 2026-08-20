@@ -315,3 +315,39 @@ that trade is **NOT MEASURED**.
 
 Recorded as a characterised, costed, open decision. Not taken, and not to be taken by relaxing
 the false-alarm figure to make it look good.
+
+
+---
+
+## S1 — the distance-2 layer: stopping rule, recorded before building
+
+The operator authorised building the skip layer **on condition that the rule for abandoning it
+was fixed first**. It is fixed here, before the table exists, before any margin is swept, and
+before any result is seen.
+
+### Ship only if BOTH hold, on `confusion_test`, measured once with the margin already fixed
+
+| | current shipped | requirement |
+|---|---|---|
+| recall | 64.58% | **strictly greater** |
+| false alarms | 0.26% | **less than or equal** |
+
+### And these are the ways it is NOT allowed to pass
+
+- **The false-alarm figure does not move.** 0.26% is the number this detector was shipped on and
+  the number a user experiences as "it left my correct writing alone". If the skip layer can
+  only clear the bar by allowing 0.4%, it has failed.
+- **The margin is chosen on `confusion_dev` and nowhere else.** `confusion_test` is measured
+  once, at the end, with everything already decided.
+- **No re-pinning `WindowBlindnessTest`.** If blindness falls, that is the improvement being
+  claimed and it gets reported with both numbers.
+- **A failure is a result, not a reason to search harder.** If the trade does not clear, the
+  outcome is a report saying so and no shipped layer. The measured 5.51 points of new evidence
+  and 92.4% correct direction are already known; they are not a promise that a usable operating
+  point exists.
+
+### What is genuinely uncertain
+
+Raw skip-2 evidence triples the false-alarm rate. Everything therefore depends on whether a
+margin exists that keeps most of the 92.4% while rejecting most of the 7.6% — and those two
+populations may simply not separate. That is **NOT MEASURED** and is the whole question.
