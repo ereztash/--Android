@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  IME metadata.
+
+  suppressesSpellChecker="true" (public since API 31) is not cosmetic. Without it the SYSTEM
+  spell checker stays active over the same text this keyboard promised stays on device, and
+  paints red squiggles this app neither produced nor controls.
+
+  configChanges: InputMethodInfo.getConfigChanges() is API 31, and this app's minSdk is 30, so
+  on API 30 devices this attribute is NOT READ and onCreateInputView() is re-called on every
+  configuration change. Declaring it is still correct for 31+, but the real defence is that no
+  state lives in the keyboard View at all. GATE-IME-STATE-1 enforces that.
+-->
+<input-method xmlns:android="http://schemas.android.com/apk/res/android"
+    android:settingsActivity="com.hebrewime.settings.SettingsActivity"
+    android:isDefault="false"
+    android:supportsSwitchingToNextInputMethod="true"
+    android:suppressesSpellChecker="true"
+    android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density|fontScale|locale|layoutDirection|touchscreen">
+
+    <subtype
+        android:label="@string/subtype_hebrew"
+        android:languageTag="he-IL"
+        android:imeSubtypeLocale="iw_IL"
+        android:imeSubtypeMode="keyboard"
+        android:isAsciiCapable="false" />
+
+    <subtype
+        android:label="@string/subtype_english"
+        android:languageTag="en-US"
+        android:imeSubtypeLocale="en_US"
+        android:imeSubtypeMode="keyboard"
+        android:isAsciiCapable="true" />
+</input-method>

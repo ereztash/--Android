@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- POSITIVE CONTROL for GATE-XML-1. This comment contains a double hyphen -- which XML
+     forbids inside a comment. This is the exact defect that broke the M2 manifest build. -->
+<resources>
+    <string name="unclosed">oops
+</resources>

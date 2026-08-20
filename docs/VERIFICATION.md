@@ -29,6 +29,12 @@ Additional measured facts not asserted in the prompt, recorded because they affe
   = **API 31**, not 30. The prompt does not claim otherwise, but the two `Initial*` families
   split across 30/31 and it is easy to assume they match. minSdk 30 therefore gets
   `getInitialTextBeforeCursor` but **not** `getInitialSurroundingText`.
+- **`InputMethodInfo.getConfigChanges()` is API 31, but this app's minSdk is 30.** The
+  `android:configChanges` attribute on `<input-method>` is therefore **not honoured on API 30
+  devices**. §1.5's instruction to "declare configChanges explicitly AND keep state outside the
+  View" is not two belts for one pair of trousers: on API 30 the declaration does nothing, and
+  keeping state outside the View is the *only* defence. `onCreateInputView()` will be re-called
+  on every configuration change there. This is enforced by `GATE-IME-STATE-1`.
 - `commitText(CharSequence,int,TextAttribute)` and
   `setComposingText(CharSequence,int,TextAttribute)` are API 33 overloads; the 2-arg forms
   are API 3.

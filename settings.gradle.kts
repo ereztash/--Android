@@ -23,3 +23,4 @@ dependencyResolutionManagement {
 rootProject.name = "hebrew-ime"
 
 include(":core")
+include(":app")

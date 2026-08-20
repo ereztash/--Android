@@ -28,6 +28,11 @@ def _gates(strict: bool) -> list[dict]:
     net = os.path.join(ROOT, "scripts", "check_no_network.py")
     api = os.path.join(ROOT, "scripts", "check_forbidden_api.py")
     lex = os.path.join(ROOT, "scripts", "check_lexicon.py")
+    xml = os.path.join(ROOT, "scripts", "check_xml.py")
+    apk = os.path.join(ROOT, "scripts", "check_apk.py")
+    debug_apk = os.path.join(ROOT, "app", "build", "outputs", "apk", "debug", "app-debug.apk")
+    netc_apk = os.path.join(ROOT, "app", "build", "outputs", "apk", "netcontrol",
+                            "app-netcontrol.apk")
     return [
         {
             "id": "GATE-NET-1",
@@ -62,6 +67,31 @@ def _gates(strict: bool) -> list[dict]:
             "real": [PY, lex, "--json"] + s,
             "control": [PY, lex, "--inject-defect", "checksum", "--json"],
             "control_desc": "one byte of upstream source A flipped before hashing",
+        },
+        {
+            "id": "GATE-XML-1",
+            "what": "every XML resource parses",
+            "real": [PY, xml, "--json"] + s,
+            "control": [PY, xml, "--root", os.path.join(ROOT, "tools", "positive_controls",
+                                                        "xml"),
+                        "--include-controls", "--json"],
+            "control_desc": "a manifest comment containing the double hyphen XML forbids",
+        },
+        {
+            "id": "GATE-NET-2",
+            "what": "the BUILT apk has no network capability (merged manifest + DEX)",
+            "real": [PY, apk, "--apk", debug_apk, "--json"] + s,
+            "control": [PY, apk, "--apk", netc_apk, "--json"],
+            "control_desc": "a REAL assembled apk carrying INTERNET and java.net usage",
+            "requires": [debug_apk, netc_apk],
+        },
+        {
+            "id": "GATE-MANIFEST-1",
+            "what": "the IME service declaration is valid (§1.8)",
+            "real": [PY, apk, "--apk", debug_apk, "--json"] + s,
+            "control": [PY, apk, "--apk", debug_apk, "--inject-defect", "service", "--json"],
+            "control_desc": "android:exported flipped to false in the merged manifest",
+            "requires": [debug_apk],
         },
         {
             "id": "GATE-DENOM-1",
@@ -104,6 +134,18 @@ def main() -> int:
 
     with tempfile.TemporaryDirectory() as empty_dir:
         for g in _gates(args.strict):
+            # 0. Some gates check a build artifact. An artifact that was never built is not a
+            #    clean artifact, and a control that cannot run has not proven anything -- so
+            #    this is reported as NOT-MEASURED, distinctly from a control that ran and
+            #    failed to go red.
+            absent = [p for p in g.get("requires", []) if not os.path.isfile(p)]
+            if absent:
+                rows.append((g["id"], "NOT-MEASURED",
+                             f"artifact absent: {os.path.basename(absent[0])}", "n/a"))
+                if args.strict:
+                    ok = False
+                continue
+
             # 1. Control first. It must go red.
             c_code, c_data, c_out = _run(g["control"], empty_dir)
             control_red = c_code != 0

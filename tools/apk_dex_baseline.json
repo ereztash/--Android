@@ -1,0 +1,22 @@
+{
+  "generated_from": "app/build/outputs/apk/debug/app-debug.apk",
+  "why": "A clean build legitimately references network classes transitively via androidx/Compose/Kotlin stdlib. The gate reports the delta from this set, so a genuinely new network path is a finding while the unavoidable background is not. Re-baseline deliberately, after establishing where a new descriptor came from -- never to silence a finding.",
+  "descriptors": [
+    "Landroid/net/ConnectivityManager;",
+    "Landroid/net/NetworkInfo;",
+    "Landroid/net/TrafficStats;",
+    "Landroid/net/Uri$Builder;",
+    "Landroid/net/Uri;",
+    "Landroid/webkit/MimeTypeMap;",
+    "Landroid/webkit/WebView;",
+    "Ljava/net/DatagramSocket;",
+    "Ljava/net/InetAddress;",
+    "Ljava/net/Socket;",
+    "Ljava/net/SocketAddress;",
+    "Ljava/net/SocketException;",
+    "Ljava/net/SocketImpl;",
+    "Ljava/net/URI;",
+    "Ljava/net/URL;",
+    "Ljava/net/URLEncoder;"
+  ]
+}

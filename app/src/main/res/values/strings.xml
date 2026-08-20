@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Hebrew Keyboard</string>
+    <string name="ime_name">Hebrew Keyboard</string>
+    <string name="settings_title">Hebrew Keyboard settings</string>
+    <string name="subtype_hebrew">Hebrew</string>
+    <string name="subtype_english">English</string>
+
+    <string name="onboarding_title">A keyboard that keeps your typing on your phone</string>
+    <string name="onboarding_offline_title">Fully offline</string>
+    <string name="onboarding_offline_body">This app has no internet permission. It cannot send
+        anything anywhere, because it has no way to. Everything it does happens on this
+        device.</string>
+    <string name="onboarding_sensitive_title">Sensitive fields are left alone</string>
+    <string name="onboarding_sensitive_body">In password, email, phone and payment fields the
+        keyboard turns off suggestions, learning and history entirely.</string>
+    <string name="onboarding_step_enable">Step 1 — Enable the keyboard</string>
+    <string name="onboarding_step_select">Step 2 — Switch to it</string>
+    <string name="onboarding_enable_button">Open keyboard settings</string>
+    <string name="onboarding_select_button">Switch keyboard</string>
+    <string name="onboarding_enabled">Enabled</string>
+    <string name="onboarding_not_enabled">Not enabled yet</string>
+    <string name="onboarding_selected">Currently in use</string>
+    <string name="onboarding_not_selected">Not currently in use</string>
+    <string name="attribution_title">Dictionary sources</string>
+</resources>
