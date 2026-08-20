@@ -14,6 +14,26 @@ push, not by intention — see below.
 | targetSdk / compileSdk | 36 |
 | UI | Custom Android Views in the IME window; Jetpack Compose **only** in settings |
 
+## What it does
+
+Types Hebrew, completes words as you type them, predicts the next one, corrects misspellings —
+and catches the mistake a spellchecker structurally cannot: `אם` where `עם` was meant. Both are
+real words; only the sentence around them says which one belongs.
+
+| | measured | on |
+|---|---|---|
+| completion top-3, 3-letter prefix | **49.28%** (38.27% without the language model) | 20,000 cases, held-out corpus |
+| next-word top-3 | **9.80%**, offered in 88.36% of positions | 20,000 cases |
+| correction top-1 / top-3 | 52.60% / 66.23% | 4,000 synthetic typos |
+| real-word errors: recall | **64.58%** | 45,867 injected errors |
+| real-word errors: false alarms on correct text | **0.26%** | 69,494 positions |
+
+Every one of those is a number about a specific corpus with its hash recorded, not a claim about
+what a user will experience — the corpora are Wikipedia prose and phone typing is not. The
+limits are stated at the bottom of each measurements document rather than left to be discovered.
+
+**Nothing is ever replaced automatically.** Every correction is a tap.
+
 ## The rule this repo is built around
 
 > A gate that has never failed has not been shown to be a gate.
@@ -43,8 +63,14 @@ GATE-CRYPTO-1    PASS     control red (FAIL)   forbidden_api=50
 GATE-DENOM-1     PROVEN   control red (PASS-PARTIAL)
 ```
 
-14 gates, 125 JVM tests. **Status: [NOT RELEASE-READY](docs/RELEASE_READINESS.md)** — nothing
+16 gates, 180 JVM tests. **Status: [NOT RELEASE-READY](docs/RELEASE_READINESS.md)** — nothing
 has ever run on an Android device, and the release artifact is unsigned.
+
+Two of the sixteen — `GATE-LEX-2` and `GATE-LEX-1`'s reproducibility detector — need the 37 MB
+of upstream lexicon sources and report **NOT-MEASURED** without them, distinctly from
+`NOT-A-GATE`. CI fetches them best-effort and prints whether they arrived. The distinction is
+not cosmetic: conflating the two kept the CI gate job red from M1 to M12 while every commit
+message said the gates were green. See [docs/QA_MATRIX.md](docs/QA_MATRIX.md).
 
 ## Gates
 
@@ -56,6 +82,8 @@ has ever run on an Android device, and the release artifact is unsigned.
 | `GATE-CRYPTO-1` | No ECB, hardcoded IV or key, seeded `SecureRandom`, or broken primitive | Planted `AES/ECB`, a fixed IV, a hardcoded key, MD5 |
 | `GATE-TRACE-1` | The latency benchmark measures trace sections the app actually emits | Requested section names renamed — otherwise `TraceSectionMetric` reports zero measurements, which reads as success |
 | `GATE-R8-1` | R8 has not stripped the classes the system instantiates by name | The service declaration invalidated |
+| `GATE-BIGRAM-1` | The bigram table inside the APK is byte-identical to the one every prediction number was measured against | One byte appended to the packaged table |
+| `GATE-SIZE-1` | The release artifact stays inside a budget written down **after** measuring it | Assets measured 50% larger |
 | `GATE-DENOM-1` | A check that examined nothing never reports PASS | The network gate run over an empty directory |
 
 `GATE-API-1` is worth a word. All four of these are invisible to the Kotlin compiler and to
@@ -82,7 +110,7 @@ tools/    positive controls (planted defects) and the gates' own tests
 docs/     VERIFICATION.md, LICENSES.md, OPERATOR_NOTICES.md, QA_MATRIX.md, milestones/
 ```
 
-## Three findings worth knowing about
+## Findings worth knowing about
 
 - **The keyboard-adjacency discount is implemented, measured, and switched off.** On an
   unbiased typo corpus it costs 8 points of top-1 accuracy and multiplies wrong
@@ -96,6 +124,19 @@ docs/     VERIFICATION.md, LICENSES.md, OPERATOR_NOTICES.md, QA_MATRIX.md, miles
 - **Android Keystore refuses a caller-supplied IV** when `setRandomizedEncryptionRequired` is
   true, which is the default. The crypto originally generated its own IV — fine on a JVM,
   throws on a device.
+- **The keyboard was mirrored for six milestones, and a test asserted that it should be.**
+  Hebrew script runs right to left; a Hebrew keyboard does not — SI-1452 maps letters onto the
+  physical QWERTY positions. The wrong assumption sat in the implementation *and* in the
+  assertion, so both looked green. A positive control proves a check can fail, not that it is
+  asking the right question. [Details](docs/milestones/M9.md); it changed how every test after
+  it was written.
+- **`isCombiningMark` called four punctuation characters marks.** Harmless where it was written
+  and wrong where it was later borrowed. Found by checking all 55 code points of the range
+  against `Character.getType` instead of against a list written in the test.
+- **An ordering that had never been measured turned out to be dominated.** Putting corrections
+  ahead of completions was worse on the completion corpus *and* worse on the typo corpus — not
+  a position that lost narrowly, a guess nobody had checked.
+  [Details](docs/PREDICTION_MEASUREMENTS.md).
 
 ## Documents worth reading first
 
@@ -105,6 +146,13 @@ docs/     VERIFICATION.md, LICENSES.md, OPERATOR_NOTICES.md, QA_MATRIX.md, miles
   not. `NOT RUN` rows are spelled out rather than omitted.
 - **[docs/CORRECTION_MEASUREMENTS.md](docs/CORRECTION_MEASUREMENTS.md)** — accuracy numbers with
   the corpus hash beside each, and the full weight sweep including the rows that were worse.
+- **[docs/PREDICTION_MEASUREMENTS.md](docs/PREDICTION_MEASUREMENTS.md)** — completion and
+  next-word accuracy, measured on a corpus **proven** disjoint from the language model's
+  training data by a script that refuses to write when the byte ranges intersect.
+- **[docs/CONFUSION_MEASUREMENTS.md](docs/CONFUSION_MEASUREMENTS.md)** — `אם` vs `עם`: recall
+  and false alarms together, thresholds chosen on a dev slice that shares no sentence with the
+  slice they were reported against, and the harness bug that nearly settled the architecture
+  wrong by 19 points.
 - **[docs/VERIFICATION.md](docs/VERIFICATION.md)** — the platform claims this project depends
   on, each checked against `android.jar` and `api-versions.xml` rather than trusted.
 - **[docs/LICENSES.md](docs/LICENSES.md)** — why almost every Hebrew wordlist in existence is
