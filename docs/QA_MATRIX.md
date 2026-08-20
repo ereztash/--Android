@@ -8,7 +8,7 @@ Status of every gate and check in the project. Three states only:
 
 There is no "ready except for". While any row is NOT RUN, the app is not release-ready.
 
-**Last updated: M4.**
+**Last updated: M5.**
 
 ---
 
@@ -62,6 +62,10 @@ There is no "ready except for". While any row is NOT RUN, the app is not release
 | M4-PRIV-FETCH | **Initial text is never fetched for a restricted field, tested with a field that DID contain text** | 9 restricted input types × a real password string | — (asserts the provider was never invoked) | n/a |
 | M4-SWEEP | Exhaustive input-type sweep, unknown values fail closed | **4,096** text variations + **16** classes | — | n/a |
 | M4-LEARN | Person-name and postal-address fields suggest but never learn | 2 variations | — | n/a |
+| GATE-ASSET-1 | The assets the app opens by name are the ones AGP actually packaged | 3 (2 named + 1 found) | `--inject-defect asset_name` | YES |
+| M5-TRIE | Trie search agrees with the reference Damerau-Levenshtein | exhaustive over 14 words × 22 queries | — | n/a |
+| M5-ACC | top-1 / top-3 against a hash-locked corpus | 4,000 pairs, corpus sha `f9f4ed80…` | — | n/a |
+| M5-CTRL | **False auto-replace on known-correct words = 0.00%** | 4,000 words, sha `6e13ffd6…` | an indiscriminate replacer scores 100% on the same harness | YES |
 
 ## MEASURED, reported with their denominator (not gates — measurements)
 
@@ -70,6 +74,12 @@ There is no "ready except for". While any row is NOT RUN, the app is not release
 | M1-COV | Lexicon token coverage on held-out Hebrew Wikipedia, MIN_STEM=4 | **96.73%** (3.27% wrong-underline) | 75,000 tokens / 22,804 types, corpus sha256 `02fe828c…` |
 | M1-COV-NONE | Same, with no prefix stripper | 94.61% (5.39% wrong-underline) | same corpus |
 | M1-COV-DELTA | Coverage cost of MIN_STEM 2→4 | −0.11 points (89 tokens) | same corpus |
+| M5-TOP1 | Correction top-1, shipped config | **52.60%** | 4,000 uniform typos, corpus sha `f9f4ed80…` |
+| M5-TOP3 | Correction top-3, shipped config | **66.23%** | same corpus |
+| M5-FALSE | False auto-replace, realistic control | **0.68%** | 4,000 raw held-out tokens, sha `c2e89437…` |
+| M5-ADJ | Keyboard-adjacency discount effect on top-1 | **−7.97 points** (52.60% → 44.63%), wrong auto-replacements ×8 | same corpus — **feature measured and NOT enabled** |
+| M5-P95 | Suggestion latency p95 | 2.88 ms | 4,000 queries, **JVM on the build host — NOT a device number** |
+| M5-STRUCT | Trie over the real lexicon | 567,767 nodes, 73.3% prefix sharing, 7.58 MiB, 148 ms build | 355,587 words |
 
 These are ~1 point below the build spec's figures on its own (unspecified) corpus. Reported as
 measured; see `docs/LEXICON_MEASUREMENTS.md` §2 for why the gap cannot be reconciled and was
@@ -96,8 +106,9 @@ Everything below has not been exercised. None of it is described as working.
 | M1-TYPO | Prefix-stripper typo-rejection / recall / false-accept rates (the spec's 88.4% at MIN_STEM 4) | A typo corpus and a correctly-constructed, prefix-free non-word control — M5 |
 | M1-DEVICE | Lexicon load time, memory and lookup latency on real hardware | A real device |
 | M1-KTIV | Ktiv male/haser coverage rate over all reform-affected lemmas | A list of affected lemmas, which this project does not have |
-| M5-ACC | top-1 / top-3 / false_auto_replace_rate against a hash-locked golden corpus | M5 |
-| M5-CTRL | Control column: already-correct words must show ~0% correction rate | M5 |
+| M5-REAL-TYPOS | Correction accuracy against REAL Hebrew typing errors | A corpus of real errors, which does not exist here. The true error distribution lies somewhere between corpus A (uniform) and B (adjacency) and nothing in this project knows where. |
+| M5-NOSUGGEST | Splitting the 12.08% no-suggestion cases into prefix-stripper false accepts vs no-candidate-within-2-edits | Per-case adjudication |
+| M5-DEVICE-LAT | Suggestion latency on real hardware | A device + the M7 harness |
 | M4-OTP-ACC | OTP heuristic accuracy (precision/recall) | A labelled corpus of OTP fields, which does not exist and was not fabricated |
 | M4-DEVICE | That the framework really does hand over password plaintext, and that `setInitialSurroundingText("")` releases it | A real device; `android.jar` ships stubs only |
 | M3-TOUCH | A touch has ever been dispatched to `KeyboardView` on real hardware | A real device |

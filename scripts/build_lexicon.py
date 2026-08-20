@@ -30,6 +30,7 @@ import gzip
 import hashlib
 import io
 import json
+import math
 import os
 import re
 import sys
@@ -152,6 +153,7 @@ def parse_source_a(data: bytes, inject: str | None) -> tuple[set[str], dict]:
 def parse_source_b(data: bytes, inject: str | None) -> tuple[set[str], dict]:
     """`word count` per line; keep pure-Hebrew tokens with count >= MIN_COUNT_B."""
     forms: set[str] = set()
+    counts: dict[str, int] = {}
     lines = malformed = below_min = 0
     word_re = HEBREW_WORD_RE
     if inject == "filter":
@@ -174,7 +176,9 @@ def parse_source_b(data: bytes, inject: str | None) -> tuple[set[str], dict]:
             continue
         if word_re.match(word):
             forms.add(word)
-    return forms, {"lines_read": lines, "malformed": malformed, "below_min_count": below_min}
+            counts[word] = max(counts.get(word, 0), n)
+    return forms, {"lines_read": lines, "malformed": malformed,
+                   "below_min_count": below_min, "_counts": counts}
 
 
 def check_counts(counts: dict[str, int]) -> list[str]:
@@ -198,6 +202,8 @@ def main() -> int:
     ap.add_argument("--cache-dir", default=os.path.join(ROOT, "lexicon", "cache"))
     ap.add_argument("--out", default=os.path.join(ROOT, "lexicon", "assets", "he_lexicon.txt.gz"))
     ap.add_argument("--manifest", default=os.path.join(ROOT, "lexicon", "MANIFEST.json"))
+    ap.add_argument("--freq-out", default=os.path.join(
+        ROOT, "lexicon", "assets", "he_freq.bin.gz"))
     ap.add_argument("--source-a"), ap.add_argument("--source-b")
     ap.add_argument("--allow-unverified-source", action="store_true",
                     help="skip the source checksum gate (used only by the count control)")
@@ -236,6 +242,32 @@ def main() -> int:
         # varies with PYTHONHASHSEED, instead of sorted order.
         ordered = list(union)
 
+    # --- frequency table -------------------------------------------------------------
+    # One byte per word, in the SAME sorted order as the word list, so the two are indexed
+    # by a single integer and no map is needed at runtime.
+    #
+    # Counts span 5..5,020,713 -- four orders of magnitude -- so they are stored log-scaled:
+    #   byte = round(log2(count + 1) * 8), capped at 255
+    # which spans 18..178 for the real range and keeps roughly 9% resolution per step. That is
+    # far finer than ranking needs and costs 355,587 bytes instead of 1.4 MB for int32.
+    #
+    # A word present in source A but absent from source B stores 0, meaning "valid but not
+    # attested in the corpus" -- 57,425 rare-but-valid verb conjugations. 0 is deliberately
+    # distinguishable from "attested once", which would be byte 8.
+    word_counts = stats_b.pop("_counts")
+    freq = bytearray(len(ordered))
+    attested = 0
+    for i, w in enumerate(ordered):
+        c = word_counts.get(w, 0)
+        if c > 0:
+            attested += 1
+            freq[i] = min(255, round(math.log2(c + 1) * 8))
+    freq_bytes = bytes(freq)
+    fbuf = io.BytesIO()
+    with gzip.GzipFile(fileobj=fbuf, mode="wb", compresslevel=9, mtime=0) as gz:
+        gz.write(freq_bytes)
+    freq_packed = fbuf.getvalue()
+
     blob = ("\n".join(ordered) + "\n").encode("utf-8")
     buf = io.BytesIO()
     # mtime=0 so the gzip header carries no timestamp; without this every run differs.
@@ -269,9 +301,24 @@ def main() -> int:
             "gzip_sha256": sha256_bytes(packed),
             "encoding": "UTF-8, newline-delimited, sorted by code point",
         },
+        "frequency": {
+            "path": os.path.relpath(args.freq_out, ROOT),
+            "encoding": "one byte per word, same sorted order as the word list; "
+                        "byte = round(log2(count+1)*8) capped at 255; 0 = valid but "
+                        "not attested in source B",
+            "entries": len(freq_bytes),
+            "attested": attested,
+            "unattested": len(ordered) - attested,
+            "sha256": sha256_bytes(freq_bytes),
+            "gzip_bytes": len(freq_packed),
+            "gzip_sha256": sha256_bytes(freq_packed),
+        },
         "license_of_derived_artifact": "CC BY-SA 4.0 (inherited from source B)",
     }
 
+    print(f"  frequency: {len(freq_bytes)} entries, {attested} attested, "
+          f"{len(ordered) - attested} unattested, {len(freq_packed)} bytes gzipped",
+          file=sys.stderr)
     print(f"\n  lexicon: {counts['union']} forms, "
           f"{len(blob)} bytes raw, {len(packed)} bytes gzipped", file=sys.stderr)
     print(f"  uncompressed sha256 {manifest['output']['uncompressed_sha256']}", file=sys.stderr)
@@ -281,6 +328,8 @@ def main() -> int:
         os.makedirs(os.path.dirname(args.out), exist_ok=True)
         with open(args.out, "wb") as fh:
             fh.write(packed)
+        with open(args.freq_out, "wb") as fh:
+            fh.write(freq_packed)
         with open(args.manifest, "w", encoding="utf-8") as fh:
             json.dump(manifest, fh, indent=2, ensure_ascii=False)
             fh.write("\n")

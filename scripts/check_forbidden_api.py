@@ -84,6 +84,12 @@ RULES: list[dict] = [
         "message": "nothing this app handles may reach logcat or stdout. A keyboard handles "
                    "passwords, messages and searches; a debugging Log.d is how those leak.",
         "allow_paths": [],
+        # Scoped to production source sets. Test code is not in the shipped APK and handles
+        # hash-locked corpus data rather than anything a user typed -- and this project REQUIRES
+        # its measurement tables to be printed, which is what these calls are. The property the
+        # rule protects ("nothing the app handles reaches logcat") is unaffected: the rule still
+        # covers 100% of src/main, which is all of this project's code that ships.
+        "skip_paths": ["src/test/", "src/androidTest/", "src/testFixtures/"],
     },
     {
         "id": "ctx.blocking_fetch",
@@ -111,6 +117,9 @@ NOT_COVERED = [
     "correct. It only bans the wrong pattern. Correctness is covered by unit tests, not here.",
     "deleteSurroundingTextInCodePoints's return value IS meaningful on API 26-32 (§1.3 "
     "exception). This gate does not check that the exception is handled where it applies.",
+    "priv.no_logging covers production source sets only. Test sources are excluded because "
+    "they do not ship and handle corpus data, not user input -- but that means a leak added "
+    "to a test file is not caught here.",
 ]
 
 
@@ -146,6 +155,8 @@ def scan(root: str, use_default_excludes: bool) -> Detector:
                 sup = SUPPRESS_RE.search(line)
                 for rule in RULES:
                     if any(a in rel for a in rule["allow_paths"]):
+                        continue
+                    if any(skip in rel for skip in rule.get("skip_paths", ())):
                         continue
                     if not rule["pattern"].search(line):
                         continue

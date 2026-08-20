@@ -32,4 +32,14 @@ tasks.withType<Test>().configureEach {
         "heldout.file",
         rootProject.file("lexicon/heldout/hewiki_sample.txt.gz").absolutePath,
     )
+    systemProperty("frequency.file", rootProject.file("lexicon/assets/he_freq.bin.gz").absolutePath)
+    systemProperty("golden.dir", rootProject.file("lexicon/golden").absolutePath)
+    // The correction measurement loads the whole lexicon, builds a trie over it and runs
+    // thousands of queries. The default heap is not enough.
+    maxHeapSize = "3g"
+    // Forward the sweep opt-in into the test JVM. Gradle's -D sets it on the daemon, not on
+    // the forked test process, so it has to be passed through explicitly.
+    if (project.hasProperty("runWeightSweep")) {
+        systemProperty("runWeightSweep", project.property("runWeightSweep").toString())
+    }
 }

@@ -167,7 +167,7 @@ def check_dex(apk: str, baseline: set[str], inject: bool) -> Detector:
     return det
 
 
-def check_lexicon_asset(apk: str, inject: bool) -> Detector:
+def check_lexicon_asset(apk: str, inject: str | None) -> Detector:
     """The lexicon inside the APK must be the lexicon the manifest describes.
 
     This is not paranoia about zip integrity. AGP **transparently gunzips** `.gz` assets while
@@ -184,18 +184,36 @@ def check_lexicon_asset(apk: str, inject: bool) -> Detector:
         return det
     expected = json.load(open(LEXICON_MANIFEST, encoding="utf-8"))["output"]
 
+    # The Kotlin side opens these by EXACT name. AGP strips the .gz while packaging, so the
+    # names in the APK are not the names in the repository, and a rename here would be a
+    # runtime crash on first suggestion rather than a build error.
+    expected_names = {"assets/he_lexicon.txt", "assets/he_freq.bin"}
+    if inject == "asset_name":
+        # PLANTED DEFECT: pretend the code expects a name AGP does not produce, which is what
+        # a rename or a change in AGP's .gz handling would look like.
+        expected_names = {"assets/he_lexicon.txt.gz"}
+
     with zipfile.ZipFile(apk) as z:
+        present = set(z.namelist())
+        for required in sorted(expected_names):
+            if required not in present:
+                det.findings.append(Finding(
+                    "apk_lexicon", os.path.basename(apk), 0,
+                    f"{required} is not in the APK; CorrectionController opens it by this "
+                    f"exact name and would crash on first use",
+                    "apk.missing_named_asset"))
+
         names = [n for n in z.namelist()
                  if n.startswith("assets/") and "he_lexicon" in n]
         if not names:
             det.notes.append("no lexicon asset found in the APK; NOT-MEASURED")
             return det
-        det.denominator = len(names)
+        det.denominator = len(names) + len(expected_names)
         for name in names:
             data = z.read(name)
             if data[:2] == b"\x1f\x8b":
                 data = gzip.decompress(data)
-            if inject:
+            if inject == "content":
                 data = data + b"\n"
             digest = hashlib.sha256(data).hexdigest()
             det.notes.append(f"{name}: {len(data)} bytes uncompressed, sha256 {digest}")
@@ -274,7 +292,7 @@ def main() -> int:
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--strict", action="store_true")
     ap.add_argument("--inject-defect",
-                    choices=["permission", "dex", "service", "lexicon"],
+                    choices=["permission", "dex", "service", "lexicon", "asset_name"],
                     help="PLANT A DEFECT. Positive control; every value must go red.")
     args = ap.parse_args()
 
@@ -328,7 +346,10 @@ def main() -> int:
             check_permissions(aapt2, args.apk, args.inject_defect == "permission"),
             check_dex(args.apk, baseline, args.inject_defect == "dex"),
             check_ime_service(aapt2, args.apk, args.inject_defect == "service"),
-            check_lexicon_asset(args.apk, args.inject_defect == "lexicon"),
+            check_lexicon_asset(
+                args.apk,
+                {"lexicon": "content", "asset_name": "asset_name"}.get(args.inject_defect),
+            ),
         ],
         not_covered=NOT_COVERED,
     )

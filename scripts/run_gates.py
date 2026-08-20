@@ -102,6 +102,15 @@ def _gates(strict: bool) -> list[dict]:
             "requires": [debug_apk],
         },
         {
+            "id": "GATE-ASSET-1",
+            "what": "the assets the app opens by name are the ones AGP actually packaged",
+            "real": [PY, apk, "--apk", debug_apk, "--json"] + s,
+            "control": [PY, apk, "--apk", debug_apk, "--inject-defect", "asset_name",
+                        "--json"],
+            "control_desc": "expect an asset name AGP does not produce (a .gz that AGP strips)",
+            "requires": [debug_apk],
+        },
+        {
             "id": "GATE-DENOM-1",
             "what": "a check that examined nothing must not report PASS",
             "real": None,  # meta-gate: it has no real-tree run, only a control

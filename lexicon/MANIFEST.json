@@ -56,5 +56,15 @@
     "gzip_sha256": "b69e8f62f64c64bbf0042c518901d597b1b51ce4c535716ee3f78e24a9b7c9c8",
     "encoding": "UTF-8, newline-delimited, sorted by code point"
   },
+  "frequency": {
+    "path": "lexicon/assets/he_freq.bin.gz",
+    "encoding": "one byte per word, same sorted order as the word list; byte = round(log2(count+1)*8) capped at 255; 0 = valid but not attested in source B",
+    "entries": 355587,
+    "attested": 298162,
+    "unattested": 57425,
+    "sha256": "a4702536131dfdcccfefb731d04012dfd836c93fff94c93d6fb3218218f54383",
+    "gzip_bytes": 241907,
+    "gzip_sha256": "b482b9707dab162553adf6e5feb6393b933dbe53c884ac2bc3669317eb906ecf"
+  },
   "license_of_derived_artifact": "CC BY-SA 4.0 (inherited from source B)"
 }
