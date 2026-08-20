@@ -3,6 +3,7 @@ package com.hebrewime.core.correction
 import com.hebrewime.core.lexicon.HebrewLexicon
 import com.hebrewime.core.lexicon.HebrewText
 import com.hebrewime.core.lexicon.PrefixStripper
+import com.hebrewime.core.lexicon.WordSet
 
 /** One ranked candidate. */
 data class Suggestion(
@@ -39,6 +40,19 @@ class CorrectionEngine(
     private val frequency: HebrewFrequency,
     private val costs: EditCostModel = NeutralCostModel,
     private val config: Config = Config(),
+    /**
+     * Extra words that count as correct: the user's personal dictionary.
+     *
+     * Kept as a separate [WordSet] rather than merged into [lexicon] because the two are not
+     * the same kind of thing. The lexicon is a fixed, hash-locked artifact that every
+     * measurement in `docs/CORRECTION_MEASUREMENTS.md` was taken against; the personal
+     * dictionary is small, mutable, per-user, and never appears in any accuracy figure. Merging
+     * them would make every measured number a claim about a set that varies per device.
+     *
+     * Empty by default, so a `CorrectionEngine` built without one behaves exactly as it did
+     * before this parameter existed — which is what keeps the M5 numbers meaning what they say.
+     */
+    private val personal: WordSet = WordSet { false },
 ) {
 
     data class Config(
@@ -88,9 +102,21 @@ class CorrectionEngine(
         val minimumLengthToCorrect: Int = 3,
     )
 
-    /** True when the word needs no correction at all. */
+    /**
+     * True when the word needs no correction at all.
+     *
+     * Consults the personal dictionary as well as the lexicon. A word the user deliberately
+     * added and is then told is misspelled is worse than no personal dictionary at all: it
+     * offers a setting that does nothing and contradicts itself on screen.
+     */
     fun isValid(word: String): Boolean =
-        PrefixStripper.accepts(word, lexicon, config.minStem)
+        PrefixStripper.accepts(word, validWords, config.minStem)
+
+    /**
+     * The lexicon and the personal dictionary as one membership test, so prefix stripping
+     * applies to user-added words too — `ולדני` is accepted once `דני` is.
+     */
+    private val validWords = WordSet { lexicon.contains(it) || personal.contains(it) }
 
     /**
      * Ranked corrections, best first. Empty when the word is already valid, too short, or not

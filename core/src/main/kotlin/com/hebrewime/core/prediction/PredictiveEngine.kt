@@ -2,6 +2,7 @@ package com.hebrewime.core.prediction
 
 import com.hebrewime.core.confusion.RealWordErrorDetector
 import com.hebrewime.core.correction.CorrectionEngine
+import com.hebrewime.core.dictionary.PersonalDictionary
 import com.hebrewime.core.correction.HebrewFrequency
 import com.hebrewime.core.correction.LexiconTrie
 import com.hebrewime.core.lexicon.HebrewLexicon
@@ -101,6 +102,19 @@ class PredictiveEngine(
     private val bigrams: BigramModel = BigramModel.EMPTY,
     private val corrections: CorrectionEngine,
     private val config: Config = Config(),
+    /**
+     * Words the user added deliberately, offered as completions before lexicon words.
+     *
+     * ### Why they go first, and why that is not a measured claim
+     * A user who typed a word into the settings screen has told the keyboard something the
+     * corpus cannot: that this word belongs to *their* vocabulary. Ranking it above a word
+     * Wikipedia happens to use more often follows from that, and there is no corpus of personal
+     * dictionaries to check it against. **Recorded as a design decision with no measurement
+     * behind it**, rather than dressed up with a weight that would look derived.
+     *
+     * The exposure is bounded by the user: the dictionary holds only what they put in it.
+     */
+    private val personal: PersonalDictionary = PersonalDictionary(),
     /**
      * Finds words that are spelled correctly and still wrong. Optional, so an engine can be
      * built without one — and so the M10 measurements can be reproduced exactly as they were
@@ -272,7 +286,9 @@ class PredictiveEngine(
             Mix.COMPLETIONS_FIRST -> finishes + fixes
             Mix.INTERLEAVED -> interleave(finishes, fixes)
         }
-        return ordered.distinctBy { it.wordIndex }.take(config.limit)
+        // By word, not by index: personal-dictionary entries all carry [PERSONAL_WORD_INDEX]
+        // and would collapse into one under distinctBy { it.wordIndex }.
+        return ordered.distinctBy { it.word }.take(config.limit)
     }
 
     private fun interleave(a: List<Prediction>, b: List<Prediction>): List<Prediction> {
@@ -298,12 +314,13 @@ class PredictiveEngine(
 
     private fun completions(prefix: String, previousIndex: Int?): List<Prediction> {
         if (prefix.length < config.minPrefixForCompletion) return emptyList()
+        val mine = personalCompletions(prefix)
         val candidates = trie.completionsTopK(
             prefix,
             config.completionCandidates,
         ) { index -> frequency.logFrequencyOf(index) }
 
-        return candidates
+        val fromLexicon = candidates
             // Offering back exactly what was typed is not a suggestion.
             .filter { lexicon.wordAt(it) != prefix }
             .map { index ->
@@ -319,6 +336,43 @@ class PredictiveEngine(
                 )
             }
             .sortedByDescending { it.score }
+
+        return (mine + fromLexicon).distinctBy { it.word }.take(config.limit)
+    }
+
+    /**
+     * Completions drawn from the personal dictionary.
+     *
+     * A linear scan. The dictionary is user-curated and small — every entry was typed by hand
+     * into a settings screen — so a scan is cheaper than any index over it would be, and it
+     * costs nothing when the dictionary is empty, which is the common case.
+     */
+    private fun personalCompletions(prefix: String): List<Prediction> {
+        if (personal.size == 0) return emptyList()
+        return personal.all()
+            .filter { it.length > prefix.length && it.startsWith(prefix) }
             .take(config.limit)
+            .map {
+                Prediction(it, PERSONAL_WORD_INDEX, SuggestionKind.COMPLETION, PERSONAL_SCORE)
+            }
+    }
+
+    companion object {
+        /**
+         * [Prediction.wordIndex] for a word that is not in the lexicon at all.
+         *
+         * Callers that index back into the lexicon must check for it. Nothing in this project
+         * does — the strip only ever reads [Prediction.word] — but a `-1` handed to
+         * `HebrewLexicon.wordAt` throws rather than returning a wrong word, which is the
+         * failure mode to prefer.
+         */
+        const val PERSONAL_WORD_INDEX: Int = -1
+
+        /**
+         * Sorts above every lexicon completion, whose scores are log-frequencies capped at 255
+         * plus a bounded bigram term. Not a tuned number and not comparable to one: it means
+         * "the user asked for this word", which is not a point on the frequency scale.
+         */
+        const val PERSONAL_SCORE: Double = Double.MAX_VALUE
     }
 }

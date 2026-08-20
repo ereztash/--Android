@@ -54,10 +54,23 @@ network permission, and three gates keep it that way.
 >
 > Both the older and newer spellings are recognised, so *tochnit* and *tochnyt* are both fine.
 >
+> **It finishes your words, and catches the ones that look right**
+>
+> The keyboard suggests how a word ends as you type it, and what usually comes next when you
+> finish one — all from a language model stored on your phone, with nothing looked up anywhere.
+>
+> It also catches a mistake a spellchecker cannot: *im* where *am* was meant. Both are real
+> Hebrew words, so nothing about either is misspelled — only the sentence around them shows
+> which one belongs. The keyboard reads that sentence and offers the other word.
+>
+> It offers. It never changes your text by itself; every correction is one you tap.
+>
 > **Your own words, encrypted**
 >
-> You can add words yourself. They are encrypted on your device with a key held in the Android
-> Keystore, and you can delete every one of them — and the key — in a single tap.
+> You can add words yourself — a name, a place, a word the dictionary has never heard of. The
+> keyboard stops underlining them and starts completing them. They are encrypted on your device
+> with a key held in the Android Keystore, and you can delete every one of them — and the key —
+> in a single tap.
 >
 > Nothing is ever added automatically. The keyboard does not learn from what you type.
 >

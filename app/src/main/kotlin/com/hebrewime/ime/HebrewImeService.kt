@@ -44,6 +44,21 @@ import com.hebrewime.ime.view.KeyboardView
  * `InputMethodManager.invalidateInput()` can force-close a batch edit and destroy the composing
  * span at any moment -- AOSP unwinds up to 16 `endBatchEdit()` calls, then falls back to
  * `restartInput`. Nothing here assumes a batch or a composing region survives across calls.
+ *
+ * ### This keyboard never replaces anything by itself
+ * `CorrectionEngine.shouldAutoReplace` exists, is measured, and is **not called from here**.
+ * Every change to the user's text comes from a tap on the candidate strip.
+ *
+ * The measurement is the argument. On the unbiased golden corpus the shipped configuration
+ * auto-replaces 24.25% of misspellings, of which **1.90% are wrong** — text the user meant,
+ * silently replaced with text they did not write, possibly noticed only much later. The
+ * alternative costs one tap. Those two errors are not comparable, and the operator asked for a
+ * keyboard that *offers* corrections, not one that makes them.
+ *
+ * An undo path used to sit in [execute] to reverse an automatic replacement with one backspace.
+ * It was unreachable: nothing ever set the field it read. Dead code that describes a feature
+ * the app does not have is worse than no code, because it reads like evidence the feature was
+ * considered and handled. Removed, with the decision recorded here instead.
  */
 class HebrewImeService : InputMethodService() {
 
@@ -65,17 +80,8 @@ class HebrewImeService : InputMethodService() {
      */
     private var session: SessionStart = restrictedSession()
 
-    /**
-     * The last automatic replacement, kept so that an immediate backspace undoes it rather
-     * than deleting a character of a word the user never typed. A correction the user did not
-     * ask for must always be one keystroke away from being gone.
-     */
-    private var lastReplacement: Replacement? = null
-
     private var keyboardView: KeyboardView? = null
     private var candidateStrip: CandidateStripView? = null
-
-    private data class Replacement(val original: String, val replacement: String)
 
     override fun onCreate() {
         super.onCreate()
@@ -142,7 +148,6 @@ class HebrewImeService : InputMethodService() {
     override fun onStartInput(info: EditorInfo?, restarting: Boolean) {
         super.onStartInput(info, restarting)
         shifted = false
-        lastReplacement = null
         // Results computed for the previous field must never surface in this one -- which
         // matters most when the previous field was a password.
         correction.cancelOutstanding()
@@ -178,6 +183,12 @@ class HebrewImeService : InputMethodService() {
         }
 
         contextBuffer.reset(session.initialTextBeforeCursor, session.cursorPosition)
+
+        if (session.maySuggest) {
+            // The settings screen and the keyboard are separate components. Without this, a
+            // word the user just added stays underlined until the process restarts.
+            correction.refreshPersonalDictionary()
+        }
     }
 
     override fun onFinishInput() {
@@ -187,7 +198,6 @@ class HebrewImeService : InputMethodService() {
         candidateStrip?.setCandidates(emptyList())
         session = restrictedSession()
         shifted = false
-        lastReplacement = null
     }
 
     override fun onDestroy() {
@@ -212,7 +222,6 @@ class HebrewImeService : InputMethodService() {
             // describes a word that is no longer under the cursor.
             correction.cancelOutstanding()
             candidateStrip?.setCandidates(emptyList())
-            lastReplacement = null
         }
     }
 
@@ -238,26 +247,13 @@ class HebrewImeService : InputMethodService() {
                 ic.commitText(command.text, 1)
                 contextBuffer.onTextCommitted(command.text)
                 if (shifted) setShift(false)
-                if (command.text.isNotEmpty()) lastReplacement = null
             }
 
             is EditCommand.DeleteBeforeCodePoints -> {
-                val undo = lastReplacement
-                if (undo != null) {
-                    // Undo the automatic replacement rather than editing the word it produced.
-                    lastReplacement = null
-                    ic.deleteSurroundingTextInCodePoints(
-                        undo.replacement.codePointCount(), 0,
-                    )
-                    ic.commitText(undo.original, 1)
-                    contextBuffer.onCharsDeleted(undo.replacement.length)
-                    contextBuffer.onTextCommitted(undo.original)
-                } else {
-                    // deleteSurroundingTextInCodePoints, never deleteSurroundingText: the
-                    // latter counts UTF-16 code units and will split a surrogate pair.
-                    ic.deleteSurroundingTextInCodePoints(command.codePoints, 0)
-                    contextBuffer.onCharsDeleted(command.codePoints)
-                }
+                // deleteSurroundingTextInCodePoints, never deleteSurroundingText: the latter
+                // counts UTF-16 code units and will split a surrogate pair.
+                ic.deleteSurroundingTextInCodePoints(command.codePoints, 0)
+                contextBuffer.onCharsDeleted(command.codePoints)
             }
 
             EditCommand.PerformEditorAction -> {
@@ -270,7 +266,6 @@ class HebrewImeService : InputMethodService() {
                 } else {
                     ic.performEditorAction(action)
                 }
-                lastReplacement = null
             }
 
             is EditCommand.SwitchLayout -> {
@@ -330,9 +325,8 @@ class HebrewImeService : InputMethodService() {
      *   day and the preceding space on a bad one.
      * - A completion or correction **replaces** what is under the cursor.
      *
-     * A chosen suggestion is never queued for undo. [lastReplacement] exists so that backspace
-     * reverses a replacement the user did not ask for; this one they asked for, and backspace
-     * should edit the resulting word normally.
+     * Neither case is queued for undo, because neither happened without being asked for. See
+     * the class docs on why this keyboard never replaces anything by itself.
      */
     private fun applySuggestion(prediction: Prediction) {
         val ic = currentInputConnection ?: return
@@ -352,7 +346,6 @@ class HebrewImeService : InputMethodService() {
             }
             ic.commitText(prediction.word, 1)
             contextBuffer.onTextCommitted(prediction.word)
-            lastReplacement = null
             candidateStrip?.setCandidates(emptyList())
             return
         }
@@ -367,7 +360,6 @@ class HebrewImeService : InputMethodService() {
         }
         contextBuffer.onCharsDeleted(original.length)
         contextBuffer.onTextCommitted(prediction.word)
-        lastReplacement = null
         candidateStrip?.setCandidates(emptyList())
     }
 
@@ -403,7 +395,6 @@ class HebrewImeService : InputMethodService() {
         }
         contextBuffer.onCharsDeleted(tail.length)
         contextBuffer.onTextCommitted(rewritten)
-        lastReplacement = null
         candidateStrip?.setCandidates(emptyList())
     }
 

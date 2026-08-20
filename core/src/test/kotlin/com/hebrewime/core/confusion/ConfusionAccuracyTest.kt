@@ -126,6 +126,40 @@ class ConfusionAccuracyTest {
     }
 
     /**
+     * What one check costs, since it runs on every keystroke.
+     *
+     * The detector re-examines the same word while the user types the one after it — the P2
+     * position does not move until a word boundary — so the wasted work is real and the
+     * question is whether it is worth caching away. Measured rather than assumed.
+     *
+     * A JVM figure on the build host. It is NOT a device number and no budget is asserted
+     * against it here; the input-path budget is measured through `HebrewIme.suggest` by the
+     * macrobenchmark, on hardware.
+     */
+    @Test
+    fun measureCheckCost() {
+        val (lexicon, bigrams) = fixture()
+        val detector = RealWordErrorDetector(lexicon, bigrams)
+        val sites = ConfusionCorpus.sites(testSlice(), lexicon, bothSides = BOTH_SIDES)
+            .take(20_000)
+        // Warm the JIT, or the first thousand calls dominate the average.
+        for (site in sites.take(2_000)) {
+            detector.check(site.sentence[site.position - 1], site.sentence[site.position],
+                site.sentence.getOrNull(site.position + 1))
+        }
+        val start = System.nanoTime()
+        for (site in sites) {
+            detector.check(site.sentence[site.position - 1], site.sentence[site.position],
+                site.sentence.getOrNull(site.position + 1))
+        }
+        val perCall = (System.nanoTime() - start) / 1_000.0 / sites.size
+        println("real-word check: %.1f us/call over ${sites.size} calls "
+            .format(perCall) + "[JVM on build host, NOT a device]")
+        assertTrue(perCall < 500.0, "%.1f us/call is far outside the expected range; something "
+            .format(perCall) + "structural changed, not a threshold to relax")
+    }
+
+    /**
      * CONTROL: every flag must come from context, not from the confusion inventory.
      *
      * The same detector with an empty bigram table has the identical confusion sets and the

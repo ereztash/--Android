@@ -10,7 +10,7 @@ Status of every gate and check in the project. Four states only:
 **There is no "ready except for". While any row below is NOT RUN, the app is not
 release-ready — and it is not described as release-ready anywhere in this repository.**
 
-**Last updated: M8, plus the operator's minSdk 31 decision. Verdict: see [RELEASE_READINESS.md](RELEASE_READINESS.md) — NOT READY.**
+**Last updated: M12. Verdict: see [RELEASE_READINESS.md](RELEASE_READINESS.md) — NOT READY.**
 
 ---
 
@@ -26,8 +26,8 @@ release-ready — and it is not described as release-ready anywhere in this repo
 | minSdk / targetSdk | **31** / 36 — verified in all four built APKs |
 | **Device / emulator** | **NONE. No Android device or emulator exists in this environment, and none of the results below were obtained on one.** |
 
-Scale: 33 production Kotlin files, 17 test files, **125 JVM tests**, 13 gate scripts,
-**14 gates**, 5 positive-control fixtures. **Lint: 0 issues.**
+Scale: 39 production Kotlin files, 26 test files, **179 JVM tests**, 8 gate scripts,
+**16 gates**, 5 positive-control fixtures. **Lint: 0 issues.**
 
 ---
 
@@ -36,20 +36,22 @@ Scale: 33 production Kotlin files, 17 test files, **125 JVM tests**, 13 gate scr
 | ID | Check | Denominator | Positive control |
 |---|---|---|---|
 | GATE-NET-1 | No network capability — manifests | 3 manifests | Planted `INTERNET` permission |
-| GATE-NET-1 | No network capability — sources | 50 Kotlin/Java files | Planted okhttp / `java.net` / WebView |
+| GATE-NET-1 | No network capability — sources | 65 Kotlin/Java files | Planted okhttp / `java.net` / WebView |
 | GATE-NET-1 | No network capability — shipping deps | 113 resolved coordinates | Planted okhttp + Firebase coordinates |
-| GATE-NET-2 | **Built debug APK** — permissions + DEX | 1 permission, 16 descriptors over 8 DEX files (28,339,184 bytes) | **A real assembled `netcontrol` APK** |
-| GATE-NET-3 | **Built RELEASE APK** — permissions + DEX | 1 permission, **2 descriptors** over 1 DEX file (1,927,388 bytes) | The same real APK against the release baseline |
-| GATE-API-1 | No IME API that compiles cleanly and fails at runtime (§1.1/1.3/1.4/1.6) | 50 files, 6 rules | Planted session-override, return-value branch, hardcoded backspace, blocking fetch |
-| GATE-API-1 | `getInitial*` accessors only inside the privacy boundary (§1.2) | 50 files | Planted read outside the boundary |
-| GATE-API-1 | Nothing typed reaches logcat or stdout | 50 files, production sources | Planted `Log.d` and `println` |
-| GATE-CRYPTO-1 | No ECB, hardcoded IV/key, seeded `SecureRandom`, broken primitive | 50 files, 4 rules | Planted `AES/ECB`, fixed IV, hardcoded key, MD5, seeded random |
+| GATE-NET-2 | **Built debug APK** — permissions + DEX | 1 permission, 16 descriptors over 13 DEX files (28,527,620 bytes) | **A real assembled `netcontrol` APK** |
+| GATE-NET-3 | **Built RELEASE APK** — permissions + DEX | 1 permission, **2 descriptors** over 1 DEX file (1,922,156 bytes) | The same real APK against the release baseline |
+| GATE-API-1 | No IME API that compiles cleanly and fails at runtime (§1.1/1.3/1.4/1.6) | 65 files, 6 rules | Planted session-override, return-value branch, hardcoded backspace, blocking fetch |
+| GATE-API-1 | `getInitial*` accessors only inside the privacy boundary (§1.2) | 65 files | Planted read outside the boundary |
+| GATE-API-1 | Nothing typed reaches logcat or stdout | 65 files, production sources | Planted `Log.d` and `println` |
+| GATE-CRYPTO-1 | No ECB, hardcoded IV/key, seeded `SecureRandom`, broken primitive | 65 files, 4 rules | Planted `AES/ECB`, fixed IV, hardcoded key, MD5, seeded random |
 | GATE-LEX-1 | Shipped lexicon matches its manifest | 1 artifact, 355,587 forms | One byte flipped |
 | GATE-LEX-2 | Upstream source integrity | 2 sources | One byte flipped before hashing |
 | GATE-LEX-3 | The lexicon **inside the APK** hashes to the manifest's value | 1 asset, 4,607,433 bytes | One byte appended |
-| GATE-ASSET-1 | The assets the app opens by name are the ones AGP packaged | 3 | Expect a name AGP does not produce |
+| GATE-ASSET-1 | The assets the app opens by name are the ones AGP packaged | 3 named assets, checked against the APK's own entry list | Expect a name AGP does not produce |
 | GATE-MANIFEST-1 | IME service declares `exported`, `BIND_INPUT_METHOD`, the action, the meta-data | 4 requirements | `exported` flipped to false |
 | GATE-R8-1 | R8 has not stripped what the system instantiates by name | 4 requirements on the minified build | Service declaration invalidated |
+| GATE-BIGRAM-1 | The bigram table **inside the APK** is byte-identical to the one every prediction number was measured on, and its header agrees with the manifest | 1 asset, 2,985,642 bytes, 54,133 groups | One byte appended |
+| GATE-SIZE-1 | The release artifact stays inside a budget written down **after** measuring it | 3 budget entries | Assets measured 50% larger |
 | GATE-XML-1 | Every XML resource parses | 15 files | A comment containing `--` |
 | GATE-TRACE-1 | The benchmark measures sections the app actually emits | 2 section names | Requested sections renamed |
 | GATE-DENOM-1 | A check that examined nothing never reports PASS | meta-gate | The network gate over an empty directory |
@@ -65,7 +67,7 @@ Scale: 33 production Kotlin files, 17 test files, **125 JVM tests**, 13 gate scr
 | M1-ROUNDTRIP | Every index round-trips | 355,587 entries |
 | M2-CTXBUF | `InputContextBuffer` desync and recovery | 12 tests |
 | M3-GRAPHEME | UAX #29 backspace widths | 30 assertions, 17 inputs |
-| M3-GEOMETRY | Rows tile exactly; every key centre hit-tests to itself; RTL mirrors | 3 layouts, every key |
+| M3-GEOMETRY | Rows tile exactly; every key centre hit-tests to itself | 3 layouts, every key. **The mirroring assertion was deleted in M9** — it asserted the bug. See docs/milestones/M9.md. |
 | M3-LAYOUT | Hebrew layout carries all 27 letters once, incl. 5 final forms | 27 letters |
 | M4-PRIV-FETCH | **Initial text never fetched for a restricted field, tested with a field that DID contain text** | 9 input types × a real password string |
 | M4-SWEEP | Exhaustive input-type sweep, unknown values fail closed | **4,096** variations + **16** classes |
@@ -75,6 +77,16 @@ Scale: 33 production Kotlin files, 17 test files, **125 JVM tests**, 13 gate scr
 | M6-TAMPER | Tampering with version, IV, body or tag each detected | 4 regions |
 | M6-MODEL | The dictionary cannot hold anything but one Hebrew word | 9 rejection cases + reflective surface check |
 | M7-A11Y-NAMES | Every key has a distinct, non-empty spoken name | 73 keys, 27 letters |
+| M9-LAYOUT-STD | Hebrew key order matches SI-1452 read from the standard, not from the code | 3 rows, every key |
+| M10-UNICODE | Every code point in U+0591..U+05C7 classified as `Character.getType` classifies it | **55 code points**, 51 marks + 4 punctuation |
+| M10-BOUNDARY | The buffer's sentence-boundary set is pinned to `BOUNDARY_RE` in `build_bigrams.py`, read from the script | 7 boundary characters + `--` |
+| M10-PRED-CTRL | A context-free predictor scores measurably worse through the same harness | 20,000 per cell — control: it cannot answer next-word at all, asserted at exactly 0 |
+| M10-FALSEFLAG | Correct words are never offered as corrections | **20,000 in-lexicon words**, 0 flagged — control: an always-correcting engine scores 100% |
+| M11-NOCTX | Every real-word flag comes from context, not from the confusion inventory | 69,494 sites with an **empty** bigram table, 0 flagged |
+| M11-FLOOR | The bigram table's minimum stored log-count is the arithmetic floor of its pruning threshold | 532,168 entries; 21 = `round(log2(6)*8)` |
+| M11-CTXBUF | Multi-word context and the span arithmetic a non-adjacent replacement depends on | 10 tests |
+| M11-WIRING | A `TypingContext` in, a ranked strip out — the two halves are actually connected | 6 tests |
+| M12-PERSONAL | The personal dictionary actually affects typing | 8 tests — control: without it the same word IS corrected |
 | VERIF-SDK | §1 / §3 claims checked against `android.jar` + `api-versions.xml` | 31 claims: 28 confirmed, 0 contradicted, 3 not checkable |
 | VERIF-LEX | Lexicon sources byte + sha256 exact | 2 of 2 |
 
@@ -92,7 +104,15 @@ Scale: 33 production Kotlin files, 17 test files, **125 JVM tests**, 13 gate scr
 | M5-ADJ | Keyboard-adjacency discount effect | **−7.97 points** top-1; wrong auto-replacements ×8 | same corpus — **feature measured and NOT enabled** |
 | M5-P95 | Suggestion latency p95 | 2.88 ms | 4,000 queries, **JVM on the build host — NOT a device number** |
 | M5-STRUCT | Trie over the real lexicon | 567,767 nodes, 73.3% prefix sharing, 7.58 MiB, 148 ms build | 355,587 words |
-| M8-SIZE | Release artifact | APK 3,311,943 B; AAB 4,076,022 B | R8 cut DEX from 28,339,184 to 1,927,388 B |
+| M10-PRED-1 | Completion top-3, 1-letter prefix | **5.73%** (2.15% without bigrams) | 20,000, slice sha `cedfb5be…` |
+| M10-PRED-2 | Completion top-3, 2-letter prefix | **25.77%** (15.80%) | 20,000, same slice |
+| M10-PRED-3 | Completion top-3, 3-letter prefix | **49.28%** (38.27%) | 20,000, same slice |
+| M10-NEXT | Next-word top-3 | **9.80%**, offered in 88.36% of positions | 20,000, same slice |
+| M10-MIX | Ordering policy: corrections-first vs completions-first | corrections-first **dominated** — worse on both corpora | 20,000 + 4,000 — baseline measured, then replaced |
+| M11-RECALL | Real-word error recall, shipped config | **64.58%** | 45,867 injected errors, test slice sha `9fc528ae…` |
+| M11-FALSE | Real-word false-alarm rate on untouched text | **0.26%** | 69,494 positions, same slice — control: a permissive detector scores 15.08% |
+| M11-COST | One real-word check | 3.7 µs | 20,000 calls, **JVM on the build host — NOT a device number** |
+| M12-SIZE | Release artifact | APK 5,161,766 B; AAB 5,940,182 B | R8 cut DEX from 28,527,620 to 1,922,156 B. Assets are 3,023,216 B, of which the bigram table is 1,849,636 B |
 
 ## FAILED
 
@@ -127,6 +147,9 @@ Nothing below has been exercised. None of it is described anywhere as working.
 | M7-TALKBACK | Whether the virtual view nodes are usable with TalkBack | A device with TalkBack |
 | M7-CONTRAST | Perceptual legibility of key colours on a real panel | A device |
 | M8-NETCAPTURE | A packet capture confirming no traffic | A device |
+| M10-STRIP | Whether a suggestion has ever been tapped | A device |
+| M11-EDIT | The non-adjacent replacement — deleting to the cursor and committing a rewritten span — against a **real** `InputConnection` | A device. The span arithmetic is unit-tested; the Binder round-trip is not. |
+| M12-RELOAD | Whether the personal dictionary reload in `onStartInput` picks up a word added in Settings while the IME is running | A device with both components live |
 
 ### Requires operator action
 
@@ -146,3 +169,7 @@ Nothing below has been exercised. None of it is described anywhere as working.
 | M1-KTIV | Ktiv male/haser coverage over all reform-affected lemmas | No list of affected lemmas. The 10 pairs checked are the 10 the spec names, not a sample. |
 | M5-NOSUGGEST | Splitting the 12.08% no-suggestion cases into stripper false-accepts vs no-candidate | Per-case human adjudication |
 | M1-TYPO | Prefix-stripper typo-rejection rate (the spec's 88.4% at MIN_STEM 4) | A typo corpus and a correctly-constructed prefix-free non-word control |
+| M10-REGISTER | Prediction accuracy on **phone typing** rather than Wikipedia prose | No corpus of Hebrew phone typing exists here. The register is wrong and held-out discipline does not fix that. |
+| M11-BASERATE | How often real Hebrew typing produces an error **inside** the confusion inventory | Needs a corpus of genuine human errors. Without it, 64.58% recall answers only "given the error is one this detector can express", and no precision figure can be computed from a 0.26% false-alarm rate. |
+| M11-KTIV-PAIR | Whether the `ו`/`י` pair is worth including | Available as `HebrewConfusions.KTIV_MALE` and **not measured**. It is the largest source of real-word pairs and mostly not a confusion at all. |
+| M12-PERSONAL-RANK | Whether ranking personal words above lexicon words is right | No corpus of personal dictionaries. Recorded as a design decision with no measurement behind it. |

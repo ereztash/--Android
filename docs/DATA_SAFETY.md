@@ -49,9 +49,30 @@ The **personal dictionary**: single words the user typed into the settings scree
 - **Deletable in one action**, which destroys the Keystore key as well as the file, so the
   stored bytes become unopenable by anyone including this app.
 
+Since M12 those words also affect typing: the keyboard stops calling them misspellings and
+offers them as completions. That is the point of the feature, and it changes nothing about
+where the data lives — the words are read from the same encrypted file into memory, and never
+sent anywhere, because the app has no way to send anything.
+
 Under the rule quoted above this is local processing and does **not** require disclosure. It is
 described here, and in the app's own settings screen, because the user should know what is
 stored regardless of what a form requires.
+
+### What is held in memory, and never written down
+
+Prediction and real-word error detection need surrounding words. The keyboard holds **up to
+three completed words** plus the one being typed, in memory, in `InputContextBuffer`. That
+buffer:
+
+- is **never persisted**, in encrypted form or otherwise — there is no code path that writes it;
+- is cleared on `onFinishInput`, and dropped entirely on any cursor movement this IME did not
+  make;
+- is never populated at all in a restricted field, because the initial text is not read there
+  and suggestions are not computed;
+- has a hard cap of 2,048 characters, the length `EditorInfo` itself documents.
+
+The distinction that matters for this form is between *processing* and *storing*. This is
+processing: bytes that exist while a field is focused and are gone when it is not.
 
 ---
 

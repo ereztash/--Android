@@ -7,11 +7,13 @@ import com.hebrewime.core.correction.CorrectionEngine
 import com.hebrewime.core.correction.HebrewFrequency
 import com.hebrewime.core.correction.LexiconTrie
 import com.hebrewime.core.correction.NeutralCostModel
+import com.hebrewime.core.dictionary.PersonalDictionary
 import com.hebrewime.core.lexicon.HebrewLexicon
 import com.hebrewime.core.prediction.BigramModel
 import com.hebrewime.core.prediction.Prediction
 import com.hebrewime.core.prediction.PredictiveEngine
 import com.hebrewime.core.prediction.TypingContext
+import com.hebrewime.dictionary.PersonalDictionaryRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -71,6 +73,18 @@ class CorrectionController(
     private var loadJob: Job? = null
     private var inFlight: Job? = null
 
+    /** The artifacts, kept so the engine can be rebuilt when the personal dictionary changes. */
+    private var artifacts: Artifacts? = null
+    private var personal: PersonalDictionary = PersonalDictionary()
+    private val personalStore = PersonalDictionaryRepository(context)
+
+    private class Artifacts(
+        val lexicon: HebrewLexicon,
+        val trie: LexiconTrie,
+        val frequency: HebrewFrequency,
+        val bigrams: BigramModel,
+    )
+
     /**
      * What the last load actually managed to read. Null until a load completes.
      *
@@ -87,6 +101,7 @@ class CorrectionController(
         val trieNodes: Int,
         val bigramGroups: Int,
         val bigramPairs: Int,
+        val personalWords: Int,
     )
 
     /**
@@ -127,36 +142,15 @@ class CorrectionController(
                     degraded.add(BIGRAM_ASSET)
                     BigramModel.EMPTY
                 }
-                engine = PredictiveEngine(
-                    lexicon = lexicon,
-                    trie = trie,
-                    frequency = frequency,
-                    bigrams = bigrams,
-                    corrections = CorrectionEngine(
-                        lexicon = lexicon,
-                        trie = trie,
-                        frequency = frequency,
-                        // The shipped configuration. The keyboard-adjacency discount is
-                        // measured and deliberately NOT enabled -- it costs 8 points of top-1
-                        // accuracy on an unbiased corpus. See docs/CORRECTION_MEASUREMENTS.md
-                        // finding 1.
-                        costs = NeutralCostModel,
-                        config = CorrectionEngine.Config(),
-                    ),
-                    // Defaults, whose bigramWeight was chosen from the sweep in
-                    // docs/PREDICTION_MEASUREMENTS.md and not before it.
-                    config = PredictiveEngine.Config(),
-                    // Real-word errors: `אם` where `עם` was meant. Costs no asset bytes --
-                    // confusion sets are generated from the lexicon on demand -- and reuses
-                    // the same bigram table. Its thresholds come from a dev slice that shares
-                    // no sentence with the slice they were then measured on.
-                    realWordErrors = RealWordErrorDetector(lexicon, bigrams),
-                )
+                personal = readPersonalDictionary()
+                artifacts = Artifacts(lexicon, trie, frequency, bigrams)
+                engine = build(artifacts!!, personal)
                 loaded = Loaded(
                     lexiconWords = lexicon.size,
                     trieNodes = trie.nodeCount,
                     bigramGroups = bigrams.groupCount,
                     bigramPairs = bigrams.bigramCount,
+                    personalWords = personal.size,
                 )
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -214,6 +208,69 @@ class CorrectionController(
         }
     }
 
+    /**
+     * Re-read the personal dictionary and rebuild the engine if it changed.
+     *
+     * Called from `onStartInput` on fields that may show suggestions. The settings screen and
+     * the keyboard are separate components, and a word added while the keyboard was already
+     * running would otherwise keep being underlined until the process restarted — a setting
+     * that appears not to work.
+     *
+     * Never called for a restricted field. Nothing here would leak — the dictionary holds only
+     * words the user typed into a settings screen, and predictions are not computed at all when
+     * `maySuggest` is false — but reading a Keystore-sealed file on entry to a password field
+     * is work with no possible purpose.
+     */
+    fun refreshPersonalDictionary() {
+        val ready = artifacts ?: return
+        scope.launch {
+            val fresh = readPersonalDictionary()
+            if (fresh.size == personal.size && fresh.all() == personal.all()) return@launch
+            personal = fresh
+            engine = build(ready, fresh)
+            loaded = loaded?.copy(personalWords = fresh.size)
+        }
+    }
+
+    private suspend fun readPersonalDictionary(): PersonalDictionary =
+        try {
+            personalStore.load()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (unreadable: Throwable) {
+            // The repository already returns an empty dictionary for a corrupted or
+            // unopenable file; this catches the rest -- a missing Keystore key after a
+            // restore, for instance. The keyboard works without it.
+            PersonalDictionary()
+        }
+
+    private fun build(a: Artifacts, personal: PersonalDictionary) = PredictiveEngine(
+        lexicon = a.lexicon,
+        trie = a.trie,
+        frequency = a.frequency,
+        bigrams = a.bigrams,
+        corrections = CorrectionEngine(
+            lexicon = a.lexicon,
+            trie = a.trie,
+            frequency = a.frequency,
+            // The shipped configuration. The keyboard-adjacency discount is measured and
+            // deliberately NOT enabled -- it costs 8 points of top-1 accuracy on an unbiased
+            // corpus. See docs/CORRECTION_MEASUREMENTS.md finding 1.
+            costs = NeutralCostModel,
+            config = CorrectionEngine.Config(),
+            personal = personal,
+        ),
+        // Defaults, whose bigramWeight was chosen from the sweep in
+        // docs/PREDICTION_MEASUREMENTS.md and not before it.
+        config = PredictiveEngine.Config(),
+        // Real-word errors: `אם` where `עם` was meant. Costs no asset bytes -- confusion sets
+        // are generated from the lexicon on demand -- and reuses the same bigram table. Its
+        // thresholds come from a dev slice that shares no sentence with the slice they were
+        // then measured on.
+        realWordErrors = RealWordErrorDetector(a.lexicon, a.bigrams),
+        personal = personal,
+    )
+
     /** Cancel outstanding work. Called when the input session changes or the IME is destroyed. */
     fun cancelOutstanding() {
         inFlight?.cancel()
@@ -223,6 +280,8 @@ class CorrectionController(
     fun shutdown() {
         scope.cancel()
         engine = null
+        artifacts = null
+        personal = PersonalDictionary()
         loaded = null
         degradedAssets = emptySet()
     }

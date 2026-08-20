@@ -15,20 +15,37 @@ Two independent reasons, either of which is sufficient:
 
 ## What IS finished, and what that is worth
 
-The build is complete through M8 in the sense that every milestone's code exists, compiles,
+The build is complete through M12 in the sense that every milestone's code exists, compiles,
 and is covered by tests and gates:
 
-- **14 gates**, each with a committed positive control demonstrated red in the same run.
+- **16 gates**, each with a committed positive control demonstrated red in the same run.
   `scripts/run_gates.py` reports a gate as `NOT-A-GATE` and fails the build if its control ever
   comes back green — verified by neutering a control by hand and watching the orchestrator
   catch it.
-- **125 JVM tests**, 0 failures, 0 skipped.
-- A **release AAB (4,076,022 bytes)** and APK that build, survive R8 with everything the system
+- **179 JVM tests**, 0 failures, 0 skipped.
+- A **release AAB (5,940,182 bytes)** and APK that build, survive R8 with everything the system
   instantiates by name intact, and carry no network permission or network class reference.
 - The lexicon reproduces the build spec's counts to **+0.000%** on all four figures.
+- Prediction and real-word error detection measured on corpora **proven** disjoint from the
+  data the model was trained on, with the thresholds chosen on a dev slice that shares no
+  sentence with the slice they were reported against.
 
 That is a real body of evidence about the things it covers. It is **not** evidence that the
 keyboard works, because none of it involves a keyboard being used.
+
+### What changed after the operator first ran it on a phone
+
+The operator installed the app, typed on it, and reported three things. All three are done:
+
+| Reported | Milestone | Status |
+|---|---|---|
+| The keys are laid out "as if in a mirror" | M9 | **Fixed.** `Layouts.hebrew.rtl = true` mirrored every row. Hebrew SI-1452 maps letters onto physical QWERTY positions, which run left to right. The test that should have caught it asserted the mirrored behaviour instead — the wrong assumption sat in both the implementation and its assertion, so both looked green. |
+| The app must be predictive and notice spelling errors | M10 | **Done and measured.** Completion top-3 rises from 2.15%/14.80%/36.58% to 5.73%/25.77%/49.28% at 1/2/3-letter prefixes; next-word top-3 9.80%, offered in 88.36% of positions. |
+| It must catch `אם` where `עם` was meant, from sentence context | M11 | **Done and measured.** 64.58% recall at a 0.26% false-alarm rate on a held-out slice the thresholds never saw. |
+
+M12 then closed two gaps that only surface once the features exist: the personal dictionary
+from M6 was never read by anything, so a word the user added stayed underlined; and an undo
+path for automatic replacement was unreachable, because nothing ever performed one.
 
 ## What would have to happen next, in order
 
@@ -43,7 +60,12 @@ Watch specifically for:
 - state loss on rotation, and on configuration changes outside the declared `configChanges`
   list, where the view is still recreated;
 - whether the lexicon load stutters the first suggestion — 148 ms to build the trie on a
-  4-core x86 host is not a phone number.
+  4-core x86 host is not a phone number, and M10 added a 2.95 MiB bigram table to that load;
+- **the non-adjacent replacement.** Tapping a real-word suggestion deletes from the flagged
+  word to the cursor and commits a rewritten span. The span arithmetic is unit-tested; the
+  Binder round-trip that carries it out is not, and getting it wrong eats text the user typed.
+- **whether a word added in Settings stops being underlined** without restarting the app. The
+  reload runs in `onStartInput`; both components have to be live for that path to matter.
 
 ### 2. Run the latency harness
 
@@ -92,6 +114,21 @@ under Policy status in Play Console. See `docs/OPERATOR_NOTICES.md` NOTICE 1.
   It costs 8 points of top-1 accuracy on unbiased typos. Anyone reading the spec and expecting
   it to be on should read `docs/CORRECTION_MEASUREMENTS.md` finding 1 first — including the
   part where my own explanation of *why* it hurt turned out to be wrong.
+- **"49.28% completion top-3"** is Wikipedia prose, not phone typing. The register is wrong and
+  no amount of held-out discipline fixes that. The next-word figure is also measured with a
+  known previous word and no punctuation; in the app, context stops at a sentence boundary, so
+  the real aggregate offer rate is lower than 88.36% by an amount **not measured**.
+- **"64.58% real-word error recall"** answers only: *given that the error is one this detector
+  can express, does context find it?* The errors were injected from the detector's own
+  inventory. How often real Hebrew typing produces an error inside that inventory is NOT
+  MEASURED, and without it no precision figure can be derived from the 0.26% false-alarm rate.
+- **This keyboard never replaces anything by itself.** `shouldAutoReplace` exists and is
+  measured; it is not called. Every change to the user's text is a tap. On the golden corpus
+  the shipped configuration would auto-replace 24.25% of misspellings with **1.90% wrong** —
+  text the user meant, silently replaced. One tap is the cheaper error.
+- **Personal-dictionary words are ranked above lexicon words with no measurement behind it.**
+  There is no corpus of personal dictionaries. It follows from the user having typed the word
+  in deliberately, and it is recorded as a design decision rather than a derived weight.
 
 ## The one conflict with the build spec, restated
 
