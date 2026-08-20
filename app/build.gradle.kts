@@ -106,6 +106,19 @@ android {
 
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+
+        // Compress the DEX in DEBUG builds only.
+        //
+        // AGP stores debug DEX uncompressed so the platform can mmap it and start faster. That
+        // is the right default for a build you install over ADB, and the wrong one for a build
+        // somebody downloads to a phone over mobile data: unminified Compose puts 28.6 MB of
+        // DEX in the debug APK, and stored uncompressed that is a 31.4 MB download.
+        //
+        // Scoped to debug on purpose. The release variant keeps AGP's default so its packaged
+        // size stays the number GATE-SIZE-1 baselines and docs/RELEASE_READINESS.md quotes --
+        // shrinking the shipped artifact as a side effect of making a test build easier to
+        // download would quietly invalidate both.
+        dex.useLegacyPackaging = false
     }
 
     lint {
@@ -126,6 +139,14 @@ android {
         // human can open is a report nobody checks.
         xmlReport = true
         htmlReport = true
+    }
+}
+
+androidComponents {
+    onVariants(selector().withBuildType("debug")) { variant ->
+        // See the packaging block: compressed DEX for the downloadable debug build, AGP's
+        // uncompressed default everywhere else.
+        variant.packaging.dex.useLegacyPackaging.set(true)
     }
 }
 
