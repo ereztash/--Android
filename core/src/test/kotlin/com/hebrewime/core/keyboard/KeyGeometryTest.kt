@@ -24,6 +24,34 @@ class KeyGeometryTest {
         }
     }
 
+    /**
+     * Every plain letter key is the same width, in every row.
+     *
+     * **Nothing tested this until a user looked at the rendered keyboard and said the letter
+     * proportions were not identical.** Hebrew rows are 8, 10 and 9 keys; stretching each row
+     * to the full width independently made a top-row key 25% wider than a middle-row key. The
+     * arithmetic was self-consistent and every existing test passed, because they all checked
+     * rows in isolation and never compared one row against another.
+     */
+    @Test
+    fun everyLetterKeyIsTheSameWidthAcrossRows() {
+        for (layout in Layouts.all) {
+            val rects = KeyGeometry.layout(layout, width, height)
+            val letterWidths = rects
+                .filter { it.key.widthWeight == 1f }
+                .map { it.width }
+            if (letterWidths.size < 2) continue
+            val smallest = letterWidths.min()
+            val largest = letterWidths.max()
+            assertTrue(
+                largest - smallest < 0.01f,
+                "${layout.id}: unit-width keys range from $smallest to $largest — a " +
+                    "%.0f%% difference. Rows are being stretched independently."
+                        .format(100.0 * (largest / smallest - 1.0)),
+            )
+        }
+    }
+
     @Test
     fun rowsTileTheFullWidthWithNoGapsOrOverlaps() {
         for (layout in Layouts.all) {
@@ -33,9 +61,15 @@ class KeyGeometryTest {
                 val rowRects = rects.subList(index, index + row.keys.size)
                     .sortedBy { it.left }
                 index += row.keys.size
-                assertTrue(abs(rowRects.first().left) < 0.01f, "${layout.id}: row starts at ${rowRects.first().left}")
-                assertTrue(abs(rowRects.last().right - width) < 0.01f,
-                    "${layout.id}: row ends at ${rowRects.last().right}, expected $width")
+                // Rows are CENTRED, not stretched: a row narrower than the widest one leaves
+                // equal margins. Asserting every row is flush to both edges is what allowed
+                // 8-key and 10-key rows to render with different key widths.
+                val leftMargin = rowRects.first().left
+                val rightMargin = width - rowRects.last().right
+                assertTrue(
+                    abs(leftMargin - rightMargin) < 0.01f,
+                    "${layout.id}: row is not centred, margins $leftMargin vs $rightMargin",
+                )
                 for (i in 1 until rowRects.size) {
                     assertTrue(
                         abs(rowRects[i].left - rowRects[i - 1].right) < 0.01f,
@@ -92,9 +126,16 @@ class KeyGeometryTest {
             ordered.joinToString("") { it.key.output!! },
             "Hebrew top row is not in QWERTY physical order left-to-right",
         )
+        // Anti-mirroring is carried by the ORDER assertion above, which is the real guard.
+        // This one only checks that qof is in the left half and pe in the right, which stays
+        // true under centring and would still fail loudly on a mirrored layout.
         assertTrue(
-            abs(ordered.first().left) < 0.01f,
-            "qof must be flush LEFT (it is the E key); mirroring has come back",
+            ordered.first().centerX < width / 2f,
+            "qof must sit in the LEFT half (it is the Q key); mirroring has come back",
+        )
+        assertTrue(
+            ordered.last().centerX > width / 2f,
+            "pe must sit in the RIGHT half (it is the P key); mirroring has come back",
         )
     }
 

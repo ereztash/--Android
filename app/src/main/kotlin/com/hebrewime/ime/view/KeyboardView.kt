@@ -4,7 +4,9 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
+import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
+import android.view.SoundEffectConstants
 import android.view.View
 import android.view.accessibility.AccessibilityEvent
 import androidx.core.view.ViewCompat
@@ -130,29 +132,61 @@ class KeyboardView(context: Context) : View(context) {
         }
     }
 
+    /**
+     * ### Keys fire on DOWN, and this was changed after a user said it felt slow
+     *
+     * The original comment here read: *"Fire on UP, not DOWN: a touch that slid off the intended
+     * key should follow the finger, and firing on DOWN would commit the wrong character first."*
+     * That reasoning is coherent and it is **wrong for a keyboard**.
+     *
+     * Firing on UP delays every single character by the whole duration of the press — typically
+     * 50–120 ms of finger-down time, on every keystroke, forever. The slide-off it protects
+     * against is rare, and users do not slide off to *cancel*; they slide to reach a popup, which
+     * this keyboard does not have. Every production IME commits on DOWN, and the operator's
+     * report — "it feels a bit slower than normal typing" — is exactly what the difference feels
+     * like.
+     *
+     * The cost is real and accepted: a genuine mis-tap now commits, and is fixed with backspace
+     * rather than by lifting somewhere else.
+     *
+     * ### Feedback happens before anything else in the handler
+     * Haptic and sound come first, ahead of the edit itself, because the perception of speed is
+     * set by the first confirmation the finger gets and not by when the glyph appears. Both go
+     * through the platform helpers, which honour the user's system-wide haptic and touch-sound
+     * settings — a keyboard that buzzes when the phone is set to silent is a keyboard people
+     * uninstall.
+     */
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (rects.isEmpty()) return false
         when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+            MotionEvent.ACTION_DOWN -> {
+                val key = KeyGeometry.hitTest(rects, event.x, event.y)
+                pressedKey = key
+                invalidate()
+                if (key != null) {
+                    // Confirmation first. See the class docs above.
+                    // Single-argument form ON PURPOSE. The two-argument overload takes FLAGS,
+                    // and the only flags available are ones that IGNORE the user's settings.
+                    // This call respects them, which is the whole point.
+                    performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                    playSoundEffect(SoundEffectConstants.CLICK)
+                    performClick()
+                    sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_CLICKED)
+                    onKeyPressed?.invoke(key)
+                }
+            }
+
+            MotionEvent.ACTION_MOVE -> {
+                // Track the highlight so the key under the finger looks live, but do NOT fire
+                // again: the character was committed on DOWN and a slide is not a second press.
                 val key = KeyGeometry.hitTest(rects, event.x, event.y)
                 if (key != pressedKey) {
                     pressedKey = key
                     invalidate()
                 }
             }
-            MotionEvent.ACTION_UP -> {
-                // Fire on UP, not DOWN: a touch that slid off the intended key should follow
-                // the finger, and firing on DOWN would commit the wrong character first.
-                val key = KeyGeometry.hitTest(rects, event.x, event.y)
-                pressedKey = null
-                invalidate()
-                if (key != null) {
-                    performClick()
-                    sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_CLICKED)
-                    onKeyPressed?.invoke(key)
-                }
-            }
-            MotionEvent.ACTION_CANCEL -> {
+
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 pressedKey = null
                 invalidate()
             }

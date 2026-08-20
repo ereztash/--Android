@@ -59,20 +59,37 @@ object KeyGeometry {
         val rowHeight = height / layout.rows.size
         val out = ArrayList<KeyRect>(layout.allKeys.size)
 
+        // ### One key unit for the whole keyboard, not one per row
+        //
+        // Hebrew rows are 8, 10 and 9 keys long. Stretching each row to the full width
+        // independently — which is what this did — makes a top-row key 10/8 = **25% wider**
+        // than a middle-row key. A user looking at the rendered keyboard said the letter
+        // proportions were not identical, which is exactly that ratio.
+        //
+        // So the unit comes from the WIDEST row and shorter rows are centred in the leftover
+        // space, which is what every phone keyboard does and why their letters look uniform.
+        // Touches landing in the margin are resolved by [hitTest]'s nearest-key fallback, so
+        // centring costs no reachable area at the row ends.
+        val widestRow = layout.rows.maxOf { it.totalWeight }
+        val unit = width / widestRow
+
         layout.rows.forEachIndexed { rowIndex, row ->
             val top = rowIndex * rowHeight
             val bottom = if (rowIndex == layout.rows.size - 1) height else top + rowHeight
-            val total = row.totalWeight
+            val rowWidth = row.totalWeight * unit
+            val margin = (width - rowWidth) / 2f
             var consumedWeight = 0f
             row.keys.forEachIndexed { keyIndex, key ->
                 // Derive each edge from the cumulative weight rather than advancing a cursor,
                 // so rounding cannot accumulate and leave a dead strip at the row's end.
-                val left = width * (consumedWeight / total)
+                val left = margin + consumedWeight * unit
                 consumedWeight += key.widthWeight
                 val right = if (keyIndex == row.keys.size - 1) {
-                    width
+                    // Snap the last key to the row's true right edge, so the row is exactly
+                    // rowWidth wide however the floats landed.
+                    width - margin
                 } else {
-                    width * (consumedWeight / total)
+                    margin + consumedWeight * unit
                 }
                 out += KeyRect(key, left, top, right, bottom)
             }
