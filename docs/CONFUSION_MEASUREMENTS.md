@@ -389,3 +389,87 @@ person who wants the feature to pass.
 Escalated. Layer built, measured, and left disabled: `RealWordErrorDetector` defaults `skip` to
 `BigramModel.EMPTY` and `CorrectionController` does not load the asset.
 `SkipLayerVerdictTest.theFailedLayerIsNotWiredIntoProduction` asserts that it stays that way.
+
+
+---
+
+# D1 — distilling DictaBERT, and the ceiling it revealed
+
+## What the oracle experiment proved
+
+The operator proposed DictaBERT (`dicta-il/dictabert`, 184,474,880 parameters, ~704 MiB fp32) as
+a **measurement tool**. That framing is what makes it usable: the model is roughly 130x the
+entire APK and could never ship, but nothing stops it running at build time.
+
+Measured on 3,000 injected confusions drawn from `confusion_test`:
+
+| | this app | DictaBERT |
+|---|---|---|
+| recovers the original, overall | 64.58% | **98.6%** (2,957/3,000) |
+| **on positions where the adjacent window is blind** | **~0%** | **97.5%** (753/772) |
+| prefers the variant on clean text (false alarms) | 0.26% | 1.43% |
+
+**The second row overturns a claim made earlier in this document.** The 30.2% of positions with
+no adjacent evidence were described as cases where "no margin, threshold or weight can help:
+there is no signal in the window to weigh". The first half is true and the implication was
+wrong. There is no signal *in a bigram count table*. The signal is in the sentence, and a model
+that reads the sentence recovers 97.5% of it.
+
+**64.58% is a property of the model, not of the problem.** That could not have been known from
+inside the model, and it is what the operator's suggestion bought.
+
+## Why a small table can carry a useful part of it
+
+21.0% of the lexicon — 74,576 of 355,587 forms — has at least one homophone variant. The
+occurrence distribution is far narrower than that:
+
+| confusable forms | share of confusable-token occurrences |
+|---|---|
+| top 100 | 36.3% |
+| top 500 | 56.9% |
+| **top 2,000** | **75.9%** |
+| top 10,000 | 93.7% |
+
+The most frequent are `של, את, על, ב, הוא, עם, לא, בשנת, היא, או, בין, כי` — exactly the words a
+person actually mistypes. A table covering thousands, not tens of thousands, reaches most of the
+traffic.
+
+## And the reason this is not free
+
+**DictaBERT is not an oracle.** On clean text it prefers the variant 1.43% of the time — over
+five times this app's shipped false-alarm rate. Distilling its *decisions* would import that
+error rate wholesale. The distillation must therefore use its **confidence**, keeping only
+contexts where it is one-sided, and the confidence threshold is itself a number that has to be
+chosen on dev data and reported on test.
+
+Everything above is Hebrew Wikipedia. The register is still wrong for phone typing, and
+distillation does not fix that — it inherits it.
+
+## D1 stopping rule, recorded before the table is built
+
+`confusion_test` has already been observed for the S1 question, so it is not clean for this one.
+D1 will be measured on a **fresh slice cut from the residual pool** by
+`scripts/slice_eval_corpus.py`, which proves pairwise disjointness across every slice and
+refuses to write on any intersection.
+
+Ship only if, on that fresh slice, measured once with every threshold already fixed on
+`confusion_dev`:
+
+| | shipped | requirement |
+|---|---|---|
+| recall | 64.58% | **strictly greater** |
+| false alarms | 0.256% | **no greater than the baseline measured in the same run** |
+| asset growth | — | fits the remaining budget with `GATE-SIZE-1` unchanged |
+
+The false-alarm criterion is written against **the baseline measured in the same run**, not
+against a rounded published constant. That is the flaw S1 exposed in my own rule-writing, fixed
+here rather than repeated.
+
+Additional conditions, so that "it passed" cannot be manufactured:
+
+- **The confidence threshold is chosen on `confusion_dev` and nowhere else.**
+- **No BERT at runtime, ever.** The shipped artifact is a table of integers. If the only way to
+  get the benefit is to run the model on the phone, D1 fails — `GATE-NET-1/2/3` and the size
+  budget are not negotiable for this.
+- **A failure is a result.** The 33-point ceiling is proven; that a *compact* table can capture
+  a useful part of it is not, and this rule exists precisely because those are different claims.
