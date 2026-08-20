@@ -74,7 +74,28 @@ enforces this — `getTextBeforeCursor` is banned outright in this codebase.
 and the fallback path plus its own latency measurements will be built — but the latency claim
 will then have to be stated separately for API 26–29, because it will not hold there.
 
-**Status: DECIDED as minSdk 30. Operator may override.**
+### AMENDED AT M7 — the evidence now favours minSdk 31
+
+Two further API-30 deficiencies were found after M0, both measured, neither anticipated when
+minSdk 30 was chosen:
+
+1. **`InputMethodInfo.getConfigChanges()` is API 31.** So `android:configChanges` in
+   `method.xml` is **not read at all on API 30**, and `onCreateInputView()` is re-called on
+   every rotation, theme change, locale change and density change. The app defends against this
+   by holding no state in the view, but the declared mitigation simply does not apply there.
+2. **`android:suppressesSpellChecker` is API 31**, which Lint flags. On API 30 the **system
+   spell checker stays active** and paints its own red squiggles over the same text this
+   keyboard promised stays on-device — visibly contradicting the app's central claim, on a
+   surface the app does not control.
+
+Neither breaks the app on API 30. Both make it measurably worse there, in ways a user would
+notice and could reasonably blame on this keyboard.
+
+**Recommendation: raise minSdk to 31.** The cost is Android 11 devices. The benefit is that
+both of the above stop being caveats. This is a device-coverage decision and therefore the
+operator's, not one to make silently in a build.
+
+**Status: minSdk 30 as originally decided. Amended recommendation: 31. Awaiting the operator.**
 
 ---
 

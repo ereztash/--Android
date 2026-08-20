@@ -32,8 +32,10 @@ jobs:
 
       # GATE-NET-2's control is a REAL defective APK, not a fixture. Both must exist before
       # the gate runs, or it reports NOT-MEASURED.
-      - name: Assemble debug and the netcontrol positive-control APK
-        run: ./gradlew :app:assembleDebug :app:assembleNetcontrol
+      # GATE-NET-2's control is a REAL defective APK, and GATE-NET-3/GATE-R8-1 check the
+      # RELEASE artifact -- the one that actually ships, and the only one R8 has touched.
+      - name: Assemble debug, release, and the netcontrol positive-control APK
+        run: ./gradlew :app:assembleDebug :app:assembleRelease :app:assembleNetcontrol
 
       - name: Run all gates + positive controls
         run: python3 scripts/run_gates.py --verbose

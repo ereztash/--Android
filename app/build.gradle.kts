@@ -1,8 +1,25 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 }
+
+/**
+ * Release signing, read from an UNTRACKED keystore.properties at the repository root.
+ *
+ * The file is in .gitignore alongside *.jks and *.keystore. When it is absent -- which is the
+ * case in CI and in any checkout that has not been handed the secret -- the release build still
+ * assembles, unsigned. That keeps the whole release path buildable and testable without ever
+ * putting a key in the repository, and makes "is the release configuration correct" a question
+ * that can be answered separately from "do we have the signing key".
+ */
+val keystoreProperties = Properties().apply {
+    val file = rootProject.file("keystore.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+val hasSigningSecrets = keystoreProperties.getProperty("storeFile") != null
 
 android {
     namespace = "com.hebrewime"
@@ -18,11 +35,25 @@ android {
         // runner would make an empty androidTest suite look like a passing one.
     }
 
+    signingConfigs {
+        if (hasSigningSecrets) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             isMinifyEnabled = false
         }
         release {
+            if (hasSigningSecrets) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

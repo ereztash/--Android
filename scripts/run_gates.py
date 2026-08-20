@@ -34,6 +34,9 @@ def _gates(strict: bool) -> list[dict]:
     debug_apk = os.path.join(ROOT, "app", "build", "outputs", "apk", "debug", "app-debug.apk")
     netc_apk = os.path.join(ROOT, "app", "build", "outputs", "apk", "netcontrol",
                             "app-netcontrol.apk")
+    release_apk = os.path.join(ROOT, "app", "build", "outputs", "apk", "release",
+                               "app-release-unsigned.apk")
+    release_baseline = os.path.join(ROOT, "tools", "apk_dex_baseline_release.json")
     return [
         {
             "id": "GATE-NET-1",
@@ -120,6 +123,25 @@ def _gates(strict: bool) -> list[dict]:
                         "--json"],
             "control_desc": "expect an asset name AGP does not produce (a .gz that AGP strips)",
             "requires": [debug_apk],
+        },
+        {
+            "id": "GATE-NET-3",
+            "what": "the RELEASE artifact -- the one that ships -- has no network capability",
+            "real": [PY, apk, "--apk", release_apk, "--baseline", release_baseline,
+                     "--json"] + s,
+            "control": [PY, apk, "--apk", netc_apk, "--baseline", release_baseline, "--json"],
+            "control_desc": "the netcontrol apk measured against the release baseline",
+            "requires": [release_apk, netc_apk],
+        },
+        {
+            "id": "GATE-R8-1",
+            "what": "R8 has not stripped the classes the system instantiates by name",
+            "real": [PY, apk, "--apk", release_apk, "--baseline", release_baseline,
+                     "--json"] + s,
+            "control": [PY, apk, "--apk", release_apk, "--baseline", release_baseline,
+                        "--inject-defect", "service", "--json"],
+            "control_desc": "the IME service declaration invalidated in the release manifest",
+            "requires": [release_apk],
         },
         {
             "id": "GATE-TRACE-1",

@@ -1,14 +1,16 @@
 # QA matrix
 
-Status of every gate and check in the project. Three states only:
+Status of every gate and check in the project. Four states only:
 
 - **PASSED** — ran, with a stated denominator, and its positive control was demonstrated red.
+- **MEASURED** — a number, with its denominator and the corpus hash it came from.
 - **FAILED** — ran and did not meet its bar.
-- **NOT RUN** — has not been exercised. Spelled out, never omitted.
+- **NOT RUN** — has not been exercised. Spelled out in full, never omitted.
 
-There is no "ready except for". While any row is NOT RUN, the app is not release-ready.
+**There is no "ready except for". While any row below is NOT RUN, the app is not
+release-ready — and it is not described as release-ready anywhere in this repository.**
 
-**Last updated: M7.**
+**Last updated: M8. Verdict: see [RELEASE_READINESS.md](RELEASE_READINESS.md) — NOT READY.**
 
 ---
 
@@ -17,121 +19,128 @@ There is no "ready except for". While any row is NOT RUN, the app is not release
 | | |
 |---|---|
 | Host | Linux 6.18.5, x86_64, 4 vCPU, 15 GiB RAM |
-| JDK (build) | OpenJDK 17.0.19 (`jvmToolchain(17)`); host default is 21.0.10 |
-| Gradle | 8.14.3 (wrapper) |
-| AGP | 8.13.2 |
-| Kotlin | 2.2.21 |
-| Android SDK | Platform 36 (`platform-36_r02`), build-tools 36.0.0 |
-| Device / emulator | **NONE. No Android device or emulator exists in this environment.** |
+| JDK (build) | OpenJDK 17.0.19 via `jvmToolchain(17)`; host default is 21.0.10 |
+| Gradle / AGP / Kotlin | 8.14.3 / 8.13.2 / 2.2.21 |
 | Compose | BOM 2026.06.01 (Compose 1.11.4) — 2026.08.00 needs AGP 9.1+ and compileSdk 37 |
+| Android SDK | Platform 36 (`platform-36_r02`), build-tools 36.0.0 |
+| **Device / emulator** | **NONE. No Android device or emulator exists in this environment, and none of the results below were obtained on one.** |
+
+Scale: 33 production Kotlin files, 17 test files, **125 JVM tests**, 13 gate scripts,
+**14 gates**, 5 positive-control fixtures. Lint: 1 warning, documented below.
 
 ---
 
-## PASSED
+## PASSED — gates, each with its control demonstrated red
 
-| ID | Check | Denominator | Positive control | Control shown red |
-|---|---|---|---|---|
-| GATE-NET-1 | No network capability — source detector | 1 Kotlin file, 8 lines | `tools/positive_controls/network/` | YES — `net.client`, `net.url`, `net.webview` all fired |
-| GATE-NET-1 | No network capability — deps detector | 6 resolved coordinates | same | YES — okhttp + firebase both flagged |
-| GATE-API-1 | No compile-clean/runtime-fatal IME API | 1 Kotlin file, 8 lines, 4 rules | `tools/positive_controls/forbidden_api/` | YES — all 4 rules fired |
-| GATE-DENOM-1 | Zero denominator never reports PASS | n/a (meta-gate) | GATE-NET-1 over an empty dir under `--strict` | YES — exits 1, status `PASS-PARTIAL`, never `PASS` |
-| GATE-META-1 | A neutered control is detected as `NOT-A-GATE` | 3 gates | control file emptied by hand | YES — `run_gates.py` exited 1 and printed `NOT-A-GATE` |
-| TEST-CONST | §3 restricted-field constants match the platform | 16 assertions / 14 constants | — (assertion test, not a gate) | n/a |
-| TEST-GATES | The gates' own behaviour | 9 tests | — | n/a |
-| VERIF-SDK | §1 / §3 claims checked against `android.jar` + `api-versions.xml` | 31 claims: 28 confirmed, 0 contradicted, 3 not-checkable | — | n/a |
-| VERIF-LEX | Lexicon sources byte + sha256 exact | 2 of 2 sources | — | n/a |
-| GATE-LEX-1 | Shipped lexicon matches its manifest (gzip+raw sha256, form count, sort order) | 1 artifact, 355,587 forms | `--inject-defect artifact` (one byte flipped) | YES — both sha256 findings fired |
-| GATE-LEX-2 | Upstream source integrity | 2 sources | `--inject-defect checksum` | YES — `CHECKSUM_MISMATCH`, exit 1 |
-| M1-REPRO | Lexicon counts reproduce the build spec | 4 counts over 241,797 + 1,167,621 input rows | `--inject-defect filter` | YES — all 4 counts −21% to −25%, `COUNT_OUT_OF_TOLERANCE` |
-| M1-DETERM | Artifact is byte-identical across runs | 2 runs | `--inject-defect nondeterminism` | YES — hashes differ across `PYTHONHASHSEED` |
-| M1-XCHECK | Kotlin shipped path agrees with the Python measurement | 75,000 tokens × 5 settings | — (equality test) | n/a — exact agreement at all 5 |
-| M1-SORT | Lexicon blob really is byte-sorted (binary search correctness) | 355,587 entries compared | — | n/a |
-| M1-ROUNDTRIP | Every index round-trips through `indexOf`/`wordAt` | 355,587 entries | — | n/a |
-| GATE-NET-2 | Built APK has no network capability — merged manifest | 1 permission entry examined | **A real assembled `netcontrol` APK** carrying INTERNET + ACCESS_NETWORK_STATE | YES — both permissions flagged |
-| GATE-NET-2 | Built APK has no network capability — DEX | 16 descriptors across 8 DEX files, 28,339,184 bytes | same real APK, adding `java.net.HttpURLConnection` | YES — 2 novel descriptors flagged |
-| GATE-MANIFEST-1 | IME service declares exported, BIND_INPUT_METHOD, the action and the meta-data | 4 requirements | `--inject-defect service` (exported → false) | YES |
-| GATE-XML-1 | Every XML resource parses | 9 XML files | `tools/positive_controls/xml/malformed.xml` | YES — named file, line and column |
-| M2-CTXBUF | `InputContextBuffer` desync/recovery semantics | 12 tests | — | n/a |
-| M2-BUILD | `:app` assembles (debug + netcontrol) | 2 APKs | — | n/a |
-| GATE-LEX-3 | The lexicon **inside the APK** hashes to what `lexicon/MANIFEST.json` says | 1 packaged asset, 4,607,433 bytes | `--inject-defect lexicon` | YES — hash + line-count findings |
-| GATE-API-1 | §1.2 `getInitial*` accessors appear only in the privacy boundary file | 26 source files, 6 rules | planted read outside the boundary | YES |
-| GATE-API-1 | Nothing typed reaches logcat or stdout | 26 source files | planted `Log.d` and `println` | YES — both fired |
-| M3-GRAPHEME | UAX #29 backspace widths | 30 assertions over 17 inputs | — (the platform-divergence tripwire) | n/a |
-| M3-GEOMETRY | Key rects tile each row exactly; every key centre hit-tests to itself; RTL mirrors | 3 layouts, every key in each | — | n/a |
-| M3-LAYOUT | Hebrew layout carries all 27 letters exactly once, incl. 5 final forms | 27 letters | — | n/a |
-| M4-PRIV-FETCH | **Initial text is never fetched for a restricted field, tested with a field that DID contain text** | 9 restricted input types × a real password string | — (asserts the provider was never invoked) | n/a |
-| M4-SWEEP | Exhaustive input-type sweep, unknown values fail closed | **4,096** text variations + **16** classes | — | n/a |
-| M4-LEARN | Person-name and postal-address fields suggest but never learn | 2 variations | — | n/a |
-| GATE-ASSET-1 | The assets the app opens by name are the ones AGP actually packaged | 3 (2 named + 1 found) | `--inject-defect asset_name` | YES |
-| M5-TRIE | Trie search agrees with the reference Damerau-Levenshtein | exhaustive over 14 words × 22 queries | — | n/a |
-| M5-ACC | top-1 / top-3 against a hash-locked corpus | 4,000 pairs, corpus sha `f9f4ed80…` | — | n/a |
-| M5-CTRL | **False auto-replace on known-correct words = 0.00%** | 4,000 words, sha `6e13ffd6…` | an indiscriminate replacer scores 100% on the same harness | YES |
-| GATE-CRYPTO-1 | No ECB, hardcoded IV/key, seeded `SecureRandom`, or broken primitive | 45 source files, 4 rules | `tools/positive_controls/crypto/` | YES — all 4 rules fired |
-| M6-IV | **IV uniqueness across 2,000 seals of identical plaintext** | 2,000 seals | — | n/a |
-| M6-TAMPER | Tampering with the version, IV, body or tag is each detected | 4 regions | — | n/a |
-| M6-KEY | Decryption with the wrong key fails | 1 | — | n/a |
-| M6-TRUNC | Truncated ciphertext fails cleanly | 4 lengths | — | n/a |
-| M6-MODEL | The dictionary cannot hold anything but one Hebrew word | 9 rejection cases + a reflective check on the mutator surface | — | n/a |
-| GATE-TRACE-1 | The benchmark measures trace sections the app actually emits | 2 section names | `--inject-defect` renames the requested sections | YES — 4 findings |
-| M7-A11Y-NAMES | Every key of all 3 layouts has a distinct, non-empty spoken name | 73 keys, 27 Hebrew letters | — | n/a |
-| M7-A11Y-FINALS | Final forms are distinguishable by ear from their ordinary counterparts | 5 pairs | — | n/a |
-| M7-HARNESS | The latency harness assembles | `:hostapp` + `:benchmark` both assemble | — | n/a |
+| ID | Check | Denominator | Positive control |
+|---|---|---|---|
+| GATE-NET-1 | No network capability — manifests | 3 manifests | Planted `INTERNET` permission |
+| GATE-NET-1 | No network capability — sources | 50 Kotlin/Java files | Planted okhttp / `java.net` / WebView |
+| GATE-NET-1 | No network capability — shipping deps | 113 resolved coordinates | Planted okhttp + Firebase coordinates |
+| GATE-NET-2 | **Built debug APK** — permissions + DEX | 1 permission, 16 descriptors over 8 DEX files (28,339,184 bytes) | **A real assembled `netcontrol` APK** |
+| GATE-NET-3 | **Built RELEASE APK** — permissions + DEX | 1 permission, **2 descriptors** over 1 DEX file (1,927,388 bytes) | The same real APK against the release baseline |
+| GATE-API-1 | No IME API that compiles cleanly and fails at runtime (§1.1/1.3/1.4/1.6) | 50 files, 6 rules | Planted session-override, return-value branch, hardcoded backspace, blocking fetch |
+| GATE-API-1 | `getInitial*` accessors only inside the privacy boundary (§1.2) | 50 files | Planted read outside the boundary |
+| GATE-API-1 | Nothing typed reaches logcat or stdout | 50 files, production sources | Planted `Log.d` and `println` |
+| GATE-CRYPTO-1 | No ECB, hardcoded IV/key, seeded `SecureRandom`, broken primitive | 50 files, 4 rules | Planted `AES/ECB`, fixed IV, hardcoded key, MD5, seeded random |
+| GATE-LEX-1 | Shipped lexicon matches its manifest | 1 artifact, 355,587 forms | One byte flipped |
+| GATE-LEX-2 | Upstream source integrity | 2 sources | One byte flipped before hashing |
+| GATE-LEX-3 | The lexicon **inside the APK** hashes to the manifest's value | 1 asset, 4,607,433 bytes | One byte appended |
+| GATE-ASSET-1 | The assets the app opens by name are the ones AGP packaged | 3 | Expect a name AGP does not produce |
+| GATE-MANIFEST-1 | IME service declares `exported`, `BIND_INPUT_METHOD`, the action, the meta-data | 4 requirements | `exported` flipped to false |
+| GATE-R8-1 | R8 has not stripped what the system instantiates by name | 4 requirements on the minified build | Service declaration invalidated |
+| GATE-XML-1 | Every XML resource parses | 15 files | A comment containing `--` |
+| GATE-TRACE-1 | The benchmark measures sections the app actually emits | 2 section names | Requested sections renamed |
+| GATE-DENOM-1 | A check that examined nothing never reports PASS | meta-gate | The network gate over an empty directory |
+| GATE-META-1 | A neutered control is caught as `NOT-A-GATE` | 3 gates | A control file emptied by hand |
 
-## MEASURED, reported with their denominator (not gates — measurements)
+## PASSED — tests
+
+| ID | Check | Denominator |
+|---|---|---|
+| TEST-CONST | §3 restricted-field constants match the platform | 16 assertions / 14 constants |
+| M1-XCHECK | Kotlin shipped path agrees with the Python measurement | 75,000 tokens × 5 settings, **exact** |
+| M1-SORT | Lexicon blob really is byte-sorted | 355,587 entries compared |
+| M1-ROUNDTRIP | Every index round-trips | 355,587 entries |
+| M2-CTXBUF | `InputContextBuffer` desync and recovery | 12 tests |
+| M3-GRAPHEME | UAX #29 backspace widths | 30 assertions, 17 inputs |
+| M3-GEOMETRY | Rows tile exactly; every key centre hit-tests to itself; RTL mirrors | 3 layouts, every key |
+| M3-LAYOUT | Hebrew layout carries all 27 letters once, incl. 5 final forms | 27 letters |
+| M4-PRIV-FETCH | **Initial text never fetched for a restricted field, tested with a field that DID contain text** | 9 input types × a real password string |
+| M4-SWEEP | Exhaustive input-type sweep, unknown values fail closed | **4,096** variations + **16** classes |
+| M5-TRIE | Trie agrees with reference Damerau-Levenshtein | exhaustive, 14 words × 22 queries |
+| M5-CTRL | False auto-replace on known-correct words | 4,000 words — control: an indiscriminate replacer scores 100% |
+| M6-IV | IV uniqueness across seals of identical plaintext | **2,000 seals**, all distinct |
+| M6-TAMPER | Tampering with version, IV, body or tag each detected | 4 regions |
+| M6-MODEL | The dictionary cannot hold anything but one Hebrew word | 9 rejection cases + reflective surface check |
+| M7-A11Y-NAMES | Every key has a distinct, non-empty spoken name | 73 keys, 27 letters |
+| VERIF-SDK | §1 / §3 claims checked against `android.jar` + `api-versions.xml` | 31 claims: 28 confirmed, 0 contradicted, 3 not checkable |
+| VERIF-LEX | Lexicon sources byte + sha256 exact | 2 of 2 |
+
+## MEASURED — numbers, with their denominators
 
 | ID | Measurement | Result | Denominator |
 |---|---|---|---|
-| M1-COV | Lexicon token coverage on held-out Hebrew Wikipedia, MIN_STEM=4 | **96.73%** (3.27% wrong-underline) | 75,000 tokens / 22,804 types, corpus sha256 `02fe828c…` |
-| M1-COV-NONE | Same, with no prefix stripper | 94.61% (5.39% wrong-underline) | same corpus |
-| M1-COV-DELTA | Coverage cost of MIN_STEM 2→4 | −0.11 points (89 tokens) | same corpus |
-| M5-TOP1 | Correction top-1, shipped config | **52.60%** | 4,000 uniform typos, corpus sha `f9f4ed80…` |
+| M1-REPRO | Lexicon counts vs the build spec | **+0.000% on all four** (102,239 / 298,162 / 355,587 / 57,425) | 241,797 + 1,167,621 input rows |
+| M1-COV | Token coverage on held-out Wikipedia, MIN_STEM=4 | **96.73%** (3.27% wrong-underline) | 75,000 tokens, corpus sha `02fe828c…` |
+| M1-COV-NONE | Same, no prefix stripper | 94.61% | same corpus |
+| M5-TOP1 | Correction top-1, shipped config | **52.60%** | 4,000 uniform typos, sha `f9f4ed80…` |
 | M5-TOP3 | Correction top-3, shipped config | **66.23%** | same corpus |
-| M5-FALSE | False auto-replace, realistic control | **0.68%** | 4,000 raw held-out tokens, sha `c2e89437…` |
-| M5-ADJ | Keyboard-adjacency discount effect on top-1 | **−7.97 points** (52.60% → 44.63%), wrong auto-replacements ×8 | same corpus — **feature measured and NOT enabled** |
+| M5-FALSE-C1 | False auto-replace, known-correct words | **0.00%** | 4,000 words, sha `6e13ffd6…` |
+| M5-FALSE-C2 | False auto-replace, raw held-out tokens | **0.68%** | 4,000 tokens, sha `c2e89437…` |
+| M5-ADJ | Keyboard-adjacency discount effect | **−7.97 points** top-1; wrong auto-replacements ×8 | same corpus — **feature measured and NOT enabled** |
 | M5-P95 | Suggestion latency p95 | 2.88 ms | 4,000 queries, **JVM on the build host — NOT a device number** |
 | M5-STRUCT | Trie over the real lexicon | 567,767 nodes, 73.3% prefix sharing, 7.58 MiB, 148 ms build | 355,587 words |
-
-These are ~1 point below the build spec's figures on its own (unspecified) corpus. Reported as
-measured; see `docs/LEXICON_MEASUREMENTS.md` §2 for why the gap cannot be reconciled and was
-not adjusted away.
-
-## NOT MEASURED (reported as such — not counted as passing)
-
-None at M2. GATE-NET-1's manifest detector moved from denominator 0 to 1 when `:app` landed,
-so GATE-NET-1 is now a full PASS rather than PASS-PARTIAL. Its deps detector now examines
-**117** resolved coordinates, up from 6.
-
-## NOT RUN
-
-Everything below has not been exercised. None of it is described as working.
-
-| ID | Check | What it needs |
-|---|---|---|
-| GATE-NET-2 | DEX/bytecode network scan of the built artifact | An assembled APK/AAB (M8) |
-| M2-ENABLE | IME can be enabled and selected from system settings | A real device |
-| M2-INSETS | Bottom key row clears the gesture bar at targetSdk 36 | A real device with gesture navigation |
-| M2-CONFIGCHANGE | State survives rotation on API 30, where `configChanges` is not honoured | A real API 30 device |
-| M2-SPELLCHECK | System spell checker is actually suppressed | A real device |
-| M3-INPUT | Basic input actions, grapheme-correct backspace on device | A real device |
-| M1-TYPO | Prefix-stripper typo-rejection / recall / false-accept rates (the spec's 88.4% at MIN_STEM 4) | A typo corpus and a correctly-constructed, prefix-free non-word control — M5 |
-| M1-DEVICE | Lexicon load time, memory and lookup latency on real hardware | A real device |
-| M1-KTIV | Ktiv male/haser coverage rate over all reform-affected lemmas | A list of affected lemmas, which this project does not have |
-| M5-REAL-TYPOS | Correction accuracy against REAL Hebrew typing errors | A corpus of real errors, which does not exist here. The true error distribution lies somewhere between corpus A (uniform) and B (adjacency) and nothing in this project knows where. |
-| M5-NOSUGGEST | Splitting the 12.08% no-suggestion cases into prefix-stripper false accepts vs no-candidate-within-2-edits | Per-case adjudication |
-| M5-DEVICE-LAT | Suggestion latency on real hardware | A device + the M7 harness |
-| M4-OTP-ACC | OTP heuristic accuracy (precision/recall) | A labelled corpus of OTP fields, which does not exist and was not fabricated |
-| M4-DEVICE | That the framework really does hand over password plaintext, and that `setInitialSurroundingText("")` releases it | A real device; `android.jar` ships stubs only |
-| M3-TOUCH | A touch has ever been dispatched to `KeyboardView` on real hardware | A real device |
-| M3-A11Y | Keys are canvas-drawn with **no** virtual view nodes, so TalkBack cannot see them at all | M7 |
-| M7-A11Y | TalkBack navigation over virtual key nodes | A real device with TalkBack |
-| M7-LAT | **p95 keystroke latency** via `TraceSectionMetric` | A real device. The harness is built and committed (`:benchmark`, `:hostapp`) and assembles in CI; running it needs hardware **and** the keyboard enabled and selected as the active IME, which a benchmark cannot do for itself without `WRITE_SECURE_SETTINGS`. |
-| M7-TALKBACK | Whether the virtual view nodes are actually usable with TalkBack | A real device with TalkBack. Node structure is unit-tested; no screen reader has ever read them. |
-| M7-CONTRAST | Perceptual legibility of the key colours on a real panel | A real device |
-| M6-KEYSTORE | Android Keystore key generation, TEE/StrongBox backing, and key destruction on wipe | A real device. `EncryptedStore` is tested given a key; the Keystore lookup itself is untested. |
-| M6-UI | The dictionary management screen has ever been displayed or interacted with | A real device |
-| M8-SIGN | Signed release AAB | Operator-provided signing secrets (NOTICE 4) |
-| M8-STORE | Store listing + Data Safety declaration | A Play Console account (NOTICE 1, 4) |
+| M8-SIZE | Release artifact | APK 3,311,943 B; AAB 4,076,022 B | R8 cut DEX from 28,339,184 to 1,927,388 B |
 
 ## FAILED
 
-None yet.
+**None.**
+
+## KNOWN LIMITATION, accepted and recorded
+
+| ID | Issue |
+|---|---|
+| LINT-1 | `suppressesSpellChecker` is API 31 and minSdk is 30, so **on API 30 devices the system spell checker is not suppressed** and will paint its own squiggles over text this keyboard promised stays on-device. This is the second thing minSdk 30 costs, alongside `configChanges` not being honoured there either. See `docs/OPERATOR_NOTICES.md` NOTICE 3 — the evidence now favours minSdk 31, and that is the operator's call. |
+
+---
+
+## NOT RUN
+
+Nothing below has been exercised. None of it is described anywhere as working.
+
+### Requires a physical Android device — nothing here has ever run on one
+
+| ID | Check | What it needs |
+|---|---|---|
+| M2-ENABLE | The IME can be enabled and selected from system settings | A device |
+| M2-INSETS | The bottom key row clears the gesture bar at targetSdk 36 | A device with gesture navigation |
+| M2-CONFIGCHANGE | State survives rotation on API 30, where `configChanges` is not honoured | An API 30 device |
+| M2-SPELLCHECK | The system spell checker is actually suppressed on API 31+ | A device |
+| M3-TOUCH | A touch has ever been dispatched to `KeyboardView` | A device |
+| M4-DEVICE | That the framework really does hand over password plaintext, and that `setInitialSurroundingText("")` releases it | A device; `android.jar` ships stubs only |
+| M6-KEYSTORE | Keystore key generation, TEE/StrongBox backing, key destruction on wipe | A device |
+| M6-UI | The dictionary management screen has ever been displayed | A device |
+| M7-LAT | **p95 keystroke latency** via `TraceSectionMetric` | A device, **and the keyboard enabled and selected as the active IME** — which a benchmark cannot arrange for itself without `WRITE_SECURE_SETTINGS`. The harness is built, committed, and assembles in CI. |
+| M7-TALKBACK | Whether the virtual view nodes are usable with TalkBack | A device with TalkBack |
+| M7-CONTRAST | Perceptual legibility of key colours on a real panel | A device |
+| M8-NETCAPTURE | A packet capture confirming no traffic | A device |
+
+### Requires operator action
+
+| ID | Check | Blocker |
+|---|---|---|
+| M8-SIGN | Signed release AAB | **Signing secrets. Not invented here.** See `docs/OPERATOR_NOTICES.md` NOTICE 4. |
+| M8-STORE | Store listing published, Data Safety submitted | A Play Console account; NOTICE 1's deadline |
+| M8-TESTING | Internal testing track | Depends on M8-SIGN |
+| M8-ASSETS | Store icon, feature graphic, screenshots, hosted privacy-policy URL | Screenshots need a device; the URL needs hosting |
+
+### Not measured, and not fabricated
+
+| ID | Check | Why it cannot be answered here |
+|---|---|---|
+| M5-REAL-TYPOS | Correction accuracy on **real** Hebrew typing errors | No such corpus exists here. The true error distribution lies between corpus A (uniform) and B (adjacency) and nothing in this project knows where. This is what would settle whether the adjacency discount should be enabled. |
+| M4-OTP-ACC | OTP heuristic precision and recall | No labelled corpus of OTP fields. One was not fabricated. |
+| M1-KTIV | Ktiv male/haser coverage over all reform-affected lemmas | No list of affected lemmas. The 10 pairs checked are the 10 the spec names, not a sample. |
+| M5-NOSUGGEST | Splitting the 12.08% no-suggestion cases into stripper false-accepts vs no-candidate | Per-case human adjudication |
+| M1-TYPO | Prefix-stripper typo-rejection rate (the spec's 88.4% at MIN_STEM 4) | A typo corpus and a correctly-constructed prefix-free non-word control |
