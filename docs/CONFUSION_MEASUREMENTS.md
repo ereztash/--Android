@@ -264,22 +264,54 @@ tuning decision, and it is why the recall ceiling in this document is where it i
 `WindowBlindnessTest` pins 30.2% as a characterisation, so that a future model claiming a wider
 window has a number to beat rather than an impression to appeal to.
 
-### What would actually close it, and what it costs
+### What would actually close it — measured, not estimated
 
-Not "semantic understanding" in the neural sense — that means a model this app cannot carry:
-the whole APK is 5.2 MB, the build has no network permission by design, and `GATE-NET-1/2/3`
-exist to keep it that way.
+Not "semantic understanding" in the neural sense: that means a model this app cannot carry. The
+whole APK is 5.2 MB, the build has no network permission by design, and `GATE-NET-1/2/3` exist
+to keep it that way.
 
-What is achievable is a **wider n-gram**, which buys part of the same effect statistically:
+What is achievable is a **distance-2 (skip) table**, letting a word two positions away bear on
+the decision. Counted on the same corpus the shipped table was trained on (1,915,789 sentences):
 
-| approach | what it adds | rough cost |
+| table | min count | distinct pairs | raw | packed (~0.38x) |
+|---|---|---|---|---|
+| adjacent (shipped) | 5 | 554,484 | 2.96 MiB | 2.85 MiB asset |
+| skip-2 | 5 | 414,574 | 2.21 MiB | ~0.85 MiB |
+| **skip-2** | **10** | **153,412** | **0.82 MiB** | **~0.31 MiB** |
+| skip-2 | 20 | 59,751 | 0.32 MiB | ~0.12 MiB |
+
+**An earlier draft of this section said a skip table would push the APK past `GATE-SIZE-1` and
+that the ceiling would have to be raised. That was an estimate, and it was wrong.** At
+`min_count >= 10` the table needs about 0.31 MiB against 576,703 bytes of asset headroom. It
+fits. No threshold moves.
+
+### And it would make the detector worse, as it stands
+
+Coverage first — on the test slice, of the 10,542 positions blind to the adjacent window:
+
+| | count | share of blind |
 |---|---|---|
-| skip-bigrams at distance 2 | lets `שוקולד` bear on `אם` | a second table, ~2–3 MB |
-| trigrams | full three-word context | larger still, and sparser at the same threshold |
+| skip-2 has any data at all | 1,948 | 18.5% |
+| ...and it discriminates between the candidates | 1,946 | 18.5% |
 
-Either would push the APK past `GATE-SIZE-1`'s 6,500,000-byte ceiling, which is a threshold, and
-**thresholds in this repository do not move to accommodate a feature**. Raising it is an
-operator decision, and the alternative — pruning harder to fit — trades away exactly the rare
-pairs that the blind 30.2% consists of.
+That is **5.51 percentage points** of new evidence across all confusable positions. Encouraging,
+and not the number that decides it.
 
-Recorded as an open decision. Not taken.
+The eval text is already correct, so the typed word is the right answer at every one of those
+positions. Which way does the new evidence point?
+
+| | count | share |
+|---|---|---|
+| favours the typed (correct) word | 1,798 | **92.4%** |
+| favours the variant — a **false alarm** if acted on | 148 | **7.6%** |
+
+Those 148 are **0.42 percentage points** of new false alarms over 35,291 positions. The shipped
+false-alarm rate is **0.26%**. Adding raw skip-2 evidence would roughly **triple** it.
+
+So the signal is real — 92.4% is not noise — and it cannot be used as it stands. It would need
+its own margin, swept on `confusion_dev` and reported once on `confusion_test`, trading most of
+the 5.51 points away to keep the false-alarm rate where it is. Whether enough recall survives
+that trade is **NOT MEASURED**.
+
+Recorded as a characterised, costed, open decision. Not taken, and not to be taken by relaxing
+the false-alarm figure to make it look good.
