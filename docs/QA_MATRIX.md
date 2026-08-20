@@ -53,6 +53,11 @@ source is present, so a NOT-MEASURED row is visible rather than inferred. An ups
 being down does not fail the build — a red CI nobody can act on is a red CI everybody learns
 to ignore.
 
+**Observed on run 15** (commit `8586cc0`, the first fully green run in this project's history):
+the fetch succeeded and both gates reported `reproducibility=1`, so all sixteen were proven on
+the runner, not merely on the build host. That is the good case and not a guarantee: the row to
+read on any given run is the one the table prints, not this sentence.
+
 ### The CI history, stated rather than quietly fixed
 
 **CI was red on every push from M1 through M12.** The cause was this exact case: GATE-LEX-2's

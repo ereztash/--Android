@@ -258,7 +258,12 @@ class PredictiveEngine(
             kind = SuggestionKind.REAL_WORD_ERROR,
             score = finding.advantage.toDouble(),
             wordsBack = 2,
-            replaces = finding.typed,
+            // [target], not `finding.typed`. The detector strips niqqud before looking a word
+            // up, so `typed` is the reduced form; the caller has to delete the text that is
+            // actually in the editor, which is what the user wrote. Handing back the stripped
+            // form would make a pointed word fail the caller's "is this still the same text"
+            // check and silently drop the suggestion.
+            replaces = target,
         )
     }
 

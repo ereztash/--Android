@@ -19,7 +19,7 @@ import kotlin.test.assertTrue
  * This proves the two are wired together — which is a separate claim, and the one that was
  * false for the entire time the keyboard was mirrored.
  *
- * Denominator: 6 tests.
+ * Denominator: 7 tests.
  */
 class PredictiveEngineContextTest {
 
@@ -57,6 +57,23 @@ class PredictiveEngineContextTest {
         assertEquals("אם", first.replaces)
         assertEquals(2, first.wordsBack, "it replaces the SECOND most recent completed word")
         println("strip: " + out.joinToString(", ") { "${it.word}[${it.kind}]" })
+    }
+
+    @Test
+    fun replacesCarriesTheTextTheUserWroteNotTheStrippedForm() {
+        // The caller deletes exactly what `replaces` names. The detector strips niqqud before
+        // looking a word up, so returning its reduced form would not match the editor's text,
+        // and the suggestion would be silently dropped for anyone typing pointed Hebrew.
+        val (e, _) = engine()
+        val pointed = "אִם"
+        val out = e.predict(context("של", "המורה", pointed, "דיברתי"))
+        val first = out.firstOrNull { it.kind == SuggestionKind.REAL_WORD_ERROR }
+        assertNotNull(first, "the pointed form should still be recognised as אם")
+        assertEquals("עם", first.word)
+        assertEquals(
+            pointed, first.replaces,
+            "replaces must be the text in the editor, not the lookup form",
+        )
     }
 
     @Test
