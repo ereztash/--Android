@@ -1,0 +1,23 @@
+# Build
+build/
+.gradle/
+local.properties
+*.iml
+.idea/
+.kotlin/
+captures/
+.cxx/
+
+# Signing — never commit
+*.jks
+*.keystore
+keystore.properties
+signing.properties
+
+# Lexicon working data: large upstream downloads are NOT committed.
+# Only the derived, checksummed artifact + its manifest are committed.
+lexicon/work/
+lexicon/cache/
+
+# OS
+.DS_Store
