@@ -43,6 +43,19 @@ android {
     }
 
     sourceSets {
+        // The lexicon artifact ships as an app asset, pointed at directly rather than copied
+        // into a generated directory by a Copy task. The copy approach was tried and produced
+        // a real Gradle failure: lint's model task reads the generated directory but has no
+        // dependency on the task that writes it, so `assembleNetcontrol` and `lintDebug` in
+        // one invocation raced and the build failed with an implicit-dependency error. A plain
+        // source directory has no such edge.
+        //
+        // lexicon/assets/ deliberately holds ONLY the artifact -- MANIFEST.json and the 37 MB
+        // of upstream sources live in lexicon/ and lexicon/cache/ and must never be packaged.
+        getByName("main") {
+            assets.srcDir(rootProject.file("lexicon/assets"))
+        }
+
         getByName("netcontrol") {
             manifest.srcFile(
                 rootProject.file("tools/positive_controls/apk_network/AndroidManifest.xml")
@@ -63,28 +76,31 @@ android {
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }
+
+    lint {
+        // ObsoleteSdkInt fires on res/mipmap-anydpi-v26 and advises merging it into
+        // res/mipmap-anydpi because minSdk is 30. Following that advice was tried and it
+        // BREAKS THE BUILD: AGP's resource merger does not accept <adaptive-icon> from an
+        // unversioned anydpi folder, and aapt2 then reports "resource mipmap/ic_launcher not
+        // found" -- even though `aapt2 compile` handles the same files without complaint.
+        // The advice is wrong for adaptive icons; the qualifier stays.
+        disable += "ObsoleteSdkInt"
+
+        // Fail the build on anything lint considers an error, rather than only on warnings
+        // someone happens to read.
+        abortOnError = true
+        warningsAsErrors = false
+
+        // XML as well as HTML: CI and the gate scripts parse the XML, and a report only a
+        // human can open is a report nobody checks.
+        xmlReport = true
+        htmlReport = true
+    }
 }
 
 kotlin {
     jvmToolchain(17)
 }
-
-/**
- * The lexicon artifact is a build output shared by the app, the Python tooling and the :core
- * tests. Copying it into app/src/main/assets would put a second 950 KB copy in git and invite
- * the two drifting apart, so it is staged into a generated asset directory instead.
- */
-val stageLexiconAsset = tasks.register<Copy>("stageLexiconAsset") {
-    description = "Stages lexicon/he_lexicon.txt.gz as an app asset."
-    from(rootProject.file("lexicon/he_lexicon.txt.gz"))
-    into(layout.buildDirectory.dir("generated/lexiconAssets"))
-}
-
-android.sourceSets.getByName("main").assets
-    .srcDir(layout.buildDirectory.dir("generated/lexiconAssets"))
-
-tasks.matching { it.name.startsWith("merge") && it.name.endsWith("Assets") }
-    .configureEach { dependsOn(stageLexiconAsset) }
 
 dependencies {
     implementation(project(":core"))

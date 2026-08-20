@@ -164,7 +164,13 @@ class InputContextBuffer(
 
     private fun recomputeWordStart() {
         var i = before.length
-        while (i > 0 && HebrewText.isHebrewLetter(before[i - 1])) i--
+        // Combining marks count as part of the word. A pointed word is still one word, and
+        // scanning back over letters alone would cut it at the first niqqud.
+        while (i > 0 && (HebrewText.isHebrewLetter(before[i - 1]) ||
+                    HebrewText.isCombiningMark(before[i - 1]))
+        ) {
+            i--
+        }
         wordStart = i
     }
 

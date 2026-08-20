@@ -3,7 +3,7 @@
 
 Two detectors, deliberately separated because they can be measured independently:
 
-  artifact       The committed lexicon/he_lexicon.txt.gz matches MANIFEST.json byte for byte
+  artifact       The committed lexicon/assets/he_lexicon.txt.gz matches MANIFEST.json byte for byte
                  (gzip sha256, uncompressed sha256, form count, sort order). Always runnable:
                  the artifact and its manifest are both in the repository.
 
@@ -26,7 +26,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gatelib import Detector, Finding, GateResult, report  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-ARTIFACT = os.path.join(ROOT, "lexicon", "he_lexicon.txt.gz")
+ARTIFACT = os.path.join(ROOT, "lexicon", "assets", "he_lexicon.txt.gz")
 MANIFEST = os.path.join(ROOT, "lexicon", "MANIFEST.json")
 
 NOT_COVERED = [
@@ -58,21 +58,21 @@ def check_artifact(inject: str | None) -> Detector:
     got_gzip = hashlib.sha256(packed).hexdigest()
     if got_gzip != exp["gzip_sha256"]:
         det.findings.append(Finding(
-            "artifact", "lexicon/he_lexicon.txt.gz", 0,
+            "artifact", "lexicon/assets/he_lexicon.txt.gz", 0,
             f"gzip sha256 {got_gzip} != manifest {exp['gzip_sha256']}",
             "artifact.gzip_sha256"))
 
     try:
         blob = gzip.decompress(packed)
     except Exception as exc:  # noqa: BLE001
-        det.findings.append(Finding("artifact", "lexicon/he_lexicon.txt.gz", 0,
+        det.findings.append(Finding("artifact", "lexicon/assets/he_lexicon.txt.gz", 0,
                                     f"gunzip failed: {exc}", "artifact.corrupt"))
         return det
 
     got_raw = hashlib.sha256(blob).hexdigest()
     if got_raw != exp["uncompressed_sha256"]:
         det.findings.append(Finding(
-            "artifact", "lexicon/he_lexicon.txt.gz", 0,
+            "artifact", "lexicon/assets/he_lexicon.txt.gz", 0,
             f"uncompressed sha256 {got_raw} != manifest {exp['uncompressed_sha256']}",
             "artifact.raw_sha256"))
 
@@ -81,14 +81,14 @@ def check_artifact(inject: str | None) -> Detector:
         words.pop()
     if len(words) != manifest["counts"]["union"]:
         det.findings.append(Finding(
-            "artifact", "lexicon/he_lexicon.txt.gz", 0,
+            "artifact", "lexicon/assets/he_lexicon.txt.gz", 0,
             f"{len(words)} forms != manifest {manifest['counts']['union']}",
             "artifact.form_count"))
 
     unsorted_at = next((i for i in range(1, len(words)) if words[i] <= words[i - 1]), None)
     if unsorted_at is not None:
         det.findings.append(Finding(
-            "artifact", "lexicon/he_lexicon.txt.gz", unsorted_at,
+            "artifact", "lexicon/assets/he_lexicon.txt.gz", unsorted_at,
             f"not sorted at index {unsorted_at}: {words[unsorted_at - 1]!r} "
             f">= {words[unsorted_at]!r} -- byte-wise binary search would be incorrect",
             "artifact.sort_order"))
@@ -134,7 +134,7 @@ def check_reproducibility(inject: str | None, allow_fetch: bool) -> Detector:
     manifest = json.load(open(MANIFEST, encoding="utf-8"))
     if rebuilt["gzip_sha256"] != manifest["output"]["gzip_sha256"]:
         det.findings.append(Finding(
-            "reproducibility", "lexicon/he_lexicon.txt.gz", 0,
+            "reproducibility", "lexicon/assets/he_lexicon.txt.gz", 0,
             f"rebuild produced {rebuilt['gzip_sha256']}, committed artifact is "
             f"{manifest['output']['gzip_sha256']}",
             "reproducibility.hash_drift"))

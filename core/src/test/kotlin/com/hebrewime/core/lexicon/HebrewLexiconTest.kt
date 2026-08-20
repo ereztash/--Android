@@ -136,3 +136,42 @@ class HebrewLexiconTest {
         }
     }
 }
+
+/**
+ * Compression must be detected from the stream, because the repository stores the artifact
+ * gzipped and AGP ships it plain. Both forms must load identically.
+ */
+class HebrewLexiconCompressionTest {
+
+    private val lexiconFile = java.io.File(System.getProperty("lexicon.file")!!)
+
+    @Test
+    fun loadsBothGzippedAndPlainFormsIdentically() {
+        val gzipped = lexiconFile.inputStream().use { HebrewLexicon.load(it) }
+
+        // Exactly what AGP puts in the APK: the same bytes, gunzipped.
+        val plainBytes = GZIPInputStream(lexiconFile.inputStream()).use { it.readBytes() }
+        val plain = plainBytes.inputStream().use { HebrewLexicon.load(it) }
+
+        assertEquals(gzipped.size, plain.size, "form count must not depend on framing")
+        assertEquals(355_587, plain.size)
+        for (w in listOf("שלום", "מקלדת", "בית", "אונייה")) {
+            assertTrue(plain.contains(w), "$w missing from the plain-text load")
+            assertTrue(gzipped.contains(w), "$w missing from the gzipped load")
+        }
+        assertEquals(gzipped.wordAt(0), plain.wordAt(0))
+        assertEquals(gzipped.wordAt(plain.size - 1), plain.wordAt(plain.size - 1))
+    }
+
+    @Test
+    fun rejectsAnArtifactWithNoTrailingNewline() {
+        val truncated = "אב\nגד".toByteArray(Charsets.UTF_8)
+        val error = kotlin.runCatching {
+            truncated.inputStream().use { HebrewLexicon.load(it) }
+        }.exceptionOrNull()
+        assertTrue(
+            error is IllegalArgumentException,
+            "a blob without a trailing newline has an ambiguous last word and must be refused",
+        )
+    }
+}

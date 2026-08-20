@@ -196,7 +196,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--cache-dir", default=os.path.join(ROOT, "lexicon", "cache"))
-    ap.add_argument("--out", default=os.path.join(ROOT, "lexicon", "he_lexicon.txt.gz"))
+    ap.add_argument("--out", default=os.path.join(ROOT, "lexicon", "assets", "he_lexicon.txt.gz"))
     ap.add_argument("--manifest", default=os.path.join(ROOT, "lexicon", "MANIFEST.json"))
     ap.add_argument("--source-a"), ap.add_argument("--source-b")
     ap.add_argument("--allow-unverified-source", action="store_true",
@@ -262,6 +262,7 @@ def main() -> int:
         "tolerance": TOLERANCE,
         "output": {
             "path": os.path.relpath(args.out, ROOT),
+            "word_count": len(ordered),
             "uncompressed_bytes": len(blob),
             "uncompressed_sha256": sha256_bytes(blob),
             "gzip_bytes": len(packed),

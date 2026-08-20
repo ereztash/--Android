@@ -94,6 +94,14 @@ def _gates(strict: bool) -> list[dict]:
             "requires": [debug_apk],
         },
         {
+            "id": "GATE-LEX-3",
+            "what": "the lexicon INSIDE the apk is the one the manifest describes",
+            "real": [PY, apk, "--apk", debug_apk, "--json"] + s,
+            "control": [PY, apk, "--apk", debug_apk, "--inject-defect", "lexicon", "--json"],
+            "control_desc": "one byte appended to the packaged lexicon asset",
+            "requires": [debug_apk],
+        },
+        {
             "id": "GATE-DENOM-1",
             "what": "a check that examined nothing must not report PASS",
             "real": None,  # meta-gate: it has no real-tree run, only a control

@@ -63,7 +63,7 @@ def accepts(word: str, lex: set[str], pfx: list[str], min_stem: int | None) -> b
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--lexicon", default=os.path.join(ROOT, "lexicon", "he_lexicon.txt.gz"))
+    ap.add_argument("--lexicon", default=os.path.join(ROOT, "lexicon", "assets", "he_lexicon.txt.gz"))
     ap.add_argument("--corpus",
                     default=os.path.join(ROOT, "lexicon", "heldout", "hewiki_sample.txt.gz"))
     ap.add_argument("--json-out")

@@ -80,15 +80,36 @@ class HebrewLexicon private constructor(
     }
 
     companion object {
+        /** gzip's magic number, RFC 1952 section 2.3.1. */
+        private const val GZIP_MAGIC_0 = 0x1f
+        private const val GZIP_MAGIC_1 = 0x8b
+
         /**
-         * Load from a gzipped, newline-delimited, code-point-sorted UTF-8 word list -- i.e.
-         * exactly what `scripts/build_lexicon.py` emits.
+         * Load a newline-delimited, code-point-sorted UTF-8 word list, gzipped or not.
+         *
+         * **Compression is detected from the stream, not declared by the caller, and that is
+         * not defensive programming — it is required.** The repository stores the artifact as
+         * `lexicon/assets/he_lexicon.txt.gz`, and `:core`'s tests read exactly that. But AGP
+         * *transparently gunzips* `.gz` files while packaging assets: in the built APK the
+         * entry is `assets/he_lexicon.txt`, plain UTF-8, 4,607,433 bytes, which the APK's own
+         * Deflate then stores in 1,173,995. So the same code path is handed gzip on the JVM
+         * and plain text on device. A `gzipped: Boolean` parameter would have been correct in
+         * tests and wrong in production — a crash on first run that no unit test could catch.
+         *
+         * Verified: the packaged asset's sha256 equals the source's gunzipped sha256,
+         * `6fbc467d…`. `scripts/check_apk.py` asserts that on every build.
          *
          * @throws IllegalArgumentException if the blob does not end with a newline, which
          *   would make the last word's extent ambiguous.
          */
-        fun load(stream: InputStream, gzipped: Boolean = true): HebrewLexicon {
-            val raw = (if (gzipped) GZIPInputStream(stream) else BufferedInputStream(stream))
+        fun load(stream: InputStream): HebrewLexicon {
+            val buffered = BufferedInputStream(stream)
+            buffered.mark(2)
+            val first = buffered.read()
+            val second = buffered.read()
+            buffered.reset()
+            val gzipped = first == GZIP_MAGIC_0 && second == GZIP_MAGIC_1
+            val raw = (if (gzipped) GZIPInputStream(buffered) else buffered)
                 .use { it.readBytes() }
             require(raw.isNotEmpty()) { "lexicon is empty" }
             require(raw[raw.size - 1] == NEWLINE) {

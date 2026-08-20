@@ -1,4 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Keyboard colours live in resources, not as hex literals in the View, so the system light/dark
+  setting picks the right set (see values-night/) without any code path. Contrast ratios are
+  checked in M7 alongside the rest of accessibility.
+-->
 <resources>
     <color name="ic_launcher_background">#1B2A41</color>
+
+    <color name="keyboard_background">#E8EAF0</color>
+    <color name="key_background">#FFFFFF</color>
+    <color name="key_background_function">#D3D8E2</color>
+    <color name="key_background_pressed">#3D8BFD</color>
+    <color name="key_label">#101418</color>
+    <color name="key_label_pressed">#FFFFFF</color>
 </resources>

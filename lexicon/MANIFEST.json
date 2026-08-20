@@ -48,7 +48,8 @@
   },
   "tolerance": 0.01,
   "output": {
-    "path": "lexicon/he_lexicon.txt.gz",
+    "path": "lexicon/assets/he_lexicon.txt.gz",
+    "word_count": 355587,
     "uncompressed_bytes": 4607433,
     "uncompressed_sha256": "6fbc467ddd7801a1b2449c40d77abd797a7eb7e298001551c8e3887ee0648ec8",
     "gzip_bytes": 950114,

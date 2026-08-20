@@ -32,6 +32,8 @@ descriptor came from.
 from __future__ import annotations
 
 import argparse
+import gzip
+import hashlib
 import json
 import os
 import re
@@ -44,6 +46,7 @@ from gatelib import Detector, Finding, GateResult, report  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BASELINE = os.path.join(ROOT, "tools", "apk_dex_baseline.json")
+LEXICON_MANIFEST = os.path.join(ROOT, "lexicon", "MANIFEST.json")
 
 NETWORK_PERMISSIONS = {
     "android.permission.INTERNET",
@@ -164,6 +167,53 @@ def check_dex(apk: str, baseline: set[str], inject: bool) -> Detector:
     return det
 
 
+def check_lexicon_asset(apk: str, inject: bool) -> Detector:
+    """The lexicon inside the APK must be the lexicon the manifest describes.
+
+    This is not paranoia about zip integrity. AGP **transparently gunzips** `.gz` assets while
+    packaging: the repository holds `lexicon/assets/he_lexicon.txt.gz`, and the APK contains
+    `assets/he_lexicon.txt`, plain UTF-8. The framing changes between source and artifact, so
+    "the file is present" says nothing. What matters is that the *content* still hashes to what
+    `scripts/build_lexicon.py` produced -- otherwise the keyboard could ship a silently
+    different dictionary from the one every measurement in docs/LEXICON_MEASUREMENTS.md was
+    taken against.
+    """
+    det = Detector(name="apk_lexicon", unit="packaged lexicon assets", denominator=0)
+    if not os.path.isfile(LEXICON_MANIFEST):
+        det.notes.append("lexicon/MANIFEST.json missing; NOT-MEASURED")
+        return det
+    expected = json.load(open(LEXICON_MANIFEST, encoding="utf-8"))["output"]
+
+    with zipfile.ZipFile(apk) as z:
+        names = [n for n in z.namelist()
+                 if n.startswith("assets/") and "he_lexicon" in n]
+        if not names:
+            det.notes.append("no lexicon asset found in the APK; NOT-MEASURED")
+            return det
+        det.denominator = len(names)
+        for name in names:
+            data = z.read(name)
+            if data[:2] == b"\x1f\x8b":
+                data = gzip.decompress(data)
+            if inject:
+                data = data + b"\n"
+            digest = hashlib.sha256(data).hexdigest()
+            det.notes.append(f"{name}: {len(data)} bytes uncompressed, sha256 {digest}")
+            if digest != expected["uncompressed_sha256"]:
+                det.findings.append(Finding(
+                    "apk_lexicon", os.path.basename(apk), 0,
+                    f"{name} hashes to {digest}, but lexicon/MANIFEST.json says "
+                    f"{expected['uncompressed_sha256']}",
+                    "apk.lexicon_mismatch"))
+            words = data.count(b"\n")
+            if words != expected.get("word_count", words):
+                det.findings.append(Finding(
+                    "apk_lexicon", os.path.basename(apk), 0,
+                    f"{name} holds {words} lines, manifest says "
+                    f"{expected.get('word_count')}", "apk.lexicon_count"))
+    return det
+
+
 IME_REQUIREMENTS = [
     ("exported", r'android:exported\(0x01010010\)=true', "android:exported must be true, "
      "or the app will not install on Android 12+"),
@@ -206,7 +256,10 @@ NOT_COVERED = [
     "reference -- though with no INTERNET permission it would still be refused by the kernel.",
     "Reflection and dynamically constructed class names are invisible here.",
     "This gate does not prove the app behaves correctly, only that it lacks the capability to "
-    "reach the network and declares the IME service an IME needs.",
+    "reach the network, declares the IME service an IME needs, and ships the lexicon its "
+    "manifest describes.",
+    "The lexicon detector checks the artifact's bytes, not its linguistic quality. Coverage "
+    "and accuracy live in docs/LEXICON_MEASUREMENTS.md and M5.",
 ]
 
 
@@ -220,7 +273,8 @@ def main() -> int:
                     help="regenerate the DEX baseline from this APK. Deliberate act only.")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--strict", action="store_true")
-    ap.add_argument("--inject-defect", choices=["permission", "dex", "service"],
+    ap.add_argument("--inject-defect",
+                    choices=["permission", "dex", "service", "lexicon"],
                     help="PLANT A DEFECT. Positive control; every value must go red.")
     args = ap.parse_args()
 
@@ -235,7 +289,8 @@ def main() -> int:
                          notes=[f"APK absent ({args.apk}); run ./gradlew :app:assembleDebug"])
                 for n, u in (("apk_permissions", "uses-permission entries"),
                              ("apk_dex", "DEX class descriptors"),
-                             ("apk_ime_service", "IME service requirements"))
+                             ("apk_ime_service", "IME service requirements"),
+                             ("apk_lexicon", "packaged lexicon assets"))
             ],
             not_covered=NOT_COVERED,
         )
@@ -273,6 +328,7 @@ def main() -> int:
             check_permissions(aapt2, args.apk, args.inject_defect == "permission"),
             check_dex(args.apk, baseline, args.inject_defect == "dex"),
             check_ime_service(aapt2, args.apk, args.inject_defect == "service"),
+            check_lexicon_asset(args.apk, args.inject_defect == "lexicon"),
         ],
         not_covered=NOT_COVERED,
     )

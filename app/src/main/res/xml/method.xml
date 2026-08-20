@@ -6,6 +6,11 @@
   spell checker stays active over the same text this keyboard promised stays on device, and
   paints red squiggles this app neither produced nor controls.
 
+  BUT: it is API 31, and minSdk here is 30. On API 30 devices this attribute is IGNORED and
+  the system spell checker stays on. That is the second thing minSdk 30 costs, alongside
+  configChanges below. See docs/OPERATOR_NOTICES.md NOTICE 3 for the recommendation to raise
+  minSdk to 31.
+
   configChanges: InputMethodInfo.getConfigChanges() is API 31, and this app's minSdk is 30, so
   on API 30 devices this attribute is NOT READ and onCreateInputView() is re-called on every
   configuration change. Declaring it is still correct for 31+, but the real defence is that no

@@ -1,9 +1,9 @@
 package com.hebrewime.ime.view
 
 import android.content.Context
-import android.graphics.Color
 import android.view.WindowInsets
 import android.widget.FrameLayout
+import com.hebrewime.R
 
 /**
  * Root container for the keyboard.
@@ -30,7 +30,7 @@ import android.widget.FrameLayout
 class KeyboardHostView(context: Context) : FrameLayout(context) {
 
     init {
-        setBackgroundColor(Color.parseColor("#111820"))
+        setBackgroundColor(context.getColor(R.color.keyboard_background))
         fitsSystemWindows = false
         setOnApplyWindowInsetsListener { view, insets ->
             val systemInsets = insets.getInsets(
