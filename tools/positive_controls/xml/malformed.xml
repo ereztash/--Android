@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- POSITIVE CONTROL for GATE-XML-1. This comment contains a double hyphen -- which XML
-     forbids inside a comment. This is the exact defect that broke the M2 manifest build. -->
+     forbids inside a comment. This is the exact defect that broke the M2 manifest build,
+     and again when the minSdk 31 change was made. -->
 <resources>
     <string name="unclosed">oops
 </resources>

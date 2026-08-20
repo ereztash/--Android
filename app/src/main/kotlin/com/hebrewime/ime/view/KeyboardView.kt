@@ -24,8 +24,8 @@ import com.hebrewime.R
  * class is deliberately thin: it owns pixels and events, and nothing else.
  *
  * It holds **no input state**. The current layout and the shift flag live on the service,
- * because this view is destroyed and recreated on every configuration change (and on API 30
- * the `configChanges` declaration is not even read). See [KeyboardHostView].
+ * because this view is destroyed and recreated on any configuration change outside the
+ * `configChanges` list. See [KeyboardHostView].
  */
 class KeyboardView(context: Context) : View(context) {
 

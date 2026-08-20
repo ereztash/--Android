@@ -41,8 +41,9 @@ object KeyPressPlanner {
      * at a time while the letters stay put, and leaves half a family emoji behind.
      *
      * When the preceding context is unknown -- after a desync, or in a restricted field where
-     * the initial text was deliberately withheld -- there is no non-blocking way to recover it
-     * at minSdk 30, since `getTextBeforeCursor` is a banned 2000 ms Binder round-trip. The
+     * the initial text was deliberately withheld -- there is no non-blocking way to recover it:
+     * `getTextBeforeCursor` and `getSurroundingText` are both banned 2000 ms Binder round-trips.
+     * The
      * fallback is **one code point**: surrogate-safe, so it can never split a character in
      * half, but not grapheme-aware, so a pointed letter or a ZWJ emoji takes more than one
      * press. That is a deliberate, bounded shortfall rather than a wrong answer, and it only

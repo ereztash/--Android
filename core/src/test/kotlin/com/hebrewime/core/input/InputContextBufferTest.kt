@@ -119,7 +119,7 @@ class InputContextBufferTest {
     @Test
     fun recoversTheCurrentWordAfterDesyncWithoutRefetching() {
         // After a desync the preceding text stays unknown -- there is no non-blocking way to
-        // re-read it at minSdk 30 -- but characters typed afterwards are known, so the
+        // re-read it without a blocking Binder call -- but characters typed afterwards are known, so the
         // current word is usable again immediately.
         val b = InputContextBuffer()
         b.reset("שלום", 4)

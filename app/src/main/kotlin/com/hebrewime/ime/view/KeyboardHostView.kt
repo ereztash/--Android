@@ -21,11 +21,11 @@ import com.hebrewime.R
  * ### No state here
  * This view holds no input state, deliberately. `onCreateInputView()` is not called once --
  * its javadoc is wrong. `initViews()` nulls the input view and re-runs from
- * `resetStateForNewConfiguration()` on every configuration change not declared in
- * `<input-method android:configChanges>`, and `InputMethodInfo.getConfigChanges()` is API 31
- * while this app's minSdk is 30, so on API 30 that declaration is not even read. Anything
- * cached in this class would be lost on rotation, theme change, locale change or a density
- * change. State lives on the service.
+ * `resetStateForNewConfiguration()` on every configuration change **not declared** in
+ * `<input-method android:configChanges>`. At minSdk 31 that declaration is honoured
+ * (`InputMethodInfo.getConfigChanges()` is API 31), but it enumerates specific changes rather
+ * than all of them, so anything cached here is still lost on a change outside the list. State
+ * lives on the service.
  */
 class KeyboardHostView(context: Context) : FrameLayout(context) {
 

@@ -10,7 +10,7 @@ push, not by intention — see below.
 |---|---|
 | Language | Kotlin, Gradle Kotlin DSL, version catalog |
 | JVM target | 17 |
-| minSdk | 30 ([why](docs/OPERATOR_NOTICES.md#notice-3--minsdk-30-decision-and-what-it-costs)) |
+| minSdk | 31 ([why](docs/OPERATOR_NOTICES.md)) |
 | targetSdk / compileSdk | 36 |
 | UI | Custom Android Views in the IME window; Jetpack Compose **only** in settings |
 

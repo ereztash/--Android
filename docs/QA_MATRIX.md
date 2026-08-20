@@ -10,7 +10,7 @@ Status of every gate and check in the project. Four states only:
 **There is no "ready except for". While any row below is NOT RUN, the app is not
 release-ready — and it is not described as release-ready anywhere in this repository.**
 
-**Last updated: M8. Verdict: see [RELEASE_READINESS.md](RELEASE_READINESS.md) — NOT READY.**
+**Last updated: M8, plus the operator's minSdk 31 decision. Verdict: see [RELEASE_READINESS.md](RELEASE_READINESS.md) — NOT READY.**
 
 ---
 
@@ -23,10 +23,11 @@ release-ready — and it is not described as release-ready anywhere in this repo
 | Gradle / AGP / Kotlin | 8.14.3 / 8.13.2 / 2.2.21 |
 | Compose | BOM 2026.06.01 (Compose 1.11.4) — 2026.08.00 needs AGP 9.1+ and compileSdk 37 |
 | Android SDK | Platform 36 (`platform-36_r02`), build-tools 36.0.0 |
+| minSdk / targetSdk | **31** / 36 — verified in all four built APKs |
 | **Device / emulator** | **NONE. No Android device or emulator exists in this environment, and none of the results below were obtained on one.** |
 
 Scale: 33 production Kotlin files, 17 test files, **125 JVM tests**, 13 gate scripts,
-**14 gates**, 5 positive-control fixtures. Lint: 1 warning, documented below.
+**14 gates**, 5 positive-control fixtures. **Lint: 0 issues.**
 
 ---
 
@@ -97,11 +98,12 @@ Scale: 33 production Kotlin files, 17 test files, **125 JVM tests**, 13 gate scr
 
 **None.**
 
-## KNOWN LIMITATION, accepted and recorded
+## RESOLVED
 
-| ID | Issue |
-|---|---|
-| LINT-1 | `suppressesSpellChecker` is API 31 and minSdk is 30, so **on API 30 devices the system spell checker is not suppressed** and will paint its own squiggles over text this keyboard promised stays on-device. This is the second thing minSdk 30 costs, alongside `configChanges` not being honoured there either. See `docs/OPERATOR_NOTICES.md` NOTICE 3 — the evidence now favours minSdk 31, and that is the operator's call. |
+| ID | Was | Now |
+|---|---|---|
+| LINT-1 | `suppressesSpellChecker` is API 31 while minSdk was 30, so on API 30 the system spell checker stayed active over text this keyboard promised stays on-device | **Resolved by raising minSdk to 31** on operator instruction. Lint went from 1 warning to **0**, which is the direct confirmation that the attribute is now honoured. |
+| M2-CONFIGCHANGE | `android:configChanges` was not read at all on API 30, so the declared mitigation did nothing there | **Resolved by the same change.** `InputMethodInfo.getConfigChanges()` is API 31, so the declaration is honoured on every supported device. State is still kept off the view, because the attribute enumerates specific changes rather than all of them. |
 
 ---
 
@@ -115,7 +117,7 @@ Nothing below has been exercised. None of it is described anywhere as working.
 |---|---|---|
 | M2-ENABLE | The IME can be enabled and selected from system settings | A device |
 | M2-INSETS | The bottom key row clears the gesture bar at targetSdk 36 | A device with gesture navigation |
-| M2-CONFIGCHANGE | State survives rotation on API 30, where `configChanges` is not honoured | An API 30 device |
+| M2-ROTATION | State survives rotation and other configuration changes | A device. `configChanges` is now honoured, but the view is still recreated for changes outside the declared list, and that path has never been exercised. |
 | M2-SPELLCHECK | The system spell checker is actually suppressed on API 31+ | A device |
 | M3-TOUCH | A touch has ever been dispatched to `KeyboardView` | A device |
 | M4-DEVICE | That the framework really does hand over password plaintext, and that `setInitialSurroundingText("")` releases it | A device; `android.jar` ships stubs only |

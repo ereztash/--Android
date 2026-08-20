@@ -27,14 +27,16 @@ UNVERIFIED rather than assumed true).
 Additional measured facts not asserted in the prompt, recorded because they affect design:
 - `EditorInfo.getInitialSelectedText` = API 30, but `EditorInfo.getInitialSurroundingText`
   = **API 31**, not 30. The prompt does not claim otherwise, but the two `Initial*` families
-  split across 30/31 and it is easy to assume they match. minSdk 30 therefore gets
-  `getInitialTextBeforeCursor` but **not** `getInitialSurroundingText`.
-- **`InputMethodInfo.getConfigChanges()` is API 31, but this app's minSdk is 30.** The
-  `android:configChanges` attribute on `<input-method>` is therefore **not honoured on API 30
-  devices**. §1.5's instruction to "declare configChanges explicitly AND keep state outside the
-  View" is not two belts for one pair of trousers: on API 30 the declaration does nothing, and
-  keeping state outside the View is the *only* defence. `onCreateInputView()` will be re-called
-  on every configuration change there. This is enforced by `GATE-IME-STATE-1`.
+  split across 30/31 and it is easy to assume they match. This mattered at minSdk 30, which got
+  `getInitialTextBeforeCursor` but not `getInitialSurroundingText`; at minSdk 31 both are
+  available. The app uses `getInitialTextBeforeCursor` regardless, since it needs left context
+  only.
+- **`InputMethodInfo.getConfigChanges()` is API 31.** This measurement is why minSdk was raised
+  from 30 to 31: at 30 the `android:configChanges` attribute on `<input-method>` was **not read
+  at all**, so the declared mitigation did nothing and `onCreateInputView()` was re-called on
+  every configuration change. At minSdk 31 it is honoured. §1.5's instruction to "declare
+  configChanges explicitly AND keep state outside the View" still holds both halves, because the
+  attribute enumerates specific changes rather than all of them.
 - `commitText(CharSequence,int,TextAttribute)` and
   `setComposingText(CharSequence,int,TextAttribute)` are API 33 overloads; the 2-arg forms
   are API 3.

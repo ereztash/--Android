@@ -26,6 +26,11 @@ class PlantedTraps : android.inputmethodservice.InputMethodService() {
         return ic.getTextBeforeCursor(2048, 0)
     }
 
+    // API 31, so reachable only since minSdk was raised. Same hazard, newer name.
+    fun trapSurroundingText(ic: android.view.inputmethod.InputConnection): Any? {
+        return ic.getSurroundingText(512, 512, 0)
+    }
+
     fun suppressedExample(ic: android.view.inputmethod.InputConnection) {
         ic.deleteSurroundingText(1, 0) // API-GATE-ALLOW: control fixture, proves suppression is visible
     }

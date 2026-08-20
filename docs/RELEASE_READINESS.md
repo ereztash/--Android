@@ -40,7 +40,8 @@ would resolve twelve NOT RUN rows and is the highest-value hour available to thi
 Watch specifically for:
 - the bottom key row sitting under the gesture bar (targetSdk 36 forces edge-to-edge with no
   IME exemption — the inset handling is written but never exercised);
-- state loss on rotation on an **API 30** device, where `configChanges` is not honoured at all;
+- state loss on rotation, and on configuration changes outside the declared `configChanges`
+  list, where the view is still recreated;
 - whether the lexicon load stutters the first suggestion — 148 ms to build the trie on a
   4-core x86 host is not a phone number.
 
@@ -52,13 +53,16 @@ selected as the active IME first** — the benchmark cannot do that itself witho
 guarantees the harness is asking for section names the app really emits, so a zero result would
 mean "no data", not "fast".
 
-### 3. Decide minSdk 30 vs 31
+### 3. ~~Decide minSdk 30 vs 31~~ — DONE
 
-Two things measurably do not work on API 30: `configChanges` in `method.xml`
-(`InputMethodInfo.getConfigChanges()` is API 31) and `suppressesSpellChecker` (also API 31,
-which Lint flags). On API 30 the system spell checker will paint squiggles over text this
-keyboard promised stays on-device. The evidence favours 31; the device-coverage tradeoff is the
-operator's call.
+**Resolved: minSdk 31**, on operator instruction. Both API-30 deficiencies are gone:
+`configChanges` is honoured and `suppressesSpellChecker` actually suppresses. Lint went from 1
+warning to 0, all four built APKs report `minSdkVersion:'31'`, and the DEX baselines were
+unchanged, so no re-baselining was warranted.
+
+The version bump also made `InputConnection.getSurroundingText` (API 31) reachable — the same
+blocking-Binder hazard the project had designed around. `GATE-API-1` was extended to ban it in
+the same change, rather than leaving a gap the bump had quietly opened.
 
 ### 4. Supply signing secrets
 

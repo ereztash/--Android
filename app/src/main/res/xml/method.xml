@@ -6,15 +6,15 @@
   spell checker stays active over the same text this keyboard promised stays on device, and
   paints red squiggles this app neither produced nor controls.
 
-  BUT: it is API 31, and minSdk here is 30. On API 30 devices this attribute is IGNORED and
-  the system spell checker stays on. That is the second thing minSdk 30 costs, alongside
-  configChanges below. See docs/OPERATOR_NOTICES.md NOTICE 3 for the recommendation to raise
-  minSdk to 31.
+  It is API 31, and minSdk is 31, so it applies on every device this app installs on. That
+  was not true at minSdk 30, where the attribute was silently ignored and the system spell
+  checker stayed on; raising minSdk was chosen partly to close exactly that gap. See
+  docs/OPERATOR_NOTICES.md NOTICE 3.
 
-  configChanges: InputMethodInfo.getConfigChanges() is API 31, and this app's minSdk is 30, so
-  on API 30 devices this attribute is NOT READ and onCreateInputView() is re-called on every
-  configuration change. Declaring it is still correct for 31+, but the real defence is that no
-  state lives in the keyboard View at all. GATE-IME-STATE-1 enforces that.
+  configChanges: InputMethodInfo.getConfigChanges() is API 31, so at minSdk 31 this attribute
+  is honoured everywhere. It is still not the whole defence — onCreateInputView()'s javadoc
+  claiming it is called once is wrong regardless, and a configuration change outside this list
+  still recreates the view — so no state lives in the keyboard View at all.
 -->
 <input-method xmlns:android="http://schemas.android.com/apk/res/android"
     android:settingsActivity="com.hebrewime.settings.SettingsActivity"

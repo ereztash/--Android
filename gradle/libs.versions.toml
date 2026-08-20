@@ -10,7 +10,7 @@ agp = "8.13.2"
 kotlin = "2.2.21"
 coroutines = "1.10.2"
 
-minSdk = "30"
+minSdk = "31"
 targetSdk = "36"
 compileSdk = "36"
 

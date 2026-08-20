@@ -29,8 +29,13 @@ import com.hebrewime.core.lexicon.HebrewText
  *
  * Recovery is deliberately passive: at the next word boundary the current word starts fresh
  * from characters this IME typed itself, which are known regardless of what precedes them.
- * There is no re-fetch, because the only re-fetch available at minSdk 30 is the banned
- * blocking call.
+ *
+ * There is no re-fetch. At minSdk 31 `InputConnection.getSurroundingText` does exist, but it
+ * is the same blocking Binder round-trip as `getTextBeforeCursor` and is banned for the same
+ * reason. Using it off the main thread to repair a desync would be defensible -- a desync is
+ * rare and not on the keystroke path -- but that is a change to make deliberately, with a
+ * measurement behind it, not a thing to slip in because a version bump made the API reachable.
+ * Recorded as an option, not taken.
  *
  * Not thread-safe: confined to the IME's main thread, like `InputConnection` itself.
  */

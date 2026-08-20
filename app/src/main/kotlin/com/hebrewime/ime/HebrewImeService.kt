@@ -45,10 +45,12 @@ import com.hebrewime.ime.view.KeyboardView
  */
 class HebrewImeService : InputMethodService() {
 
-    // ALL session state lives on the service. onCreateInputView() is not called once -- its
-    // javadoc is wrong -- and InputMethodInfo.getConfigChanges() is API 31 while minSdk is 30,
-    // so on API 30 the configChanges declaration is not read at all and the view is recreated
-    // on every rotation, theme change, locale change and density change.
+    // ALL session state lives on the service. onCreateInputView() is NOT called once -- its
+    // javadoc is wrong: initViews() nulls the input view and re-runs from
+    // resetStateForNewConfiguration() on every configuration change not covered by
+    // <input-method android:configChanges>. That declaration is honoured at minSdk 31
+    // (InputMethodInfo.getConfigChanges() is API 31), but it lists specific changes, not all of
+    // them, so anything held in the view is still lost on a change outside the list.
     private val contextBuffer = InputContextBuffer()
     private var currentLayoutId: String = Layouts.HEBREW
     private var shifted: Boolean = false

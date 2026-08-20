@@ -125,10 +125,12 @@ RULES: list[dict] = [
     },
     {
         "id": "ctx.blocking_fetch",
-        "pattern": re.compile(r"\.getTextBeforeCursor\s*\(|\.getTextAfterCursor\s*\("),
+        "pattern": re.compile(r"\.getTextBeforeCursor\s*\(|\.getTextAfterCursor\s*\(|"
+                              r"(?<!Initial)\bgetSurroundingText\s*\("),
         "message": "§1.1 blocking Binder round-trip, up to MAX_WAIT_TIME_MILLIS=2000. "
-                   "At minSdk 30 use EditorInfo.getInitialTextBeforeCursor + an incremental "
-                   "buffer resynced from onUpdateSelection.",
+                   "Use EditorInfo.getInitialTextBeforeCursor + an incremental buffer "
+                   "resynced from onUpdateSelection. getSurroundingText (API 31) is the same "
+                   "hazard and is banned too.",
         "allow_paths": [],
     },
 ]

@@ -46,9 +46,24 @@ CC BY-NC 4.0, so blocked as-is. Ask about commercial terms.
 
 ---
 
-## NOTICE 3 — minSdk 30 decision, and what it costs
+## NOTICE 3 — minSdk decision: RESOLVED as 31
 
-**Chosen: minSdk 30.** State the tradeoff explicitly so it can be reversed knowingly.
+**RESOLVED: minSdk 31**, decided by the operator after the M7 evidence below. The history is
+kept rather than rewritten, because the reasoning for the original choice is still the reasoning
+for not going lower.
+
+**What minSdk 31 costs:** Android 11 devices (API 30) can no longer install the app, on top of
+Android 8.0–10 (API 26–29) which minSdk 30 had already excluded.
+
+**What it buys:** both deficiencies in the amendment below disappear. `configChanges` is
+honoured, and the system spell checker is genuinely suppressed rather than silently left on.
+
+---
+
+### Original M0 reasoning, kept for the record
+
+**Chosen at M0: minSdk 30.** The tradeoff was stated explicitly so it could be reversed
+knowingly. It was.
 
 Verified locally against `platforms/android-36/data/api-versions.xml` (see
 `docs/VERIFICATION.md`):
@@ -95,7 +110,20 @@ notice and could reasonably blame on this keyboard.
 both of the above stop being caveats. This is a device-coverage decision and therefore the
 operator's, not one to make silently in a build.
 
-**Status: minSdk 30 as originally decided. Amended recommendation: 31. Awaiting the operator.**
+**Status: RESOLVED. minSdk raised to 31 on operator instruction.**
+
+### What changed in the build when minSdk moved to 31
+
+| | Before (minSdk 30) | After (minSdk 31) |
+|---|---|---|
+| `android:suppressesSpellChecker` | Ignored on API 30; system spell checker stayed on | Honoured on every supported device |
+| `android:configChanges` on `<input-method>` | Not read on API 30 | Honoured on every supported device |
+| Lint | 1 warning (`UnusedAttribute` on `suppressesSpellChecker`) | **0 warnings** |
+| `InputConnection.getSurroundingText` (API 31) | Unreachable | Reachable — and now **explicitly banned** by `GATE-API-1`, since it is the same blocking-Binder hazard as `getTextBeforeCursor`. A version bump must not quietly open a gap the gate was closing. |
+
+The last row is the one worth noticing: raising a minSdk makes new APIs reachable, and some of
+them are ones the project had deliberately designed around. The ban was extended in the same
+change rather than left for someone to discover.
 
 ---
 
