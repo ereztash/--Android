@@ -55,6 +55,16 @@ def _gates(strict: bool) -> list[dict]:
                             "hardcoded backspace width, blocking getTextBeforeCursor",
         },
         {
+            "id": "GATE-CRYPTO-1",
+            "what": "no ECB, hardcoded IV or key, seeded SecureRandom, or broken primitive",
+            "real": [PY, api, "--root", ROOT, "--json"] + s,
+            "control": [PY, api, "--root",
+                        os.path.join(ROOT, "tools", "positive_controls", "crypto"),
+                        "--no-default-excludes", "--json"],
+            "control_desc": "planted AES/ECB, a fixed IV, a hardcoded key, MD5, and a seeded "
+                            "SecureRandom",
+        },
+        {
             "id": "GATE-LEX-1",
             "what": "the shipped lexicon matches its manifest and the recipe reproduces it",
             "real": [PY, lex, "--json"] + s,

@@ -8,7 +8,7 @@ Status of every gate and check in the project. Three states only:
 
 There is no "ready except for". While any row is NOT RUN, the app is not release-ready.
 
-**Last updated: M5.**
+**Last updated: M6.**
 
 ---
 
@@ -66,6 +66,12 @@ There is no "ready except for". While any row is NOT RUN, the app is not release
 | M5-TRIE | Trie search agrees with the reference Damerau-Levenshtein | exhaustive over 14 words × 22 queries | — | n/a |
 | M5-ACC | top-1 / top-3 against a hash-locked corpus | 4,000 pairs, corpus sha `f9f4ed80…` | — | n/a |
 | M5-CTRL | **False auto-replace on known-correct words = 0.00%** | 4,000 words, sha `6e13ffd6…` | an indiscriminate replacer scores 100% on the same harness | YES |
+| GATE-CRYPTO-1 | No ECB, hardcoded IV/key, seeded `SecureRandom`, or broken primitive | 45 source files, 4 rules | `tools/positive_controls/crypto/` | YES — all 4 rules fired |
+| M6-IV | **IV uniqueness across 2,000 seals of identical plaintext** | 2,000 seals | — | n/a |
+| M6-TAMPER | Tampering with the version, IV, body or tag is each detected | 4 regions | — | n/a |
+| M6-KEY | Decryption with the wrong key fails | 1 | — | n/a |
+| M6-TRUNC | Truncated ciphertext fails cleanly | 4 lengths | — | n/a |
+| M6-MODEL | The dictionary cannot hold anything but one Hebrew word | 9 rejection cases + a reflective check on the mutator surface | — | n/a |
 
 ## MEASURED, reported with their denominator (not gates — measurements)
 
@@ -115,6 +121,8 @@ Everything below has not been exercised. None of it is described as working.
 | M3-A11Y | Keys are canvas-drawn with **no** virtual view nodes, so TalkBack cannot see them at all | M7 |
 | M7-A11Y | TalkBack navigation over virtual key nodes | A real device with TalkBack |
 | M7-LAT | p95 keystroke latency via `TraceSectionMetric` | A real device + host app + macrobenchmark |
+| M6-KEYSTORE | Android Keystore key generation, TEE/StrongBox backing, and key destruction on wipe | A real device. `EncryptedStore` is tested given a key; the Keystore lookup itself is untested. |
+| M6-UI | The dictionary management screen has ever been displayed or interacted with | A real device |
 | M8-SIGN | Signed release AAB | Operator-provided signing secrets (NOTICE 4) |
 | M8-STORE | Store listing + Data Safety declaration | A Play Console account (NOTICE 1, 4) |
 

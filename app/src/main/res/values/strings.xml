@@ -23,4 +23,18 @@
     <string name="onboarding_selected">Currently in use</string>
     <string name="onboarding_not_selected">Not currently in use</string>
     <string name="attribution_title">Dictionary sources</string>
+
+    <string name="cancel">Cancel</string>
+    <string name="dictionary_title">Your personal dictionary</string>
+    <string name="dictionary_explainer">Words you add here are stored encrypted on this device
+        and never leave it. The keyboard adds nothing on its own — only what you type in
+        below. It never stores sentences or a record of what you type.</string>
+    <string name="dictionary_add_label">Add a word</string>
+    <string name="dictionary_add_button">Add</string>
+    <string name="dictionary_delete">Delete</string>
+    <string name="dictionary_count">Stored words: %1$d</string>
+    <string name="dictionary_wipe_button">Delete everything</string>
+    <string name="dictionary_wipe_confirm">This deletes every word you have added and destroys
+        the encryption key, so the stored data can never be read again — including by this
+        app. It cannot be undone.</string>
 </resources>

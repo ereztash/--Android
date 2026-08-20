@@ -78,6 +78,38 @@ RULES: list[dict] = [
         "allow_paths": ["HebrewImeService.kt"],
     },
     {
+        "id": "crypto.weak_mode",
+        # A bare "AES" transformation is the trap: it silently means AES/ECB, which leaks
+        # plaintext structure block by block.
+        "pattern": re.compile(r'["/]ECB["/]|Cipher\.getInstance\s*\(\s*"AES"\s*\)|'
+                              r'"AES/CBC/NoPadding"'),
+        "message": "AES-GCM only. ECB leaks plaintext structure, a bare \"AES\" transformation "
+                   "silently means ECB, and unauthenticated CBC is malleable.",
+        "allow_paths": [],
+    },
+    {
+        "id": "crypto.weak_primitive",
+        "pattern": re.compile(r'"(?:MD5|SHA-?1|DES|DESede|RC2|RC4|ARCFOUR|Blowfish)"'),
+        "message": "broken or obsolete primitive. Use SHA-256 and AES.",
+        "allow_paths": [],
+    },
+    {
+        "id": "crypto.hardcoded_material",
+        "pattern": re.compile(r'(?:IvParameterSpec|GCMParameterSpec|SecretKeySpec)\s*\('
+                              r'[^)]*(?:byteArrayOf\s*\(|"[^"]*"\.toByteArray)'),
+        "message": "IV and key material must never be literals. A fixed IV under GCM is "
+                   "catastrophic: it leaks the XOR of two plaintexts and can expose the "
+                   "authentication subkey.",
+        "allow_paths": [],
+    },
+    {
+        "id": "crypto.seeded_random",
+        "pattern": re.compile(r'SecureRandom\s*\(\s*[^)\s]|\.setSeed\s*\('),
+        "message": "a seeded SecureRandom is reproducible, which makes every IV it generates "
+                   "reproducible too.",
+        "allow_paths": [],
+    },
+    {
         "id": "priv.no_logging",
         "pattern": re.compile(r"\bandroid\.util\.Log\b|\bLog\s*\.\s*[vdiwe]\s*\(|"
                               r"(?<![.\w])println\s*\(|\bSystem\.(?:out|err)\s*\."),

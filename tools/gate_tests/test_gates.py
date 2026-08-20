@@ -130,6 +130,15 @@ class TestForbiddenApiGate(unittest.TestCase):
         self.assertEqual(len(hits), 1, "expected exactly one planted initial-text read")
         self.assertNotIn("HebrewImeService", hits[0]["path"])
 
+    def test_crypto_control_fires_every_rule(self):
+        control = os.path.join(ROOT, "tools", "positive_controls", "crypto")
+        code, data = run([PY, API, "--root", control, "--no-default-excludes", "--json"])
+        self.assertEqual(code, 1)
+        found = rules_of(data)
+        for rule in ("crypto.weak_mode", "crypto.weak_primitive",
+                     "crypto.hardcoded_material", "crypto.seeded_random"):
+            self.assertIn(rule, found, f"planted crypto defect {rule} was not detected")
+
     def test_real_tree_clean(self):
         code, data = run([PY, API, "--root", ROOT, "--json"])
         self.assertEqual(code, 0)
