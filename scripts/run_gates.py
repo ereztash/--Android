@@ -27,6 +27,7 @@ def _gates(strict: bool) -> list[dict]:
     s = ["--strict"] if strict else []
     net = os.path.join(ROOT, "scripts", "check_no_network.py")
     api = os.path.join(ROOT, "scripts", "check_forbidden_api.py")
+    lex = os.path.join(ROOT, "scripts", "check_lexicon.py")
     return [
         {
             "id": "GATE-NET-1",
@@ -47,6 +48,20 @@ def _gates(strict: bool) -> list[dict]:
                         "--no-default-excludes", "--json"],
             "control_desc": "planted session-interface override, return-value branch, "
                             "hardcoded backspace width, blocking getTextBeforeCursor",
+        },
+        {
+            "id": "GATE-LEX-1",
+            "what": "the shipped lexicon matches its manifest and the recipe reproduces it",
+            "real": [PY, lex, "--json"] + s,
+            "control": [PY, lex, "--inject-defect", "artifact", "--json"],
+            "control_desc": "one byte of the committed lexicon artifact flipped",
+        },
+        {
+            "id": "GATE-LEX-2",
+            "what": "upstream source integrity: a changed source must not build silently",
+            "real": [PY, lex, "--json"] + s,
+            "control": [PY, lex, "--inject-defect", "checksum", "--json"],
+            "control_desc": "one byte of upstream source A flipped before hashing",
         },
         {
             "id": "GATE-DENOM-1",

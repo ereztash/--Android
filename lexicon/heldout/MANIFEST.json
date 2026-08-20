@@ -1,0 +1,38 @@
+{
+  "purpose": "held-out corpus for lexicon coverage measurement; NOT in the lexicon",
+  "source": {
+    "wiki": "hewiki",
+    "dump_date": "20260801",
+    "data_url": "https://dumps.wikimedia.org/hewiki/20260801/hewiki-20260801-pages-articles-multistream.xml.bz2",
+    "index_url": "https://dumps.wikimedia.org/hewiki/20260801/hewiki-20260801-pages-articles-multistream-index.txt.bz2",
+    "index_sha256": "a4bd53645e6e5f0f7bc81f0f376d5bd9ba235e3e20536a843e21c5d0ea1987c7",
+    "license": "CC BY-SA 4.0"
+  },
+  "sampling": {
+    "method": "seeded sha256 ordering over multistream block offsets, fetched by HTTP Range; unbiased across the encyclopedia, not a dump prefix",
+    "seed": "hebrew-ime-heldout-v1",
+    "blocks_available": 10397,
+    "blocks_used": 4,
+    "compressed_bytes_fetched": 380228,
+    "block_offsets_used": [
+      420567613,
+      425715640,
+      617789164,
+      323185809
+    ]
+  },
+  "corpus": {
+    "articles": 331,
+    "tokens": 75000,
+    "distinct_types": 22804,
+    "uncompressed_bytes": 771996,
+    "sha256": "02fe828ce7ef083ab5db1d602714989d06676c2dadf490376c88b40e30520515",
+    "gzip_sha256": "abb2c19193e5bd183986ae39849f8d2093f8f208e1530a3a6cf49294a187a4ed",
+    "tokenization": "runs of U+05D0..U+05EA only; tokens containing maqaf, geresh, digits or Latin letters are excluded"
+  },
+  "known_limitations": [
+    "Encyclopedic prose. Not representative of keyboard input: no SMS register, no slang, no typos. Coverage measured here is a claim about encyclopedic Hebrew.",
+    "Proper nouns are heavily over-represented relative to everyday typing.",
+    "Tokens with internal punctuation (maqaf, geresh) are dropped by the tokenizer, so the denominator excludes them entirely."
+  ]
+}

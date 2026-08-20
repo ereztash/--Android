@@ -8,7 +8,7 @@ Status of every gate and check in the project. Three states only:
 
 There is no "ready except for". While any row is NOT RUN, the app is not release-ready.
 
-**Last updated: M0.**
+**Last updated: M1.**
 
 ---
 
@@ -39,6 +39,25 @@ There is no "ready except for". While any row is NOT RUN, the app is not release
 | TEST-GATES | The gates' own behaviour | 9 tests | — | n/a |
 | VERIF-SDK | §1 / §3 claims checked against `android.jar` + `api-versions.xml` | 31 claims: 28 confirmed, 0 contradicted, 3 not-checkable | — | n/a |
 | VERIF-LEX | Lexicon sources byte + sha256 exact | 2 of 2 sources | — | n/a |
+| GATE-LEX-1 | Shipped lexicon matches its manifest (gzip+raw sha256, form count, sort order) | 1 artifact, 355,587 forms | `--inject-defect artifact` (one byte flipped) | YES — both sha256 findings fired |
+| GATE-LEX-2 | Upstream source integrity | 2 sources | `--inject-defect checksum` | YES — `CHECKSUM_MISMATCH`, exit 1 |
+| M1-REPRO | Lexicon counts reproduce the build spec | 4 counts over 241,797 + 1,167,621 input rows | `--inject-defect filter` | YES — all 4 counts −21% to −25%, `COUNT_OUT_OF_TOLERANCE` |
+| M1-DETERM | Artifact is byte-identical across runs | 2 runs | `--inject-defect nondeterminism` | YES — hashes differ across `PYTHONHASHSEED` |
+| M1-XCHECK | Kotlin shipped path agrees with the Python measurement | 75,000 tokens × 5 settings | — (equality test) | n/a — exact agreement at all 5 |
+| M1-SORT | Lexicon blob really is byte-sorted (binary search correctness) | 355,587 entries compared | — | n/a |
+| M1-ROUNDTRIP | Every index round-trips through `indexOf`/`wordAt` | 355,587 entries | — | n/a |
+
+## MEASURED, reported with their denominator (not gates — measurements)
+
+| ID | Measurement | Result | Denominator |
+|---|---|---|---|
+| M1-COV | Lexicon token coverage on held-out Hebrew Wikipedia, MIN_STEM=4 | **96.73%** (3.27% wrong-underline) | 75,000 tokens / 22,804 types, corpus sha256 `02fe828c…` |
+| M1-COV-NONE | Same, with no prefix stripper | 94.61% (5.39% wrong-underline) | same corpus |
+| M1-COV-DELTA | Coverage cost of MIN_STEM 2→4 | −0.11 points (89 tokens) | same corpus |
+
+These are ~1 point below the build spec's figures on its own (unspecified) corpus. Reported as
+measured; see `docs/LEXICON_MEASUREMENTS.md` §2 for why the gap cannot be reconciled and was
+not adjusted away.
 
 ## NOT MEASURED (reported as such — not counted as passing)
 
@@ -53,10 +72,12 @@ Everything below has not been exercised. None of it is described as working.
 | ID | Check | What it needs |
 |---|---|---|
 | GATE-NET-2 | DEX/bytecode network scan of the built artifact | An assembled APK/AAB (M8) |
-| M1-REPRO | Lexicon reproducibility gate (102,239 / 298,162 / 355,587 ±1%) | M1 |
 | M2-ENABLE | IME can be enabled and selected | A real device |
 | M3-INPUT | Basic input actions, grapheme-correct backspace on device | A real device |
 | M4-PRIV | `EditorInfo` initial-text discard on a password field that *did* contain text | M4 |
+| M1-TYPO | Prefix-stripper typo-rejection / recall / false-accept rates (the spec's 88.4% at MIN_STEM 4) | A typo corpus and a correctly-constructed, prefix-free non-word control — M5 |
+| M1-DEVICE | Lexicon load time, memory and lookup latency on real hardware | A real device |
+| M1-KTIV | Ktiv male/haser coverage rate over all reform-affected lemmas | A list of affected lemmas, which this project does not have |
 | M5-ACC | top-1 / top-3 / false_auto_replace_rate against a hash-locked golden corpus | M5 |
 | M5-CTRL | Control column: already-correct words must show ~0% correction rate | M5 |
 | M7-A11Y | TalkBack navigation over virtual key nodes | A real device with TalkBack |

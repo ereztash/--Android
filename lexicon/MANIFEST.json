@@ -1,0 +1,59 @@
+{
+  "recipe_version": 1,
+  "sources": {
+    "A": {
+      "name": "InflectedVerbsExtended.csv",
+      "url": "https://raw.githubusercontent.com/NNLP-IL/Hebrew-Resources/master/linguistic_resources/word_lists/hebrew_verbs_eran_tomer/InflectedVerbsExtended.csv",
+      "bytes": 17842473,
+      "sha256": "818793894a360243d471e0f302494b245736189465c8e0258e5665335052a456",
+      "license": "CC BY 4.0",
+      "attribution": "Eran Tomer"
+    },
+    "B": {
+      "name": "he_full.txt",
+      "url": "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/he/he_full.txt",
+      "bytes": 19215890,
+      "sha256": "a69a3f390eb53183bf191c4eac18282592992aef9ff184c5dcf8919f5ea0f773",
+      "license": "CC BY-SA 4.0",
+      "attribution": "OpenSubtitles / OPUS, via hermitdave/FrequencyWords"
+    }
+  },
+  "filters": {
+    "niqqud_stripped": "U+0591..U+05C7 after NFC",
+    "accepted_alphabet": "U+05D0..U+05EA (27 Hebrew letters incl. final forms)",
+    "source_b_min_count": 5
+  },
+  "parse_stats": {
+    "A": {
+      "rows_read": 241798,
+      "rows_rejected": 657
+    },
+    "B": {
+      "lines_read": 1167621,
+      "malformed": 0,
+      "below_min_count": 835179
+    }
+  },
+  "counts": {
+    "a": 102239,
+    "b": 298162,
+    "union": 355587,
+    "a_only": 57425
+  },
+  "expected_counts": {
+    "a": 102239,
+    "b": 298162,
+    "union": 355587,
+    "a_only": 57425
+  },
+  "tolerance": 0.01,
+  "output": {
+    "path": "lexicon/he_lexicon.txt.gz",
+    "uncompressed_bytes": 4607433,
+    "uncompressed_sha256": "6fbc467ddd7801a1b2449c40d77abd797a7eb7e298001551c8e3887ee0648ec8",
+    "gzip_bytes": 950114,
+    "gzip_sha256": "b69e8f62f64c64bbf0042c518901d597b1b51ce4c535716ee3f78e24a9b7c9c8",
+    "encoding": "UTF-8, newline-delimited, sorted by code point"
+  },
+  "license_of_derived_artifact": "CC BY-SA 4.0 (inherited from source B)"
+}

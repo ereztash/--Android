@@ -24,4 +24,12 @@ tasks.withType<Test>().configureEach {
     testLogging {
         events("passed", "failed", "skipped")
     }
+    // The lexicon artifact and the held-out corpus live at the repo root rather than in test
+    // resources: they are build outputs shared with the Android app and the Python tooling,
+    // and copying a 950 KB artifact into two places invites the copies drifting apart.
+    systemProperty("lexicon.file", rootProject.file("lexicon/he_lexicon.txt.gz").absolutePath)
+    systemProperty(
+        "heldout.file",
+        rootProject.file("lexicon/heldout/hewiki_sample.txt.gz").absolutePath,
+    )
 }
