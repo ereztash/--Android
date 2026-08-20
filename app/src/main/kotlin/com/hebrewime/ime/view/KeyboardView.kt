@@ -6,10 +6,13 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.view.MotionEvent
 import android.view.View
+import android.view.accessibility.AccessibilityEvent
+import androidx.core.view.ViewCompat
 import com.hebrewime.core.keyboard.Key
 import com.hebrewime.core.keyboard.KeyAction
 import com.hebrewime.core.keyboard.KeyGeometry
 import com.hebrewime.core.keyboard.KeyRect
+import com.hebrewime.core.keyboard.KeyDescriptions
 import com.hebrewime.core.keyboard.KeyboardLayout
 import com.hebrewime.R
 
@@ -28,6 +31,14 @@ class KeyboardView(context: Context) : View(context) {
 
     /** Called with the pressed key. The service decides what it means. */
     var onKeyPressed: ((Key) -> Unit)? = null
+
+    /**
+     * Exposes each canvas-drawn key as a virtual view node. Without it the whole keyboard is a
+     * single blank rectangle to TalkBack -- see [KeyboardAccessibilityHelper].
+     */
+    private val accessibilityHelper = KeyboardAccessibilityHelper(this).also {
+        ViewCompat.setAccessibilityDelegate(this, it)
+    }
 
     private var layoutModel: KeyboardLayout? = null
     private var rects: List<KeyRect> = emptyList()
@@ -54,11 +65,27 @@ class KeyboardView(context: Context) : View(context) {
     private val scratch = RectF()
 
     fun setLayout(model: KeyboardLayout) {
+        val changed = layoutModel?.id != model.id
         layoutModel = model
         rects = emptyList()
+        accessibilityHelper.setKeys(emptyList())
         requestLayout()
         invalidate()
+        if (changed) {
+            // A layout switch is otherwise completely silent, which leaves a screen-reader user
+            // on a keyboard whose keys have all changed with no indication that anything
+            // happened.
+            accessibilityHelper.announceLayoutChange(
+                KeyDescriptions.describe(
+                    Key(model.id, model.id, KeyAction.SWITCH_LAYOUT),
+                )
+            )
+        }
     }
+
+    /** Required so ExploreByTouchHelper can receive hover events. */
+    override fun dispatchHoverEvent(event: MotionEvent): Boolean =
+        accessibilityHelper.dispatchHoverEvent(event) || super.dispatchHoverEvent(event)
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val width = MeasureSpec.getSize(widthMeasureSpec)
@@ -78,6 +105,9 @@ class KeyboardView(context: Context) : View(context) {
         val model = layoutModel ?: return
         if (w <= 0 || h <= 0) return
         rects = KeyGeometry.layout(model, w.toFloat(), h.toFloat())
+        // Rebuilt, never cached across layouts: stale nodes would tell a screen reader a key
+        // is somewhere it has moved away from.
+        accessibilityHelper.setKeys(rects)
         val rowHeight = h.toFloat() / model.rows.size
         labelPaint.textSize = rowHeight * LABEL_HEIGHT_FRACTION
         labelPaintPressed.textSize = labelPaint.textSize
@@ -118,6 +148,7 @@ class KeyboardView(context: Context) : View(context) {
                 invalidate()
                 if (key != null) {
                     performClick()
+                    sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_CLICKED)
                     onKeyPressed?.invoke(key)
                 }
             }

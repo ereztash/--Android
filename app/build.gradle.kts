@@ -105,6 +105,8 @@ kotlin {
 dependencies {
     implementation(project(":core"))
     implementation(libs.androidx.core.ktx)
+    // ExploreByTouchHelper: the only way to make canvas-drawn keys visible to TalkBack.
+    implementation(libs.androidx.customview)
     implementation(libs.androidx.tracing)
     implementation(libs.kotlinx.coroutines.android)
 

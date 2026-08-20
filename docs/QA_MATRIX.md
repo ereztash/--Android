@@ -8,7 +8,7 @@ Status of every gate and check in the project. Three states only:
 
 There is no "ready except for". While any row is NOT RUN, the app is not release-ready.
 
-**Last updated: M6.**
+**Last updated: M7.**
 
 ---
 
@@ -72,6 +72,10 @@ There is no "ready except for". While any row is NOT RUN, the app is not release
 | M6-KEY | Decryption with the wrong key fails | 1 | — | n/a |
 | M6-TRUNC | Truncated ciphertext fails cleanly | 4 lengths | — | n/a |
 | M6-MODEL | The dictionary cannot hold anything but one Hebrew word | 9 rejection cases + a reflective check on the mutator surface | — | n/a |
+| GATE-TRACE-1 | The benchmark measures trace sections the app actually emits | 2 section names | `--inject-defect` renames the requested sections | YES — 4 findings |
+| M7-A11Y-NAMES | Every key of all 3 layouts has a distinct, non-empty spoken name | 73 keys, 27 Hebrew letters | — | n/a |
+| M7-A11Y-FINALS | Final forms are distinguishable by ear from their ordinary counterparts | 5 pairs | — | n/a |
+| M7-HARNESS | The latency harness assembles | `:hostapp` + `:benchmark` both assemble | — | n/a |
 
 ## MEASURED, reported with their denominator (not gates — measurements)
 
@@ -120,7 +124,9 @@ Everything below has not been exercised. None of it is described as working.
 | M3-TOUCH | A touch has ever been dispatched to `KeyboardView` on real hardware | A real device |
 | M3-A11Y | Keys are canvas-drawn with **no** virtual view nodes, so TalkBack cannot see them at all | M7 |
 | M7-A11Y | TalkBack navigation over virtual key nodes | A real device with TalkBack |
-| M7-LAT | p95 keystroke latency via `TraceSectionMetric` | A real device + host app + macrobenchmark |
+| M7-LAT | **p95 keystroke latency** via `TraceSectionMetric` | A real device. The harness is built and committed (`:benchmark`, `:hostapp`) and assembles in CI; running it needs hardware **and** the keyboard enabled and selected as the active IME, which a benchmark cannot do for itself without `WRITE_SECURE_SETTINGS`. |
+| M7-TALKBACK | Whether the virtual view nodes are actually usable with TalkBack | A real device with TalkBack. Node structure is unit-tested; no screen reader has ever read them. |
+| M7-CONTRAST | Perceptual legibility of the key colours on a real panel | A real device |
 | M6-KEYSTORE | Android Keystore key generation, TEE/StrongBox backing, and key destruction on wipe | A real device. `EncryptedStore` is tested given a key; the Keystore lookup itself is untested. |
 | M6-UI | The dictionary management screen has ever been displayed or interacted with | A real device |
 | M8-SIGN | Signed release AAB | Operator-provided signing secrets (NOTICE 4) |

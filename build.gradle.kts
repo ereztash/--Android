@@ -30,9 +30,24 @@ tasks.register("dependencyAudit") {
     val projects = allprojects
 
     doLast {
-        val coords = sortedSetOf<String>()
+        // Each row is `scope<TAB>project<TAB>configuration<TAB>coordinate`.
+        //
+        // The scope column exists because "does this dependency have network capability" is
+        // only a shipping question. `:benchmark` pulls in com.squareup.wire transitively --
+        // androidx.benchmark uses it to parse Perfetto traces -- and `:hostapp` is a test
+        // fixture. Neither is in the shipped APK, so flagging them would either produce a
+        // permanently red gate or, worse, invite someone to delete the blocklist entry that
+        // matters. The gate fails on SHIPPING scope and merely reports the rest.
+        val rows = sortedSetOf<String>()
         var configurationsExamined = 0
         var configurationsFailed = 0
+
+        fun scopeOf(projectPath: String, configuration: String): String {
+            val isTestConfig = configuration.contains("Test", ignoreCase = true) ||
+                configuration.startsWith("netcontrol")
+            val isShippingProject = projectPath == ":app" || projectPath == ":core"
+            return if (isShippingProject && !isTestConfig) "SHIPPING" else "TEST"
+        }
 
         projects.forEach { p ->
             p.configurations
@@ -43,31 +58,39 @@ tasks.register("dependencyAudit") {
                 }
                 .forEach { cfg ->
                     configurationsExamined++
+                    val scope = scopeOf(p.path, cfg.name)
                     runCatching {
                         cfg.incoming.resolutionResult.allComponents.forEach { component ->
                             val id = component.id
                             if (id is ModuleComponentIdentifier) {
-                                coords.add("${id.group}:${id.module}:${id.version}")
+                                rows.add(
+                                    "$scope\t${p.path}\t${cfg.name}\t" +
+                                        "${id.group}:${id.module}:${id.version}"
+                                )
                             }
                         }
                     }.onFailure { configurationsFailed++ }
                 }
         }
 
+        val shipping = rows.count { it.startsWith("SHIPPING") }
         val f = outFile.get().asFile
         f.parentFile.mkdirs()
         f.writeText(
             buildString {
                 appendLine("# GATE-NET-1 dependency audit")
+                appendLine("# format: scope<TAB>project<TAB>configuration<TAB>coordinate")
+                appendLine("# SHIPPING = reaches the published APK; TEST = benchmark, host app")
+                appendLine("#            fixture, or a test/netcontrol configuration")
                 appendLine("# projects_examined=${projects.size}")
                 appendLine("# configurations_examined=$configurationsExamined")
                 appendLine("# configurations_failed_to_resolve=$configurationsFailed")
-                appendLine("# distinct_coordinates=${coords.size}")
-                coords.forEach { appendLine(it) }
+                appendLine("# rows=${rows.size} shipping_rows=$shipping")
+                rows.forEach { appendLine(it) }
             }
         )
         logger.lifecycle(
-            "dependencyAudit: ${coords.size} distinct coordinates from " +
+            "dependencyAudit: ${rows.size} rows ($shipping shipping) from " +
                 "$configurationsExamined configurations across ${projects.size} projects " +
                 "-> ${f.relativeTo(rootDir)}"
         )

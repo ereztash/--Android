@@ -88,7 +88,13 @@ jobs:
           java-version: '17'
       - uses: android-actions/setup-android@v3
       - uses: gradle/actions/setup-gradle@v4
-      - name: Assemble all modules
-        run: ./gradlew assembleDebug
+      - name: Assemble the app and the benchmark host
+        run: ./gradlew :app:assembleDebug :hostapp:assembleDebug
+
+      # The latency harness cannot be RUN without a device, but it must keep compiling --
+      # a harness that has silently stopped building measures nothing at all.
+      - name: Assemble the latency benchmark
+        run: ./gradlew :benchmark:assembleBenchmark
+
       - name: Lint
         run: ./gradlew :app:lintDebug

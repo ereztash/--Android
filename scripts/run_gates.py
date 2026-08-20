@@ -29,6 +29,7 @@ def _gates(strict: bool) -> list[dict]:
     api = os.path.join(ROOT, "scripts", "check_forbidden_api.py")
     lex = os.path.join(ROOT, "scripts", "check_lexicon.py")
     xml = os.path.join(ROOT, "scripts", "check_xml.py")
+    trace = os.path.join(ROOT, "scripts", "check_trace_sections.py")
     apk = os.path.join(ROOT, "scripts", "check_apk.py")
     debug_apk = os.path.join(ROOT, "app", "build", "outputs", "apk", "debug", "app-debug.apk")
     netc_apk = os.path.join(ROOT, "app", "build", "outputs", "apk", "netcontrol",
@@ -119,6 +120,15 @@ def _gates(strict: bool) -> list[dict]:
                         "--json"],
             "control_desc": "expect an asset name AGP does not produce (a .gz that AGP strips)",
             "requires": [debug_apk],
+        },
+        {
+            "id": "GATE-TRACE-1",
+            "what": "the benchmark measures trace sections the app actually emits",
+            "real": [PY, trace, "--json"] + s,
+            "control": [PY, trace, "--inject-defect", "--json"],
+            "control_desc": "rename the benchmark's requested sections, which is what a "
+                            "one-sided rename looks like and would otherwise report zero "
+                            "measurements as success",
         },
         {
             "id": "GATE-DENOM-1",

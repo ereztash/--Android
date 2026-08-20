@@ -185,8 +185,22 @@ def scan_sources(root, use_default_excludes, extra_excludes) -> Detector:
 
 
 def scan_deps(root, coord_files: list[str]) -> Detector:
-    det = Detector(name="deps", unit="resolved module coordinates", denominator=0)
-    seen = set()
+    """Blocklist the SHIPPING dependency graph; report the test graph without failing on it.
+
+    "Does this dependency have network capability" is only a shipping question. `:benchmark`
+    pulls in com.squareup.wire transitively -- androidx.benchmark parses Perfetto traces with
+    it -- and `:hostapp` is a fixture. Neither reaches the published APK. Failing on them
+    would leave a permanently red gate, and the usual response to a permanently red gate is to
+    delete the rule that matters.
+
+    What ships is checked twice over: here, and again by GATE-NET-2 against the built APK's
+    own permissions and DEX, which is the authoritative answer and does not depend on this
+    classification being right.
+    """
+    det = Detector(name="deps", unit="resolved SHIPPING module coordinates", denominator=0)
+    seen: set[str] = set()
+    test_scope_hits: dict[str, str] = {}
+    test_coordinates: set[str] = set()
     files_read = 0
     for cf in coord_files:
         if not os.path.isfile(cf):
@@ -194,20 +208,44 @@ def scan_deps(root, coord_files: list[str]) -> Detector:
         files_read += 1
         with open(cf, "r", encoding="utf-8") as fh:
             for lineno, line in enumerate(fh, start=1):
-                coord = line.strip()
-                if not coord or coord.startswith("#"):
+                raw = line.rstrip("\n")
+                if not raw.strip() or raw.startswith("#"):
                     continue
+                parts = raw.split("\t")
+                if len(parts) == 4:
+                    scope, project, configuration, coord = parts
+                else:
+                    # The positive-control fixture is a bare coordinate list. Treat an
+                    # unscoped row as shipping, which is the conservative reading.
+                    scope, project, configuration = "SHIPPING", "?", "?"
+                    coord = raw.strip()
+
+                hit = next((b for b in DEP_BLOCKLIST
+                            if coord.startswith(b) or b in coord), None)
+
+                if scope != "SHIPPING":
+                    test_coordinates.add(coord)
+                    if hit:
+                        test_scope_hits[coord] = f"{project}:{configuration}"
+                    continue
+
                 if coord in seen:
                     continue
                 seen.add(coord)
                 det.denominator += 1
-                for bad in DEP_BLOCKLIST:
-                    if coord.startswith(bad) or bad in coord:
-                        det.findings.append(Finding(
-                            "deps", os.path.relpath(cf, root), lineno, coord,
-                            f"deps.blocklist:{bad}"))
-                        break
+                if hit:
+                    det.findings.append(Finding(
+                        "deps", os.path.relpath(cf, root), lineno,
+                        f"{coord} (scope=SHIPPING, {project} {configuration})",
+                        f"deps.blocklist:{hit}"))
+
     det.notes.append(f"{files_read} coordinate file(s) read")
+    det.notes.append(
+        f"{len(test_coordinates)} additional coordinates in TEST scope "
+        f"(benchmark, host-app fixture, test configurations) were NOT blocklisted")
+    for coord, where in sorted(test_scope_hits.items()):
+        det.notes.append(
+            f"  network-capable in TEST scope only, not shipped: {coord} via {where}")
     if det.denominator == 0:
         det.notes.append(
             "No resolved coordinates available. Run `./gradlew dependencyAudit` first. "
@@ -225,6 +263,9 @@ NOT_COVERED = [
     "Data leaving the device via IPC to another app that itself has INTERNET is not detected.",
     "Gradle build scripts are not scanned. Build-time downloads are out of scope; what must "
     "be offline is the shipped application.",
+    "The deps detector blocklists SHIPPING configurations only. Network-capable artifacts in "
+    "test and benchmark configurations are reported but not failed, because they do not reach "
+    "the published APK. GATE-NET-2 checks the built artifact independently of that judgement.",
 ]
 
 

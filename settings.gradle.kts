@@ -24,3 +24,5 @@ rootProject.name = "hebrew-ime"
 
 include(":core")
 include(":app")
+include(":hostapp")
+include(":benchmark")

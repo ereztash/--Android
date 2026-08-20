@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <!--
+      The benchmark finds this field by resource id. Its inputType is deliberately plain text:
+      any of the restricted types would put the IME into Restricted mode, where it computes no
+      suggestions at all, and the benchmark would then measure nothing while reporting success.
+    -->
+    <EditText
+        android:id="@+id/benchmark_target"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:contentDescription="@string/benchmark_target_description"
+        android:hint="@string/benchmark_target_hint"
+        android:importantForAutofill="no"
+        android:inputType="text" />
+</LinearLayout>
