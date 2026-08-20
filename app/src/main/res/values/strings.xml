@@ -22,6 +22,24 @@
     <string name="onboarding_not_enabled">Not enabled yet</string>
     <string name="onboarding_selected">Currently in use</string>
     <string name="onboarding_not_selected">Not currently in use</string>
+    <string name="learning_title">Learn how you write</string>
+    <string name="learning_body">Off by default. When you turn this on, the keyboard counts
+        which words you tend to put next to each other and uses that to order its suggestions.
+        The counts stay on this phone, encrypted, and there is nowhere for them to go — this app
+        has no internet permission.</string>
+    <string name="learning_switch">Learn from what I type</string>
+    <string name="learning_never_title">What it never does</string>
+    <string name="learning_never_body">It never stores what you wrote — only how often one word
+        followed another, as numbers. It never learns in password, payment, email, phone, name
+        or address fields. A pair you have typed only once is never suggested back to you.</string>
+    <string name="learning_status_off">Not learning</string>
+    <string name="learning_status_empty">On — nothing learned yet</string>
+    <string name="learning_status">On — %1$d word pairs learned</string>
+    <string name="learning_forget_button">Forget what you learned</string>
+    <string name="learning_forget_confirm">This deletes everything the keyboard has learned
+        about how you write, and the key that unlocks it, so the stored bytes can never be read
+        again. Your personal dictionary is separate and is not touched.</string>
+
     <string name="attribution_title">Dictionary sources</string>
 
     <string name="cancel">Cancel</string>

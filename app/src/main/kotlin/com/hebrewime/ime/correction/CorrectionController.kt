@@ -298,25 +298,35 @@ class CorrectionController(
         scope.launch { model.endSession() }
     }
 
-    /** Turn learning on or off, rebuilding the engine and loading or dropping the model. */
-    fun setLearningEnabled(enabled: Boolean) {
-        LearningPreferences.setEnabled(context, enabled)
-        learningEnabled = enabled
+    /**
+     * Re-read the opt-in and rebuild if it changed.
+     *
+     * Called from `onStartInput`. The switch lives in a different Activity, so without this a
+     * user turning learning **off** would keep being learned from until the IME process
+     * happened to be killed — the failure that matters, and the reason this is not merely a
+     * convenience.
+     *
+     * Turning it off drops the in-memory model and stops writing. It does **not** delete what
+     * is stored; that is what "forget what you learned" is for, and conflating pause with
+     * delete would mean someone pausing the feature silently lost everything.
+     */
+    fun refreshLearningState() {
+        val enabled = LearningPreferences.isEnabled(context)
         val ready = artifacts ?: return
+        val toggled = enabled != learningEnabled
+        learningEnabled = enabled
         scope.launch {
+            // "Forget what you learned" happens in the settings Activity, which deletes the
+            // file and the key. The IME may already be running with the model in memory, and
+            // without this check it would go on suggesting from data the user just asked to be
+            // destroyed -- the wipe would look like it worked and would not have.
+            val wiped = enabled && userModel.pairCount > 0 && !userStore.hasStoredData()
+            if (!toggled && !wiped) return@launch
+            if (wiped) userModel.clear()
             userModel = if (enabled) readUserModel() else UserNgramModel.empty()
             engine = build(ready, personal, userModel)
             loaded = loaded?.copy(learnedPairs = userModel.pairCount)
         }
-    }
-
-    /** Forget everything learned, in memory and on disk, and drop the key. */
-    suspend fun forgetLearned() {
-        userStore.wipe()
-        userModel.clear()
-        userModel = UserNgramModel.empty()
-        artifacts?.let { engine = build(it, personal, userModel) }
-        loaded = loaded?.copy(learnedPairs = 0)
     }
 
     /**

@@ -186,8 +186,11 @@ class HebrewImeService : InputMethodService() {
 
         if (session.maySuggest) {
             // The settings screen and the keyboard are separate components. Without this, a
-            // word the user just added stays underlined until the process restarts.
+            // word the user just added stays underlined until the process restarts -- and,
+            // worse for the learning switch, turning learning OFF would not take effect until
+            // the IME process happened to die.
             correction.refreshPersonalDictionary()
+            correction.refreshLearningState()
         }
     }
 

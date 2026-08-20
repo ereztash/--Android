@@ -19,12 +19,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.Switch
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -34,6 +36,9 @@ import androidx.compose.ui.unit.dp
 import com.hebrewime.R
 import com.hebrewime.core.dictionary.PersonalDictionary
 import com.hebrewime.dictionary.PersonalDictionaryRepository
+import androidx.lifecycle.lifecycleScope
+import com.hebrewime.learning.LearningPreferences
+import com.hebrewime.learning.UserModelRepository
 import kotlinx.coroutines.launch
 
 /**
@@ -51,26 +56,37 @@ class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val repository = PersonalDictionaryRepository(applicationContext)
+        val learning = UserModelRepository(applicationContext, lifecycleScope)
         setContent {
             MaterialTheme {
-                SettingsScreen(repository)
+                SettingsScreen(repository, learning)
             }
         }
     }
 }
 
 @Composable
-private fun SettingsScreen(repository: PersonalDictionaryRepository) {
+private fun SettingsScreen(
+    repository: PersonalDictionaryRepository,
+    learning: UserModelRepository,
+) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var dictionary by remember { mutableStateOf(PersonalDictionary()) }
     var entries by remember { mutableStateOf(emptyList<String>()) }
     var draft by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     var confirmingWipe by remember { mutableStateOf(false) }
+    var learningEnabled by remember { mutableStateOf(LearningPreferences.isEnabled(context)) }
+    var learnedPairs by remember { mutableStateOf(0) }
+    var confirmingForget by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         dictionary = repository.load()
         entries = dictionary.all()
+        // Only read the learned model when learning is on. Loading it while the feature is off
+        // would mean touching the Keystore for data the user has not asked the app to use.
+        if (learningEnabled) learnedPairs = learning.load().pairCount
     }
 
     Scaffold { inner ->
@@ -162,12 +178,91 @@ private fun SettingsScreen(repository: PersonalDictionaryRepository) {
             }
 
             HorizontalDivider()
+
+            // Adaptive learning. Default OFF, and off is a real state rather than a disabled
+            // toggle: with it off the engine is handed an empty model, which is arithmetically
+            // identical to having no model at all.
+            Text(
+                stringResource(R.string.learning_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                stringResource(R.string.learning_body),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.learning_switch))
+                Switch(
+                    checked = learningEnabled,
+                    onCheckedChange = { on ->
+                        learningEnabled = on
+                        LearningPreferences.setEnabled(context, on)
+                        // Turning it off does not delete what is already stored -- that is what
+                        // the forget button is for, and conflating the two would mean someone
+                        // pausing the feature silently lost everything.
+                        if (on) scope.launch { learnedPairs = learning.load().pairCount }
+                    },
+                )
+            }
+            Card {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        stringResource(R.string.learning_never_title),
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        stringResource(R.string.learning_never_body),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+            Text(
+                when {
+                    !learningEnabled -> stringResource(R.string.learning_status_off)
+                    learnedPairs == 0 -> stringResource(R.string.learning_status_empty)
+                    else -> stringResource(R.string.learning_status, learnedPairs)
+                },
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Button(onClick = { confirmingForget = true }) {
+                Text(stringResource(R.string.learning_forget_button))
+            }
+
+            HorizontalDivider()
             Text(
                 stringResource(R.string.attribution_title),
                 style = MaterialTheme.typography.titleMedium,
             )
             Text(ATTRIBUTION, style = MaterialTheme.typography.bodySmall)
         }
+    }
+
+    if (confirmingForget) {
+        AlertDialog(
+            onDismissRequest = { confirmingForget = false },
+            title = { Text(stringResource(R.string.learning_forget_button)) },
+            text = { Text(stringResource(R.string.learning_forget_confirm)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmingForget = false
+                    scope.launch {
+                        // Deletes the ciphertext AND the learning key -- a different alias from
+                        // the personal dictionary's, so this leaves the dictionary intact.
+                        learning.wipe()
+                        learnedPairs = 0
+                    }
+                }) { Text(stringResource(R.string.learning_forget_button)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmingForget = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
     }
 
     if (confirmingWipe) {
