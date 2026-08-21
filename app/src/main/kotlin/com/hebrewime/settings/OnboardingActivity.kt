@@ -14,6 +14,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -49,6 +51,9 @@ class OnboardingActivity : ComponentActivity() {
                     onOpenSettings = {
                         startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
                     },
+                    onOpenAppSettings = {
+                        startActivity(Intent(this, SettingsActivity::class.java))
+                    },
                     onPickKeyboard = {
                         getSystemService(InputMethodManager::class.java)
                             ?.showInputMethodPicker()
@@ -74,6 +79,7 @@ private fun OnboardingScreen(
     isSelected: () -> Boolean,
     onOpenSettings: () -> Unit,
     onPickKeyboard: () -> Unit,
+    onOpenAppSettings: () -> Unit,
 ) {
     // Re-read on every resume: the user leaves this screen to change the setting and comes
     // back, so a value captured once would always read "not enabled".
@@ -140,6 +146,23 @@ private fun OnboardingScreen(
             Button(onClick = onPickKeyboard, enabled = enabled) {
                 Text(stringResource(R.string.onboarding_select_button))
             }
+
+            // ### Why this button exists
+            // SettingsActivity is exported="false" and is declared only as the IME's
+            // android:settingsActivity, which means the ONLY route to it is
+            // System Settings > Languages & input > Keyboards > this keyboard > gear icon.
+            // Three levels deep, in a place nobody browses. The operator went looking for the
+            // keyboard-status card, tapped the app icon, landed here, and there was no way on
+            // from this screen — so the personal dictionary, the learning switch and the
+            // diagnostics were all effectively unreachable from the app itself.
+            HorizontalDivider()
+            OutlinedButton(onClick = onOpenAppSettings) {
+                Text(stringResource(R.string.onboarding_open_app_settings))
+            }
+            Text(
+                stringResource(R.string.onboarding_app_settings_hint),
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
     }
 }

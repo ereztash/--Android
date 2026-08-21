@@ -1,179 +1,108 @@
-# Hebrew IME for Android
+<div dir="rtl">
 
-A privacy-first, **fully offline** Hebrew input method for Android.
+# מקלדת עברית — מקלדת אנדרואיד שלא מדברת החוצה
 
-No `android.permission.INTERNET`. No HTTP client, WebView, Firebase, analytics, ads, remote
-crash reporting, account, sync, LLM or backend. This is enforced by a gate that runs on every
-push, not by intention — see below.
+מקלדת עברית לאנדרואיד שרצה **לגמרי במכשיר**. אין הרשאת אינטרנט, אין לקוח HTTP, אין אנליטיקה, אין חשבון, אין שרת. לא כהבטחה — כתכונה של מה שנבנה, שנבדקת בכל דחיפה מול ה-APK עצמו.
+
+**הקוד הזה עדיין לא מוכן לייצור.** הסיבות מפורטות ב-[`docs/RELEASE_READINESS.md`](docs/RELEASE_READINESS.md), והפסק שם הוא **NOT READY** בלי "מוכן חוץ מ־".
+
+---
+
+## מה היא עושה
 
 | | |
 |---|---|
-| Language | Kotlin, Gradle Kotlin DSL, version catalog |
-| JVM target | 17 |
-| minSdk | 31 ([why](docs/OPERATOR_NOTICES.md)) |
-| targetSdk / compileSdk | 36 |
-| UI | Custom Android Views in the IME window; Jetpack Compose **only** in settings |
+| **פריסה** | עברית SI-1452 ואנגלית QWERTY, מיקומי מקשים פיזיים |
+| **תיקון שגיאות** | Damerau-Levenshtein מול לקסיקון של 355,587 צורות |
+| **השלמה** | מילה בהתהוות, מדורגת לפי תדירות והקשר |
+| **ניבוי מילה הבאה** | טבלת ביגרמים של 532,168 זוגות מוויקיפדיה |
+| **שגיאות מילה-אמיתית** | `אם` במקום `עם`, מזוהה לפי ההקשר בתוך המשפט |
+| **ראשי תיבות** | `ככ` ← `כ״כ`, 861 צורות שנכרו מהדאמפ |
+| **מילון אישי** | מוצפן AES-GCM, מפתח ב-Keystore, יוזמה של המשתמש בלבד |
+| **למידה אדפטיבית** | סופרת אילו מילים אתה מצמיד זו לזו. **כבויה כברירת מחדל** |
 
-## What it does
+**שום דבר לא מוחלף אוטומטית.** כל שינוי בטקסט שלך הוא הקשה שלך. `shouldAutoReplace` קיים, נמדד, ומעולם לא נקרא — בכוונה.
 
-Types Hebrew, completes words as you type them, predicts the next one, corrects misspellings —
-and catches the mistake a spellchecker structurally cannot: `אם` where `עם` was meant. Both are
-real words; only the sentence around them says which one belongs.
+---
 
-| | measured | on |
+## הכלל שהפרויקט רץ עליו
+
+> **שער שמעולם לא נכשל לא הוכח כשער.**
+
+זה נאכף מילולית. [`scripts/run_gates.py`](scripts/run_gates.py) מריץ לכל שער **ביקורת חיובית** — פגם מושתל — **לפני** הבדיקה האמיתית, ומכשיל את הבנייה עם `NOT-A-GATE` אם הביקורת חוזרת ירוקה. שער עובר רק אם הודגם שהוא יכול להיכשל, באותה ריצה.
+
+שלוש נגזרות שמעצבות כל דבר כאן:
+
+- **טענה לעולם לא רחבה מהמדידה שהפיקה אותה.** `p95 2.88ms` הוא מספר JVM על מארח x86 בעל 4 ליבות ואינו אומר דבר על טלפון. כתוב כך בכל מקום.
+- **ספים נבחרים אחרי שקיים בסיס, לא לפניו.** ולא זזים כדי שסוויטה תהפוך ירוקה.
+- **מה שלא ניתן לאמת נכתב UNVERIFIED**, לא מרוכך בניסוח.
+
+---
+
+## מה שנמדד, ובאילו מספרים
+
+הכל על ויקיפדיה בעברית, על פרוסות שהוכחו זרות זו לזו. **הרישום שגוי להודעות טלפון**, וזה נאמר ליד כל מספר ולא נקבר בהערת שוליים.
+
+| מדידה | תוצאה | מכנה |
 |---|---|---|
-| completion top-3, 3-letter prefix | **49.28%** (38.27% without the language model) | 20,000 cases, held-out corpus |
-| next-word top-3 | **9.80%**, offered in 88.36% of positions | 20,000 cases |
-| correction top-1 / top-3 | 52.60% / 66.23% | 4,000 synthetic typos |
-| real-word errors: recall | **64.58%** | 45,867 injected errors |
-| real-word errors: false alarms on correct text | **0.26%** | 69,494 positions |
+| דיוק תיקון, top-1 | 78.34% | 20,000 שגיאות מוזרקות |
+| שגיאות מילה-אמיתית | 64.58% אחזור, 0.26% התראות שווא | 45,867 / 69,494 |
+| ניבוי מילה הבאה, top-3 | 16.51% | 58,343 מיקומים |
+| למידה אדפטיבית | **+0.57** נקודות top-1 | תיקון נכון נוסף לכל 175 מילים |
 
-Every one of those is a number about a specific corpus with its hash recorded, not a claim about
-what a user will experience — the corpora are Wikipedia prose and phone typing is not. The
-limits are stated at the bottom of each measurements document rather than left to be discovered.
+הפירוט המלא — כולל מה שנכשל — נמצא ב-[`docs/`](docs/):
+[`CORRECTION_MEASUREMENTS.md`](docs/CORRECTION_MEASUREMENTS.md) ·
+[`PREDICTION_MEASUREMENTS.md`](docs/PREDICTION_MEASUREMENTS.md) ·
+[`CONFUSION_MEASUREMENTS.md`](docs/CONFUSION_MEASUREMENTS.md) ·
+[`LEARNING_MEASUREMENTS.md`](docs/LEARNING_MEASUREMENTS.md)
 
-**Nothing is ever replaced automatically.** Every correction is a tap.
+### שני ניסויים שנכשלו, ונשמרו
 
-It can also learn how *you* write — counts of which words you put next to each other, stored
-encrypted on the phone. **Off by default**, worth +0.57 points of top-1 next-word accuracy under
-a simulated-user protocol whose limits are stated, and built so that 94.2% of what it learns is
-never eligible to be suggested back. See
-[docs/LEARNING_MEASUREMENTS.md](docs/LEARNING_MEASUREMENTS.md).
+**שכבת מרחק-2** (`S1`) — נבנתה, נמדדה, **נכשלה בכלל העצירה של עצמה**. היא הוסיפה 243 תפיסות נכונות תמורת 4 התראות שווא — יחס 61:1 — והכלל אסר כל עלייה בהתראות שווא. הכלל נכתב לפני הבנייה, אז השכבה לא נשלחת.
 
-## The rule this repo is built around
+**זיקוק DictaBERT לטבלה** (`D1`) — נכשל **מבנית**. DictaBERT הוכיח תקרה של 98.6% מול 64.58% שלנו, ו-97.5% דווקא במקומות שבהם המודל שלנו עיוור לגמרי. אבל טבלת שינון לא יכולה להגיע לשם: **העיוורון יושב בזנב הארוך וטבלה מכסה את הראש**. הטבלה הגדולה ביותר שנכנסת בתקציב כיסתה 1.8%.
 
-> A gate that has never failed has not been shown to be a gate.
+שני הכישלונות מתועדים במלואם. הם חסכו שבועות.
 
-Every check that reports "clean" ships with three things, or it is recorded as **NOT-MEASURED**
-and never as **PASSED**:
+---
 
-1. **A denominator** — how many files, cases or dependencies were actually examined.
-2. **A positive control** — a deliberately planted defect, committed as a fixture, that makes
-   the check go red. CI runs it on every push and **fails the build if the control does not
-   fail**.
-3. **An explicit list of what the gate does not cover**, printed by the gate itself.
-
-`scripts/run_gates.py` enforces this structurally: it runs each control *before* the real
-check, and reports the gate as `NOT-A-GATE` if the control comes back green — no matter what
-the real check said.
+## ארכיטקטורה
 
 ```
-$ python3 scripts/run_gates.py
-gate             result   control              denominators
-GATE-NET-1       PASS     control red (FAIL)   manifest=3, source=50, deps=113
-GATE-NET-2       PASS     control red (FAIL)   apk_permissions=1, apk_dex=16, ...
-GATE-NET-3       PASS     control red (FAIL)   apk_permissions=1, apk_dex=2, ...
-GATE-API-1       PASS     control red (FAIL)   forbidden_api=50
-GATE-CRYPTO-1    PASS     control red (FAIL)   forbidden_api=50
-...
-GATE-DENOM-1     PROVEN   control red (PASS-PARTIAL)
+core/        לוגיקה טהורה על JVM — לקסיקון, trie, תיקון, ניבוי, פרטיות
+app/         שירות ה-IME, תצוגות, הגדרות
+hostapp/     יעד לבנצ'מרק
+benchmark/   Macrobenchmark להשהיית הקלדה
+scripts/     שערים, בוני נתונים, מדידות
+lexicon/     נכסים בנויים + קורפוסי הערכה
 ```
 
-18 gates, 214 JVM tests. **Status: [NOT RELEASE-READY](docs/RELEASE_READINESS.md)** — nothing
-has ever run on an Android device, and the release artifact is unsigned.
+`:core` הוא JVM טהור בכוונה — כל מה שאפשר לבדוק בלי מכשיר נבדק ב-CI בכל דחיפה.
 
-Two of the sixteen — `GATE-LEX-2` and `GATE-LEX-1`'s reproducibility detector — need the 37 MB
-of upstream lexicon sources and report **NOT-MEASURED** without them, distinctly from
-`NOT-A-GATE`. CI fetches them best-effort and prints whether they arrived. The distinction is
-not cosmetic: conflating the two kept the CI gate job red from M1 to M12 while every commit
-message said the gates were green. See [docs/QA_MATRIX.md](docs/QA_MATRIX.md).
+---
 
-## Gates
+## הרצה
 
-| ID | Asserts | Control |
-|---|---|---|
-| `GATE-NET-1` | No network capability in any manifest, source file or resolved dependency coordinate | Planted INTERNET permission, okhttp/`java.net`/WebView usage, and okhttp + Firebase coordinates |
-| `GATE-API-1` | None of the four Android IME APIs that compile cleanly and fail at runtime | Planted session-interface override, `InputConnection` return-value branch, hardcoded backspace width, blocking `getTextBeforeCursor` |
-| `GATE-NET-2` / `GATE-NET-3` | The **built** debug and release APKs have no network permission and no network class in their DEX | A real assembled APK carrying `INTERNET` and `java.net.HttpURLConnection` |
-| `GATE-CRYPTO-1` | No ECB, hardcoded IV or key, seeded `SecureRandom`, or broken primitive | Planted `AES/ECB`, a fixed IV, a hardcoded key, MD5 |
-| `GATE-TRACE-1` | The latency benchmark measures trace sections the app actually emits | Requested section names renamed — otherwise `TraceSectionMetric` reports zero measurements, which reads as success |
-| `GATE-R8-1` | R8 has not stripped the classes the system instantiates by name | The service declaration invalidated |
-| `GATE-BIGRAM-1` | The bigram table inside the APK is byte-identical to the one every prediction number was measured against | One byte appended to the packaged table |
-| `GATE-SIZE-1` | The release artifact stays inside a budget written down **after** measuring it | Assets measured 50% larger |
-| `GATE-DENOM-1` | A check that examined nothing never reports PASS | The network gate run over an empty directory |
-
-`GATE-API-1` is worth a word. All four of these are invisible to the Kotlin compiler and to
-Android Lint:
-
-- **§1.6** overriding `onCreateInputMethodSessionInterface()` throws `LinkageError` in
-  `onCreate()` at targetSdk ≥ 34 — an instant crash on launch. The method is public and
-  overridable in the API 36 SDK, so nothing warns you.
-- **§1.3** `IRemoteInputConnection` is `oneway`. `commitText`, `setComposingText`,
-  `deleteSurroundingText`, `beginBatchEdit` and `endBatchEdit` return `true` even when the
-  editor dropped the command. Every `if (!ic.commitText(...))` branch is dead code.
-- **§1.4** a hardcoded backspace width of 1 splits surrogate pairs, emoji ZWJ sequences and
-  Hebrew base-letter + niqqud stacks.
-- **§1.1** `getTextBeforeCursor()` is a blocking Binder round-trip that can stall for up to
-  2000 ms — incompatible with any sub-50 ms budget.
-
-## Layout
-
-```
-core/     pure JVM Kotlin -- lexicon, correction, sensitive-field logic.
-          No Android dependency, so it is unit-testable in CI without a device.
-scripts/  build_lexicon.py and the gates
-tools/    positive controls (planted defects) and the gates' own tests
-docs/     VERIFICATION.md, LICENSES.md, OPERATOR_NOTICES.md, QA_MATRIX.md, milestones/
+```sh
+./gradlew :core:test              # 235 בדיקות
+./gradlew :app:assembleDebug      # APK להתקנה
+python3 scripts/run_gates.py      # 18 שערים, כל אחד עם ביקורת
 ```
 
-## Findings worth knowing about
+בשיבוט נקי חלק מהשערים ידווחו **NOT-MEASURED** ולא PASS: הם דורשים מקורות במעלה הזרם שאינם ב-git. זו התנהגות נכונה — NOT-MEASURED אינו PASS.
 
-- **The keyboard-adjacency discount is implemented, measured, and switched off.** On an
-  unbiased typo corpus it costs 8 points of top-1 accuracy and multiplies wrong
-  auto-replacements eightfold. It only looks good on the corpus generated from its own
-  assumption. [Details](docs/CORRECTION_MEASUREMENTS.md), including the part where my
-  explanation of *why* it hurt turned out to be wrong.
-- **AGP transparently gunzips `.gz` assets when packaging.** The lexicon loader originally took
-  a `gzipped: Boolean` flag that was correct in every unit test and wrong in production on the
-  first read. It now detects compression from the stream, and a gate pins the packaged asset's
-  hash and name.
-- **Android Keystore refuses a caller-supplied IV** when `setRandomizedEncryptionRequired` is
-  true, which is the default. The crypto originally generated its own IV — fine on a JVM,
-  throws on a device.
-- **The keyboard was mirrored for six milestones, and a test asserted that it should be.**
-  Hebrew script runs right to left; a Hebrew keyboard does not — SI-1452 maps letters onto the
-  physical QWERTY positions. The wrong assumption sat in the implementation *and* in the
-  assertion, so both looked green. A positive control proves a check can fail, not that it is
-  asking the right question. [Details](docs/milestones/M9.md); it changed how every test after
-  it was written.
-- **`isCombiningMark` called four punctuation characters marks.** Harmless where it was written
-  and wrong where it was later borrowed. Found by checking all 55 code points of the range
-  against `Character.getType` instead of against a list written in the test.
-- **An ordering that had never been measured turned out to be dominated.** Putting corrections
-  ahead of completions was worse on the completion corpus *and* worse on the typo corpus — not
-  a position that lost narrowly, a guess nobody had checked.
-  [Details](docs/PREDICTION_MEASUREMENTS.md).
+---
 
-## Documents worth reading first
+## מה חסר, במפורש
 
-- **[docs/RELEASE_READINESS.md](docs/RELEASE_READINESS.md)** — the verdict, which is NOT READY,
-  and what would have to happen next.
-- **[docs/QA_MATRIX.md](docs/QA_MATRIX.md)** — what has actually been exercised, and what has
-  not. `NOT RUN` rows are spelled out rather than omitted.
-- **[docs/CORRECTION_MEASUREMENTS.md](docs/CORRECTION_MEASUREMENTS.md)** — accuracy numbers with
-  the corpus hash beside each, and the full weight sweep including the rows that were worse.
-- **[docs/PREDICTION_MEASUREMENTS.md](docs/PREDICTION_MEASUREMENTS.md)** — completion and
-  next-word accuracy, measured on a corpus **proven** disjoint from the language model's
-  training data by a script that refuses to write when the byte ranges intersect.
-- **[docs/LEARNING_MEASUREMENTS.md](docs/LEARNING_MEASUREMENTS.md)** — adaptive learning: what
-  it is worth, what the once-seen protection costs, and why the interpolation weight is not the
-  one that scored best.
-- **[docs/CONFUSION_MEASUREMENTS.md](docs/CONFUSION_MEASUREMENTS.md)** — `אם` vs `עם`: recall
-  and false alarms together, thresholds chosen on a dev slice that shares no sentence with the
-  slice they were reported against, and the harness bug that nearly settled the architecture
-  wrong by 19 points.
-- **[docs/VERIFICATION.md](docs/VERIFICATION.md)** — the platform claims this project depends
-  on, each checked against `android.jar` and `api-versions.xml` rather than trusted.
-- **[docs/LICENSES.md](docs/LICENSES.md)** — why almost every Hebrew wordlist in existence is
-  unusable here, and which two are not.
-- **[docs/OPERATOR_NOTICES.md](docs/OPERATOR_NOTICES.md)** — decisions and actions that need a
-  human.
+1. **חתימה.** ה-AAB לא חתום. סודות החתימה הם של המפעיל.
+2. **מכשיר.** האפליקציה **רצה** על טלפון והפריסה, הרצועה, הניבוי, שגיאות מילה-אמיתית וההחלפה בהקשה כולם נצפו עובדים. מה שלא נמדד: השהיה, TalkBack, Keystore, לכידת חבילות. [`docs/QA_MATRIX.md`](docs/QA_MATRIX.md) מפריד בין **OBSERVED** ל-**NOT RUN** שורה-שורה.
+3. **targetSdk 36** נדרש על ידי Play מ-2026-08-31. ראה [`docs/OPERATOR_NOTICES.md`](docs/OPERATOR_NOTICES.md).
 
-## Build
+---
 
-```bash
-./gradlew build              # compile + unit tests
-./gradlew dependencyAudit    # refresh the coordinate list GATE-NET-1 reads
-python3 scripts/run_gates.py # all gates, each preceded by its positive control
-python3 tools/gate_tests/test_gates.py
-```
+## רישוי
+
+הקוד: ראה [`LICENSE`](LICENSE). הנתונים הלשוניים נושאים רישיונות משלהם, כולל ייחוס נדרש — [`docs/LICENSES.md`](docs/LICENSES.md).
+
+</div>

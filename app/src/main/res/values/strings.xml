@@ -22,6 +22,10 @@
     <string name="onboarding_not_enabled">Not enabled yet</string>
     <string name="onboarding_selected">Currently in use</string>
     <string name="onboarding_not_selected">Not currently in use</string>
+    <string name="onboarding_open_app_settings">Dictionary, learning and status</string>
+    <string name="onboarding_app_settings_hint">Your personal dictionary, the learn-as-you-type
+        switch, and a status screen that says why suggestions are or are not appearing.</string>
+
     <string name="diagnostics_title">Keyboard status</string>
     <string name="diagnostics_hint">If suggestions are not appearing, this says why.</string>
     <string name="diagnostics_reset">Reset counters</string>
