@@ -34,9 +34,11 @@ from __future__ import annotations
 import argparse
 import gzip
 import hashlib
+import glob
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import zipfile
@@ -86,16 +88,37 @@ DEX_RE = re.compile(b"|".join(re.escape(p) + rb"[A-Za-z0-9_/$]*;" for p in DEX_P
 
 
 def find_aapt2() -> str | None:
+    """Locate aapt2, preferring the SDK and falling back to Gradle's own copy.
+
+    The fallback exists because GATE-MANIFEST-1 and GATE-R8-1 reported NOT-A-GATE on any
+    machine that builds through the Gradle wrapper without a separately installed SDK -- which
+    is every container this project has been built in. Two gates whose controls never ran are
+    two gates that were never shown to be gates, and the cause was a missing environment
+    variable rather than anything about the APK. Gradle downloads aapt2 to build the APK in the
+    first place, so if there is an APK to check there is an aapt2 that produced it.
+    """
     home = os.environ.get("ANDROID_HOME") or os.environ.get("ANDROID_SDK_ROOT")
-    if not home:
-        return None
-    bt = os.path.join(home, "build-tools")
-    if not os.path.isdir(bt):
-        return None
-    for version in sorted(os.listdir(bt), reverse=True):
-        candidate = os.path.join(bt, version, "aapt2")
-        if os.path.isfile(candidate):
-            return candidate
+    if home:
+        bt = os.path.join(home, "build-tools")
+        if os.path.isdir(bt):
+            for version in sorted(os.listdir(bt), reverse=True):
+                candidate = os.path.join(bt, version, "aapt2")
+                if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+                    return candidate
+
+    on_path = shutil.which("aapt2")
+    if on_path:
+        return on_path
+
+    # Gradle unpacks the aapt2 it fetched into its transform cache. Newest first, so a stale
+    # copy from an older AGP does not win over the one that built the artifact being checked.
+    cache = os.path.join(os.path.expanduser("~"), ".gradle", "caches")
+    if os.path.isdir(cache):
+        found = glob.glob(os.path.join(cache, "*", "transforms", "*", "transformed",
+                                       "aapt2-*", "aapt2"))
+        found = [f for f in found if os.path.isfile(f) and os.access(f, os.X_OK)]
+        if found:
+            return max(found, key=os.path.getmtime)
     return None
 
 

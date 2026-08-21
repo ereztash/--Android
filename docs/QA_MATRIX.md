@@ -98,7 +98,8 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | GATE-LEARN-1 | The learned model persists counts over integer ids and nothing that can hold text | 2 learning source files | An encoder that accepts a `String` |
 | GATE-LEARN-2 | Learning happens in exactly one place, guarded by `session.mayLearn` | 100 Kotlin source files | A second, unguarded call site |
 | GATE-BIGRAM-1 | The bigram table **inside the APK** is byte-identical to the one every prediction number was measured on, and its header agrees with the manifest | 1 asset, 2,697,304 bytes, 51,900 groups | One byte appended |
-| GATE-DOC-1 | The readiness verdict's device-blocked list matches this matrix, **and** the gate denominators published in this table match what the gates actually counted on this tree | 20 ids + 5 denominators | A device-blocked id dropped; a denominator off by one |
+| GATE-DOC-1 | The readiness verdict's device-blocked list matches this matrix, **and** the gate denominators published in this table match what the gates actually counted on this tree — **including this row's own id count**, which went stale the day the check for it was written | 21 ids + 5 denominators + this row | A device-blocked id dropped; a denominator off by one |
+| GATE-DOC-3 | This matrix does not contradict **itself**: no id sits in the device-blocked table while another row marks it OBSERVED | the same 21 ids against every OBSERVED row | A row left in the blocked table after being marked OBSERVED |
 | GATE-SIZE-1 | The release artifact stays inside a budget written down **after** measuring it | 3 budget entries | Assets measured 50% larger |
 | GATE-XML-1 | Every XML resource parses | 15 files | A comment containing `--` |
 | GATE-TRACE-1 | The benchmark measures sections the app actually emits | 2 section names | Requested sections renamed |
@@ -250,7 +251,13 @@ working.
   and the L2 commit) and nothing else on the suggestion path changed, which makes memory
   pressure the leading explanation — but the in-app diagnostic that would settle it has not
   been read yet. Recorded as the leading hypothesis, not as a finding.
-- Latency, rotation, TalkBack, Keystore and packet capture remain untested.
+- Latency, TalkBack, Keystore and packet capture remain untested.
+  *(This bullet said "Latency, **rotation**, TalkBack, ..." until 2026-08-21, while
+  `M2-ROTATION` sat OBSERVED in the table directly above it. The row was added in a later
+  edit and the prose beneath it was not. Same failure as the one this file's own correction
+  section describes, three sections further down, pointing the same way: a claim kept in
+  step by hand went stale in the pessimistic direction. `GATE-DOC-1` did not catch it
+  because it compares this file against `RELEASE_READINESS.md`, not against itself.)*
 - Adaptive learning is off by default and was not enabled in this session, so nothing about it
   has run on a device.
 
@@ -266,11 +273,47 @@ working.
 - The bottom row was not *reported* as clipped, which is not the same as M2-INSETS passing. An
   absent complaint is not a check.
 
+**Third device session, 2026-08-21, WhatsApp again.** Provenance is weaker than the two above
+and is recorded as weaker: the build is the debug APK sent after `1f805a1`, **as reported by the
+operator**. A screenshot cannot identify a build, and nothing in this one does — the strip shows
+post-M12 behaviour, so the build is at least M12, and everything past that rests on the report.
+Sources: the operator's message *"יש רטט, יש הצעה ללמידה, אני על מכשיר, זה עובד"* and the
+screenshot attached to it.
+
+| ID | Check | Evidence | Now |
+|---|---|---|---|
+| M2-ENABLE-POST-M9 | The app still installs and the IME still enables on a build later than the one M9 fixed | The operator installed it, enabled it, and typed into WhatsApp with it | **OBSERVED** |
+| MI-HAPTIC | Key taps produce haptic feedback on a real panel | *"יש רטט"*. `KeyboardView` calls `performHapticFeedback`; the platform side had never been confirmed | **OBSERVED** |
+
+**`MI-HAPTIC` was not in this matrix until it passed.** That is worth saying out loud rather than
+quietly adding a green row. Haptics shipped at MI and no line here ever recorded that the device
+end needed a device. The hole was found by the observation, not by the matrix — which means the
+matrix's coverage of the micro-interaction work is itself unmeasured, and `MI-PREVIEW`,
+`MI-REPEAT`, `MI-LONGPRESS`, `MI-CONFIRM` may not be the whole list either.
+
+**A third real-word catch, and why it counts for less than the two before it.** The screenshot
+shows `תרעי` flagged and **`תראי (תרעי)`** offered in the correction colour — the same `א↔ע`
+substitution as `אם`/`עם` and `עת`/`את`, on a third word pair. It is **not** credited as a new
+row, because of the shape it fired in:
+
+- The flagged word had **no left neighbour** in the visible field. It sat first, with only a
+  right neighbour (`ה`), so the detector ran on **one** context word.
+- One-context-word firings are **1.85% of the harvest** — 40 of 2,166 — and are essentially
+  unmeasured. Of the 320 real firings among the 465 blind-labelled screens, **four** were
+  one-context-word, **two** of those were decided, and **both decided ones were false alarms**
+  (`b002-025` `העם`, `b002-292` `חי`). 0 of 2 is not a precision estimate; it is a statement
+  that this shape has never been measured.
+- The published precision interval — **12.5% to 39.7%**, 465 screens, `docs/LABELING_LOG.md` —
+  is **not updated by this**, in either direction. One catch that looks right is an anecdote,
+  and that interval was built to be immune to anecdotes.
+
+So the mechanism produced a plausible correction in the least-measured configuration it has.
+That is a thing to watch, not a thing to publish.
+
 ### Requires a physical Android device — still not exercised
 
 | ID | Check | What it needs |
 |---|---|---|
-| M2-ENABLE-POST-M9 | That the app still installs and the IME still enables **on the current build** | A device. The observation above is against a build four milestones old. |
 | M2-INSETS | The bottom key row clears the gesture bar at targetSdk 36 | A device with gesture navigation |
 | M2-SPELLCHECK | The system spell checker is actually suppressed on API 31+ | A device |
 | M4-DEVICE | That the framework really does hand over password plaintext, and that `setInitialSurroundingText("")` releases it | A device; `android.jar` ships stubs only |
@@ -290,6 +333,8 @@ working.
 | R1-FEEL | Whether the conversational corpus makes suggestions feel more useful in real messages | A device. The +12.73 points are measured on transcribed dialogue, not on written messages. |
 | L2-PERSONAL | Whether personal word frequency is noticeable in use | A device, with learning enabled |
 | L1-DEBOUNCE | Whether a 3-second debounced encrypted write actually stays off the input path | A device. The interval is a judgement, not a measurement. |
+| R2-FONT | That the typeface `FONT-CHOICE` selected is the one actually drawing key labels on a panel | A device. `GATE-FONT-1` proves the right bytes are packaged; it cannot prove `ResourcesCompat.getFont` returned them at runtime rather than falling back |
+| L2-BENEFIT | That the benefit counter ever shows a non-zero number in settings | A device, learning enabled, and enough accepted completions to move it. `LEARN-BENEFIT` is exercised in JVM tests only |
 
 ### Requires operator action
 

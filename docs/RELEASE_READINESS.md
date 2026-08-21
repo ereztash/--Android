@@ -15,14 +15,24 @@ Two independent reasons, either of which is sufficient:
    What is device-blocked right now:
 
    <!-- DEVICE-BLOCKED-BEGIN: generated from QA_MATRIX.md, checked by GATE-DOC-1 -->
-   M2-ENABLE-POST-M9, M2-INSETS, M2-SPELLCHECK, M4-DEVICE, M6-KEYSTORE, M6-UI, M7-LAT,
-   M7-TALKBACK, M7-CONTRAST, M8-NETCAPTURE, M12-RELOAD, L1-KEYSTORE, L1-SWITCH, L1-DEBOUNCE,
-   MI-PREVIEW, MI-REPEAT, MI-LONGPRESS, MI-CONFIRM, R1-FEEL, L2-PERSONAL
+   M2-INSETS, M2-SPELLCHECK, M4-DEVICE, M6-KEYSTORE, M6-UI, M7-LAT, M7-TALKBACK, M7-CONTRAST,
+   M8-NETCAPTURE, M12-RELOAD, L1-KEYSTORE, L1-SWITCH, MI-PREVIEW, MI-REPEAT, MI-LONGPRESS,
+   MI-CONFIRM, R1-FEEL, L2-PERSONAL, L1-DEBOUNCE, R2-FONT, L2-BENEFIT
    <!-- DEVICE-BLOCKED-END -->
 
    Two of those are the ones flagged as highest risk and still unrun: **M2-INSETS**, the bottom
    key row against the gesture bar, and **M4-DEVICE**, whether the framework really hands over
    password plaintext. Both were in the test protocol and neither has been done.
+
+   **That list got longer on 2026-08-21, on a day the app was observed working on a phone.** A
+   third device session cleared `M2-ENABLE-POST-M9` and added `MI-HAPTIC` — a check that was
+   never in the matrix until the observation exposed the gap. In the same window two features
+   shipped whose device behaviour nobody has seen, so `R2-FONT` and `L2-BENEFIT` joined the
+   blocked list. Net: **20 blocked, then 21.**
+
+   This is the ordinary direction of travel when features ship faster than device checks, and it
+   is the reason the verdict above is a verdict and not a countdown. "It works on my phone" and
+   "device coverage is shrinking" are not the same claim, and only the first of them is true.
 
 2. **The release artifact is unsigned**, and the signing secrets are the operator's to provide.
 

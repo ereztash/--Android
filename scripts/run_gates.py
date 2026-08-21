@@ -204,6 +204,21 @@ def _gates(strict: bool) -> list[dict]:
                             "-- the exact drift that made the same sentence stale twice",
         },
         {
+            # A third control on the same detector, because "stale" only exercises the
+            # cross-document comparison. This one exercises the matrix against itself, which
+            # went unchecked until a bullet in QA_MATRIX.md was found contradicting a table
+            # six lines above it.
+            "id": "GATE-DOC-3",
+            "what": "QA_MATRIX.md does not contradict itself: no row is both device-blocked "
+                    "and OBSERVED in the same file",
+            "real": [PY, docs, "--root", ROOT, "--json"] + s,
+            "control": [PY, docs, "--root", ROOT, "--inject-defect", "selfcontradiction",
+                        "--json"],
+            "control_desc": "a row left in the device-blocked table after being marked "
+                            "OBSERVED -- what hand-editing produces when a check is copied "
+                            "into the observed table and not deleted from the blocked one",
+        },
+        {
             # A second control on the same script, because check_docs.py now carries two
             # detectors and a control shown red on one says nothing about the other.
             "id": "GATE-DOC-2",

@@ -52,7 +52,8 @@ ROW_ID_RE = re.compile(r"^\|\s*([A-Z][A-Z0-9-]*)\s*\|", re.MULTILINE)
 OBSERVED_ROW_RE = re.compile(r"^\|\s*([A-Z][A-Z0-9-]*)\s*\|.*OBSERVED", re.MULTILINE)
 
 
-def check(root: str, inject: bool) -> Detector:
+def check(root: str, defect: str | None) -> Detector:
+    inject = defect == "stale"
     det = Detector(name="doc_device_blocked", unit="device-blocked ids cross-checked",
                    denominator=0)
     readiness = os.path.join(root, "docs", "RELEASE_READINESS.md")
@@ -108,6 +109,25 @@ def check(root: str, inject: bool) -> Detector:
             "doc_device_blocked", "docs/RELEASE_READINESS.md", 0,
             f"{row} is called device-blocked while QA_MATRIX.md records it OBSERVED",
             "doc.blocked_but_observed"))
+
+    # QA_MATRIX.md against ITSELF. Added 2026-08-21 after a bullet reading "Latency, rotation,
+    # TalkBack, Keystore and packet capture remain untested" was found sitting six lines under a
+    # table that recorded M2-ROTATION as OBSERVED. This gate had run clean over that for a day,
+    # because it only ever compared the matrix to the OTHER document. A file can contradict
+    # itself, and this one did.
+    self_blocked = set(actual)
+    if defect == "selfcontradiction":
+        # PLANTED DEFECT: a row left in the device-blocked table after it was marked OBSERVED
+        # -- the direction that overstates what is unverified, and the one hand-editing produces
+        # when a row is copied into the observed table and not deleted from the blocked one.
+        self_blocked.add("M9-LAYOUT")
+    for row in sorted(self_blocked & observed):
+        det.findings.append(Finding(
+            "doc_device_blocked", "docs/QA_MATRIX.md", 0,
+            f"{row} is in QA_MATRIX.md's device-blocked table AND marked OBSERVED in the same "
+            f"file. The matrix is the source of truth for the readiness verdict, so a matrix "
+            f"that disagrees with itself makes both documents unciteable.",
+            "doc.matrix_self_contradiction"))
     return det
 
 
@@ -125,6 +145,13 @@ NOT_COVERED = [
     "The denominator check compares a published number against a live gate run. It says "
     "nothing about whether the gate examines the right files -- only that the matrix reports "
     "the count the gate actually produced.",
+    "Compares TABLE ROWS. QA_MATRIX.md's PROSE is unchecked, and prose is where the last "
+    "drift was found: a bullet listing rotation as untested, six lines under a table marking "
+    "M2-ROTATION OBSERVED. Naming a check in a sentence is not a row, and nothing here reads "
+    "sentences.",
+    "A check that is in neither table is invisible to this gate. MI-HAPTIC shipped and was "
+    "absent from the matrix entirely until a device session found it; an absent row cannot "
+    "contradict anything, so absence is exactly what this gate cannot see.",
 ]
 
 
@@ -212,6 +239,31 @@ def check_denominators(root: str, inject: bool) -> Detector:
                 f"detector counted {expected} on this tree. A denominator copied by hand "
                 f"goes stale the next time a file is added, and this one has -- twice.",
                 "doc.stale_denominator"))
+
+    # GATE-DOC-1's OWN published denominator, which the loop above cannot reach: reading it
+    # back the same way would mean running check_docs.py from inside check_docs.py. It is
+    # derived from the matrix instead, in-process. It went stale on 2026-08-21 -- the row read
+    # "20 ids" while the table below it listed 21 -- inside the one gate whose entire subject
+    # is numbers going stale.
+    if BLOCKED_SECTION in text:
+        body = text.split(BLOCKED_SECTION, 1)[1].split("### ", 1)[0]
+        counted = len({i for i in ROW_ID_RE.findall(body) if i != "ID"})
+        rows = [line for line in text.splitlines() if line.startswith("| GATE-DOC-1 |")]
+        m = re.search(r"\|\s*(\d+) ids \+ (\d+) denominators\s*\|", rows[0]) if rows else None
+        if m:
+            det.denominator += 1
+            published_ids = int(m.group(1)) + (1 if inject else 0)
+            det.notes.append(f"GATE-DOC-1 (own row): matrix says {published_ids} ids, "
+                             f"its device-blocked table lists {counted}")
+            if published_ids != counted:
+                det.findings.append(Finding(
+                    "doc_denominators", "docs/QA_MATRIX.md", 0,
+                    f"GATE-DOC-1's row publishes {published_ids} device-blocked ids while the "
+                    f"table it describes lists {counted}. The gate against stale numbers "
+                    f"published a stale number.",
+                    "doc.stale_denominator"))
+        else:
+            det.notes.append("GATE-DOC-1 (own row): no published id count found in the matrix")
     return det
 
 
@@ -221,7 +273,8 @@ def main() -> int:
     ap.add_argument("--root", default=ROOT)
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--strict", action="store_true")
-    ap.add_argument("--inject-defect", choices=["stale", "denominator"],
+    ap.add_argument("--inject-defect",
+                    choices=["stale", "denominator", "selfcontradiction"],
                     help="PLANT A DEFECT. Positive control; must go red.")
     args = ap.parse_args()
 
@@ -230,7 +283,7 @@ def main() -> int:
         description="the readiness verdict's device-blocked list matches the QA matrix, and "
                     "the matrix's gate denominators match what the gates actually count",
         detectors=[
-            check(args.root, args.inject_defect == "stale"),
+            check(args.root, args.inject_defect),
             check_denominators(args.root, args.inject_defect == "denominator"),
         ],
         not_covered=NOT_COVERED,
