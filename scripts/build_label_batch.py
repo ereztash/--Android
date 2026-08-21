@@ -222,7 +222,7 @@ def main():
             fh.write("\n")
 
     body = open(TEMPLATE, encoding="utf-8").read()
-    title = f"תיוג {args.batch:03d} · שגיאות מילה-אמיתית"
+    title = f"תיוג אצווה {args.batch:03d}"
     body = (body.replace("__BATCH_JSON__", json.dumps(presented, ensure_ascii=False))
                 .replace("__TITLE__", title))
     with open(os.path.join(LABEL_DIR, f"{batch_id}.artifact.html"), "w",
