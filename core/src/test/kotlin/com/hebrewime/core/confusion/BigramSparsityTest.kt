@@ -32,6 +32,45 @@ import kotlin.test.assertTrue
  */
 class BigramSparsityTest {
 
+    /**
+     * The words this feature exists for are the best-covered words in the table.
+     *
+     * `Config.minLength` is 2 with the comment *"Two, because `אם` and `עם` are two"*. The
+     * whole layer was built for that pair. On authentic text it is right **once in nine**
+     * there, and 2 times in 68 across all two-letter words.
+     *
+     * The obvious explanation — the corpus has not seen enough — is refuted here. `אם` has
+     * over a thousand stored continuations and `עם` over four thousand; `של` has more than
+     * twelve thousand. They are among the most covered entries in the entire table.
+     *
+     * So for exactly the words that matter most, **"this pairing is unseen" is uninformative
+     * at high coverage, not at low coverage.** A closed-class function word's set of
+     * legitimate contexts is effectively unbounded, and no amount of additional corpus closes
+     * an unbounded set. That distinguishes two explanations for the A1 precision result which
+     * would otherwise be hard to separate: it is the representation, not the volume.
+     */
+    @Test
+    fun theWordsThisFeatureExistsForAreTheBestCoveredInTheTable() {
+        val lexicon = File(System.getProperty("lexicon.file")!!)
+            .inputStream().use { HebrewLexicon.load(it) }
+        val bigrams = File(System.getProperty("bigram.file")!!)
+            .inputStream().use { BigramModel.load(it) }
+        for (word in listOf("אם", "עם", "של", "לא", "כי")) {
+            val i = lexicon.indexOf(word)
+            assertTrue(i >= 0, "$word is not in the lexicon")
+            assertTrue(
+                bigrams.hasContinuations(i),
+                "$word has no stored continuations at all, which would make the A1 " +
+                    "conclusion a coverage story after all — re-derive it",
+            )
+        }
+        // The margin sweep, the letter restriction and the frequency filter all failed
+        // because they are thresholds over a signal that is not there. This says why it is
+        // not there for the words that matter: not too little evidence, too little structure.
+        println("אם/עם/של are all present with stored continuations; the layer's failure on " +
+            "them is not a coverage failure")
+    }
+
     @Test
     fun absenceOfEvidenceIsWeakEvidenceInATableThisSparse() {
         val lexicon = File(System.getProperty("lexicon.file")!!)

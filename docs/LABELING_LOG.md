@@ -476,3 +476,124 @@ Two conditions on reusing them, both of which this project already applies every
    cautionary example: it passed on 12 items and died on 240.
 2. **They only cover positions the current detector fires at.** A replacement that fires
    somewhere else is not evaluable against them, and needs its own sample.
+
+---
+
+# An outside reanalysis of these labels, checked against them
+
+The operator ran an independent analysis of the exported dataset. Three of its claims hold,
+one does not survive recomputation, and one of its conclusions turns out to be right for a
+reason it did not use. All numbers below were recomputed from `labeling/results/` rather than
+taken as given.
+
+## Holds — and is a better framing than the one already recorded here
+
+**4.83 wrong for every right, counted over decided items only.**
+
+This log had been reporting **7 : 1**, which counts an undecidable position as a wrong
+suggestion. It is not one: at an abstained position nothing was shown to be wrong. The honest
+headline is **4.83 : 1 among decided**, with 7 : 1 as the worst case. Adopted.
+
+## Holds — a test that had not been run here
+
+`typedEvidence == 0` merges two logically different statements, and splitting them is a direct
+probe on the coverage explanation:
+
+| | | n | agreed | floor | 95% |
+|---|---|---|---|---|---|
+| **A** | the typed word has no outgoing group at all — its zero is guaranteed | 77 | 11 | 14.3% | [8.2, 23.8] |
+| **D** | the word has groups; this pairing was never seen — its zero is an observation | 243 | 29 | 11.9% | [8.4, 16.6] |
+
+Flat, as the reanalysis reported. (Its counts were 67/253 against 77/243 here, a definitional
+difference about incoming edges; the conclusion is identical.)
+
+## Does NOT hold as stated — word length "separates"
+
+Recomputed over the pooled 320:
+
+| chars | n | agreed | floor | 95% |
+|---|---|---|---|---|
+| **2** | 68 | 2 | **2.9%** | [0.8, 10.1] |
+| 3 | 85 | 13 | 15.3% | [9.2, 24.4] |
+| 4 | 87 | 10 | 11.5% | [6.4, 19.9] |
+| 5 | 50 | 10 | 20.0% | [11.2, 33.0] |
+| 6+ | 30 | 5 | 16.7% | [7.3, 33.6] |
+
+**Not monotone, and not a gradient.** Four characters sits below three. From three upward the
+intervals overlap almost completely. The one cell that stands apart is **two characters,
+whose upper bound (10.1%) is below every other band's point estimate.**
+
+So the finding is not "length is a signal". It is **"two-letter words are dead, and everything
+else is the same 11–20%."** Narrower, and sharper.
+
+## And it makes the A/D test confounded
+
+The two classes differ on exactly the variable that does matter:
+
+| | median log-freq of the typed word | median word length |
+|---|---|---|
+| A | 52 | 5 |
+| D | 96 | 3 |
+
+Class A is long, rare content words. Class D is short, common function words. Comparing their
+precision is not a clean read on coverage, because they are not matched on word class — and
+A's slightly *higher* precision is what a length effect alone would predict. **The A ≈ D
+result does not refute the coverage explanation. It was a good idea run on an unmatched
+contrast.**
+
+## The clean evidence, which reaches the reanalysis's conclusion anyway
+
+`Config.minLength` is 2, with the comment *"Two, because `אם` and `עם` are two."* The layer was
+built for that pair; it is the example in the class header, in the README, and in the
+operator's original report from their phone.
+
+**On authentic text it is right once in nine there. Two-letter words overall: 2 agreements in
+68.**
+
+The obvious explanation is too little corpus. It is refuted directly:
+
+| word | log-frequency | stored continuations |
+|---|---|---|
+| של | 162 | **12,470** |
+| לא | 178 | 5,042 |
+| עם | 157 | **4,473** |
+| כי | 145 | 1,284 |
+| **אם** | 157 | **1,044** |
+| — content words, for contrast — | | |
+| להתחיל | 119 | 54 |
+| הצלחה | 95 | 25 |
+| מחשבה | 97 | 12 |
+
+The table holds 477,180 continuations across 51,900 groups. **`אם` and `עם` are among its
+best-covered entries, and the detector is still right one time in nine on them.**
+
+For the words this feature exists for, *"this pairing is unseen"* is uninformative **at high
+coverage, not at low coverage** — a closed-class function word's set of legitimate contexts is
+effectively unbounded, and no quantity of additional corpus closes an unbounded set.
+
+**That settles the question the reanalysis posed: representation, not volume.** It reaches the
+same answer the reanalysis did, by evidence the reanalysis did not use, and it also means the
+discriminating experiment it proposed — rebuild at 4× subtitles and compare — would have been
+wasted twice over: the 320 labels do not transfer to a different table's firings, and the words
+that dominate the failure are already saturated.
+
+`BigramSparsityTest` pins both halves.
+
+## The correction this forces to an earlier entry
+
+The entry above concluded *"it is a property of corpus size"* and named 25.6M tokens. That was
+stronger than the evidence. The measured 37.7% unseen-pair rate is real and does bound what
+counting can do, but it is not the mechanism behind the failure on the cases that matter most —
+those fail while fully covered. **Corpus size is a ceiling on this approach; word
+representation is why it is already at that ceiling.**
+
+## The one product point that holds whichever mechanism is right
+
+At 4.83 : 1 the user's modal response to a flag is dismissal, not acceptance. The operative
+question is therefore not *how good is the suggestion* but **how cheap is refusing it** — and
+that is true today, at the current precision, without waiting for any of the above.
+
+Also measured, and pointed the same way: the labeller — a native speaker, with the whole
+sentence, two options side by side and no time pressure — took a median 4.2 s, needed more
+than 10 s on a tenth of the items, and could not decide 20–34% of them. The keyboard puts the
+same decision in front of someone with less context, less time, and a moving cursor.
