@@ -435,3 +435,74 @@ near 0% from one near 10%. No fresh items are needed, because the question is ab
 labeller and not about the detector.
 
 **This proposal is recorded here and is not in force.** Batch 002's verdict stands at NOISE.
+
+---
+
+# Amendment 2 — self-agreement splits in two. Written before batch 003 exists.
+
+Approved by the operator after batch 002. **No labels for batch 003 have been collected, and
+the batch has not been cut, at the time this is committed.**
+
+## What changes
+
+The self-agreement bar compares the full four-way bucket, so an abstain-boundary move
+(`in-text → unclear`) costs exactly as much as a direction reversal (`in-text → suggested`).
+For the two statistics this project reports, they are not remotely equivalent:
+
+| statistic | moves when… |
+|---|---|
+| **filtered precision** = a/(a+b) | either kind of change — abstentions are excluded, so an item crossing the boundary enters or leaves the denominator |
+| **floor** = a/n | **only** a direction reversal — an item that becomes "unclear" was not an agreement either way |
+
+Batch 002 measured 0 direction reversals and 3 boundary moves in 15 repeats. That is a
+suggestive split on a sample too small to carry it, which is exactly the position the
+rarer-suggestion filter was in one batch before it failed to replicate. So it gets its own
+pre-registered test rather than being believed.
+
+## The two bars, from batch 003 onward
+
+| bar | governs | threshold |
+|---|---|---|
+| **four-way agreement** | the filtered precision figure | **≥ 90%**, unchanged |
+| **direction stability** = 1 − reversals / (items decided **both** times) | whether the **floor** may be published | **≥ 90%** |
+
+Both are reported on every batch that carries repeats. Neither replaces the other, and the
+four-way bar is not being relaxed — a batch that fails it still publishes no filtered figure.
+
+## Batch 003, and how its repeats are drawn
+
+**50 screens: 40 repeats, 5 clean controls, 5 injected controls.** Control bar **9 of 10**,
+which is the same 90% every batch has used. No fresh firings: the question is about the
+labeller, not the detector.
+
+The 40 are drawn **stratified by what was answered the first time**:
+
+- **30** from items **decided** the first time (`suggested` or `in-text`)
+- **10** from items **abstained** the first time (`both-fine` or `unclear`)
+
+**Stratifying is deliberate and it is not sampling toward a result.** Direction stability is
+only defined on items decided twice, and an unstratified draw wastes most of its items on
+pairs that can never contribute to it. From batch 002's repeats, an item decided once was
+decided again 8 times in 9, so 30 first-decided items should yield roughly 27 usable pairs —
+against roughly 21 from an unstratified 40. The 10 abstain-first items measure movement in the
+other direction and stop the design from only being able to see stability.
+
+Items already repeated in batch 002 are excluded, so every batch-003 repeat is a clean second
+observation of an item seen exactly once before.
+
+## What each outcome means — fixed now, not after
+
+**If direction stability ≥ 90%:** the floors from batches 001 and 002 become publishable
+figures. Their lower bounds are **5.2%** and **9.6%**. Both sit far below the 40% floor of the
+decision rule, and the margin sweep has already established that no threshold trades recall
+for precision here. **That combination means the layer is withdrawn or restricted to a
+configuration that has yet to be found — and this consequence is written down before the
+labels exist precisely so it cannot be relitigated afterwards.**
+
+**If direction stability < 90%:** the labeller is not reliable about direction, and *nothing*
+from batches 001, 002 or 003 supports any claim about this detector's precision. A1 returns
+**NOT MEASURED**, the shipped feature stays exactly as it is, and the honest conclusion is that
+this question needs a second annotator rather than a third batch.
+
+**Either way, the detector is not changed on the strength of batch 003 alone.** It is a check
+on the instrument, not on the product.
