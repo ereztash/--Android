@@ -207,3 +207,41 @@ python3 scripts/check_learning.py                        # GATE-LEARN-1 / GATE-L
 python3 scripts/check_learning.py --inject-defect schema # control: must exit 1
 python3 scripts/check_learning.py --inject-defect guard  # control: must exit 1
 ```
+
+
+---
+
+# L2 — four directions for adaptive learning, and the rule for judging them
+
+The shipped layer learns **word pairs, and nothing else**. Measured, only **5.8%** of what it
+learns is ever eligible to be suggested. That is the once-seen protection working as designed,
+and it is also most of the reason the gain is +0.67 points rather than something a person would
+notice.
+
+Four directions are built and measured here. The rule is fixed first, before any of them is run.
+
+## The rule
+
+A direction ships only if, on `learning_test` with everything already chosen on `learning_dev`:
+
+1. It beats the **current adaptive layer** on top-1, not merely the static baseline. Beating
+   static is not the bar; the current layer already does that.
+2. Its **offer rate does not fall**. A gain bought by going quiet on hard cases is not a gain.
+3. It does not weaken any privacy property: counts over ids, session-gated eligibility, no
+   stored text, and nothing on disk that identifies where the user was typing.
+4. Its cost in size and per-keystroke work is stated.
+
+**A direction that fails is reported and not shipped**, and the four are judged independently —
+"the best of four" is not a result if none of them clears the bar.
+
+## What is NOT measurable here, stated before the numbers
+
+**Per-app bias** cannot be measured honestly: the simulated-user protocol has no app dimension,
+and inventing one would produce a number about my own fabrication. It is measured instead as a
+**generic context bucket** — the same mechanism with the app identity removed — which answers
+the mechanical question (does conditioning on a sub-context help?) without pretending to answer
+the product one.
+
+That substitution is also what would ship. Storing learned counts keyed by package name puts a
+record on disk saying *what you write in which app*. `ImeDiagnostics` already refuses to record
+package names for weaker reasons than this.
