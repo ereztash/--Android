@@ -1,0 +1,36 @@
+{
+  "purpose": "conversational-register training text, to correct a corpus that was entirely encyclopedic",
+  "source": {
+    "name": "OPUS OpenSubtitles v2018, Hebrew monolingual",
+    "url": "https://object.pouta.csc.fi/OPUS-OpenSubtitles/v2018/mono/he.txt.gz",
+    "license": "OpenSubtitles data, redistributed by OPUS. See opus.nlpl.eu for terms."
+  },
+  "cleaning": {
+    "max_token_chars": 12,
+    "min_fraction_in_lexicon": 0.75,
+    "min_tokens": 4,
+    "lines_read": 10126728,
+    "lines_kept": 5347734,
+    "lines_rejected": 4778994,
+    "rejected_fraction": 0.4719,
+    "why": "The subtitle source drops spaces and carries OCR noise, producing tokens like מההייתעושהבמקומי. Both rules are stated so the 48% rejection rate is a reported property and not a hidden one."
+  },
+  "split": {
+    "held_out_every": 20,
+    "train_sentences": 3789670,
+    "train_tokens": 25600001,
+    "held_out_sentences": 267386,
+    "disjoint_by": "construction -- a sentence is written to exactly one file"
+  },
+  "output": {
+    "train": "lexicon/cache/subtitle-corpus-train.txt.gz",
+    "held_out": "lexicon/cache/subtitle-corpus-heldout.txt.gz",
+    "train_sha256": "05172157b5200002ca69c91b6dd16638ec9c38c2da9ff08f6e4719808c6aad8b",
+    "held_out_sha256": "1c2d9ce35ee763ed657df8fb90fc289b79ac18df4369b3ea9ea1381b9db61e3a"
+  },
+  "known_limitations": [
+    "Subtitles are transcribed SPEECH, not written messages. A better proxy for phone typing than an encyclopedia; not the target.",
+    "48% of lines are rejected, and what survives still contains artefacts.",
+    "A bounded prefix of the file is read, so this is not a uniform sample of it."
+  ]
+}

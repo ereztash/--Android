@@ -93,7 +93,7 @@ class RealWordErrorDetector(
          * Separate from [margin] because the two are not the same kind of evidence and must not
          * share a threshold. Measured on the test slice, distance-2 evidence points at the
          * correct word 92.4% of the time — real signal, and the 7.6% that point the wrong way
-         * would add 0.42 points of false alarms on top of a shipped rate of 0.26%, roughly
+         * would add 0.42 points of false alarms on top of a shipped rate of 0.25%, roughly
          * tripling it, if used at the adjacent margin.
          *
          * Swept on `confusion_dev`; see `docs/CONFUSION_MEASUREMENTS.md`.

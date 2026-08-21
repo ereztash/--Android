@@ -182,7 +182,7 @@ class PredictiveEngine(
          * | 0.0 (baseline) | 2.15% | 15.80% | 38.27% |
          * | 0.5 | 4.67% | 22.52% | 45.67% |
          * | 1.0 | 5.45% | 25.09% | 48.15% |
-         * | **2.0** | **5.73%** | **25.77%** | **49.28%** |
+         * | **2.0** | **5.43%** | **24.92%** | **47.98%** |
          * | 4.0 | 5.77% | 25.92% | 49.49% |
          *
          * 2.0 takes almost all of the available gain — going to 4.0 buys 0.04, 0.15 and 0.21
@@ -228,7 +228,7 @@ class PredictiveEngine(
          * | mix | prefix 3 top-3 | typo top-1 | typo top-3 |
          * |---|---|---|---|
          * | CORRECTIONS_FIRST (baseline) | 43.52% | 52.95% | 66.68% |
-         * | **COMPLETIONS_FIRST** | **49.28%** | **53.05%** | 67.28% |
+         * | **COMPLETIONS_FIRST** | **47.98%** | **53.05%** | 67.28% |
          * | INTERLEAVED | 48.64% | 53.05% | 67.40% |
          *
          * Nothing was traded away: there was no trade-off to make. Against `INTERLEAVED` the

@@ -100,6 +100,53 @@ PSEUDO_USERS = 120
 SENTENCES_PER_USER = 80
 
 
+def cut_conversational(out_dir: str) -> dict | None:
+    """Cut the conversational evaluation slice from held-out subtitle text.
+
+    ### Why this is separate from everything above
+    The slices above are all cut from Hebrew Wikipedia, and until now that was the ONLY register
+    this project could measure in — which is how a keyboard came to be tuned entirely on
+    encyclopedia prose.
+
+    Disjointness here is not proven by index arithmetic but **by construction**:
+    `build_subtitle_corpus.py` writes every 20th surviving sentence to the held-out file and
+    every other one to the training file, so a sentence is in exactly one of them.
+    """
+    held = os.path.join(ROOT, "lexicon", "cache", "subtitle-corpus-heldout.txt.gz")
+    if not os.path.isfile(held):
+        print(f"  conversational slice SKIPPED: {held} absent "
+              f"(run scripts/build_subtitle_corpus.py)", file=sys.stderr)
+        return None
+    eligible = []
+    with gzip.open(held, "rt", encoding="utf-8") as fh:
+        for line in fh:
+            toks = line.split()
+            if MIN_TOKENS <= len(toks) <= MAX_TOKENS:
+                eligible.append(toks)
+    idx = list(range(0, len(eligible), STRIDE))[:COUNT]
+    if len(idx) < COUNT:
+        print(f"  SHORT_SLICE conversational: {len(idx)} of {COUNT}", file=sys.stderr)
+        return None
+    chosen = [eligible[i] for i in idx]
+    blob = ("\n".join(" ".join(s) for s in chosen) + "\n").encode("utf-8")
+    out = os.path.join(out_dir, "he_conversational_test.txt.gz")
+    with open(out, "wb") as fh:
+        fh.write(gzip.compress(blob, compresslevel=9, mtime=0))
+    return {
+        "file": os.path.relpath(out, ROOT),
+        "shape": "strided over held-out subtitle sentences",
+        "register": "transcribed dialogue -- NOT written phone messages, which no corpus here "
+                    "contains. A better proxy than an encyclopedia, and nothing more.",
+        "used_by": "R1: every claim about conversational-register accuracy.",
+        "disjoint_from_training_by": "construction -- build_subtitle_corpus.py writes each "
+                                     "sentence to exactly one of train / held-out",
+        "sentences": len(chosen),
+        "tokens": sum(len(s) for s in chosen),
+        "sha256": hashlib.sha256(blob).hexdigest(),
+        "uncompressed_bytes": len(blob),
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--full", default=FULL)
@@ -203,6 +250,12 @@ def main() -> int:
             "sha256": hashlib.sha256(blob).hexdigest(),
             "uncompressed_bytes": len(blob),
         }
+
+    conversational = cut_conversational(EVAL_DIR)
+    if conversational:
+        manifest["slices"]["conversational_test"] = conversational
+        print(f"  conversational_test: {conversational['sentences']} sentences, "
+              f"sha256 {conversational['sha256'][:16]}...", file=sys.stderr)
 
     # The M10 key is kept so nothing that already reads it breaks; it points at the same file.
     manifest["sample"] = manifest["slices"]["sample"]

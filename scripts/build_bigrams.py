@@ -46,6 +46,21 @@ LEXICON = os.path.join(ROOT, "lexicon", "assets", "he_lexicon.txt.gz")
 OUT_DIR = os.path.join(ROOT, "lexicon", "assets")
 MANIFEST = os.path.join(ROOT, "lexicon", "BIGRAM_MANIFEST.json")
 
+
+def manifest_path_for(out: str) -> str:
+    """The manifest describes THE ARTIFACT THIS RUN WROTE, so it lives beside it.
+
+    A fixed path meant that building a comparison table second left `BIGRAM_MANIFEST.json`
+    describing a table that is not shipped. Nothing caught it except a test asserting the
+    manifest's count against the loaded model — which is exactly the kind of quiet mismatch
+    `GATE-BIGRAM-1` exists to make loud, and it could not, because it reads the same manifest.
+    """
+    default_out = os.path.join(OUT_DIR, "he_bigrams.bin.gz")
+    if os.path.abspath(out) == os.path.abspath(default_out):
+        return MANIFEST
+    base = out[:-len(".bin.gz")] if out.endswith(".bin.gz") else os.path.splitext(out)[0]
+    return base + "_MANIFEST.json"
+
 DUMP_DATE = "20260801"
 BASE = f"https://dumps.wikimedia.org/hewiki/{DUMP_DATE}"
 DATA_URL = f"{BASE}/hewiki-{DUMP_DATE}-pages-articles-multistream.xml.bz2"
@@ -219,6 +234,13 @@ def main() -> int:
                          "distribution and write nothing.")
     ap.add_argument("--max-bigrams", type=int, default=None)
     ap.add_argument("--out", default=os.path.join(OUT_DIR, "he_bigrams.bin.gz"))
+    ap.add_argument("--subtitle-weight", type=float, default=0.0,
+                    help="blend conversational counts in at this weight before pruning. "
+                         "0.25 is what ships; see docs/CORPUS_REGISTER.md for the sweep that "
+                         "chose it and the 2x2 that justified blending at all.")
+    ap.add_argument("--subtitle-corpus",
+                    default=os.path.join(ROOT, "lexicon", "cache",
+                                         "subtitle-corpus-train.txt.gz"))
     args = ap.parse_args()
 
     with gzip.open(LEXICON, "rb") as fh:
@@ -254,6 +276,32 @@ def main() -> int:
             # that happen to surround it.
             if a is not None and b is not None:
                 bigrams[(a, b)] += 1
+
+    # ### The conversational blend
+    #
+    # Wikipedia counts alone produce a keyboard measured at 60.77% recall on conversational
+    # text; blending subtitle counts at 0.25 takes that to 72.31% AND lowers the false-alarm
+    # rate, while encyclopedic performance moves 62.51% -> 60.06% with its false alarms
+    # unchanged. The weights multiply COUNTS, before pruning, so a pair attested in both
+    # corpora survives on their combined evidence rather than on either alone.
+    subtitle_pairs = 0
+    if args.subtitle_weight > 0:
+        if not os.path.isfile(args.subtitle_corpus):
+            print(f"MISSING_SUBTITLE_CORPUS: {args.subtitle_corpus}; run "
+                  f"scripts/build_subtitle_corpus.py first", file=sys.stderr)
+            return 1
+        for k in list(bigrams):
+            bigrams[k] = bigrams[k] * (1.0 - args.subtitle_weight)
+        with gzip.open(args.subtitle_corpus, "rt", encoding="utf-8") as fh:
+            for line in fh:
+                toks = line.split()
+                ids = [index.get(t) for t in toks]
+                for a, b in zip(ids, ids[1:]):
+                    if a is not None and b is not None:
+                        bigrams[(a, b)] += args.subtitle_weight
+                        subtitle_pairs += 1
+        print(f"blended {subtitle_pairs} subtitle bigram occurrences at weight "
+              f"{args.subtitle_weight}", file=sys.stderr)
 
     print(f"distinct bigrams: {len(bigrams)}  (out-of-lexicon tokens skipped: {oov})",
           file=sys.stderr)
@@ -310,6 +358,10 @@ def main() -> int:
         "corpus": {"sentences": len(sentences), "tokens": tokens,
                    "out_of_lexicon_tokens": oov},
         "model": {
+            "subtitle_weight": args.subtitle_weight,
+            "subtitle_corpus": (os.path.relpath(args.subtitle_corpus, ROOT)
+                                if args.subtitle_weight > 0 else None),
+            "subtitle_occurrences_blended": subtitle_pairs,
             "min_count": args.min_count,
             "max_bigrams": args.max_bigrams,
             "distinct_bigrams_before_pruning": len(bigrams),
@@ -329,7 +381,7 @@ def main() -> int:
             "Bigrams straddling an out-of-lexicon word are dropped rather than joined.",
         ],
     }
-    with open(MANIFEST, "w", encoding="utf-8") as fh:
+    with open(manifest_path_for(args.out), "w", encoding="utf-8") as fh:
         json.dump(manifest, fh, indent=2, ensure_ascii=False)
         fh.write("\n")
 

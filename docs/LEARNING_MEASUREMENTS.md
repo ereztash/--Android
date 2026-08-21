@@ -1,5 +1,11 @@
 # Adaptive learning measurements
 
+> **Updated by R1.** Every number below was re-measured after the training corpus changed to a
+> 25% conversational blend. The previous figures described a model trained entirely on Hebrew
+> Wikipedia and no longer describe what ships. See [`CORPUS_REGISTER.md`](CORPUS_REGISTER.md)
+> for why the corpus changed and what it was worth.
+
+
 Every number here is a claim about **exactly one thing**: this layer, on this corpus, under a
 simulated-user protocol whose limitations are stated below and not argued away. Slice hashes sit
 beside the tables.
@@ -15,9 +21,9 @@ byte-verifiable. Counts over lexicon-index pairs; **off by default**.
 
 | | measured on `learning_test` |
 |---|---|
-| static baseline | top-1 10.45%, top-3 16.51%, offered 88.68% |
-| **adaptive** | **top-1 11.02%, top-3 16.96%, offered 88.78%** |
-| delta | **+0.57 points top-1 (+333 cases), +0.45 top-3 (+262)** |
+| static baseline | top-1 10.11%, top-3 15.86%, offered 87.48% |
+| **adaptive** | **top-1 10.79%, top-3 16.33%, offered 87.59%** |
+| delta | **+0.67 points top-1 (+392 cases), +0.48 top-3 (+279)** |
 | denominator | 58,343 next-word positions, 120 pseudo-users |
 
 That is the whole size of the effect. It is a real improvement — measured on sentences the
@@ -174,7 +180,7 @@ on. The 60-sentence row on dev rests on 31,172 positions, not 117,988.
   contiguous article text. The register is wrong and the sampling discipline does not fix that.
 - **Not a claim about one person.** "Pseudo-user" means a block of sentences that share a topic.
   Nobody's actual writing was measured, because no such corpus exists here.
-- **+0.57 points is not "the keyboard gets noticeably better".** It is roughly one additional
+- **+0.67 points is not "the keyboard gets noticeably better".** It is roughly one additional
   correct first suggestion in every 175 words, under a protocol that is generous about sessions
   and pessimistic about vocabulary. Whether a person would notice it is **NOT MEASURED** and
   would need real users.

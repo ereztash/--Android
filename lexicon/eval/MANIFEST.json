@@ -170,6 +170,17 @@
       "tokens": 127588,
       "sha256": "d8177a78eace8701da1f5af3371b1b6508db16e4a96a22a2b7656b24006cc2f9",
       "uncompressed_bytes": 1283088
+    },
+    "conversational_test": {
+      "file": "lexicon/eval/he_conversational_test.txt.gz",
+      "shape": "strided over held-out subtitle sentences",
+      "register": "transcribed dialogue -- NOT written phone messages, which no corpus here contains. A better proxy than an encyclopedia, and nothing more.",
+      "used_by": "R1: every claim about conversational-register accuracy.",
+      "disjoint_from_training_by": "construction -- build_subtitle_corpus.py writes each sentence to exactly one of train / held-out",
+      "sentences": 6000,
+      "tokens": 40434,
+      "sha256": "d4cec6cf2c0241a6dde2d1067ac64a2bb9008ced14b6e22e275c62ece5706109",
+      "uncompressed_bytes": 353144
     }
   }
 }

@@ -161,10 +161,10 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | M10-PRED-3 | Completion top-3, 3-letter prefix | **49.28%** (38.27%) | 20,000, same slice |
 | M10-NEXT | Next-word top-3 | **9.80%**, offered in 88.36% of positions | 20,000, same slice |
 | M10-MIX | Ordering policy: corrections-first vs completions-first | corrections-first **dominated** — worse on both corpora | 20,000 + 4,000 — baseline measured, then replaced |
-| M11-RECALL | Real-word error recall, shipped config | **64.58%** | 45,867 injected errors, test slice sha `9fc528ae…` |
-| M11-FALSE | Real-word false-alarm rate on untouched text | **0.26%** | 69,494 positions, same slice — control: a permissive detector scores 15.08% |
+| M11-RECALL | Real-word error recall, shipped config | **62.31%** | 45,867 injected errors, test slice sha `9fc528ae…` |
+| M11-FALSE | Real-word false-alarm rate on untouched text | **0.25%** | 69,494 positions, same slice — control: a permissive detector scores 15.08% |
 | M11-COST | One real-word check | 3.7 µs | 20,000 calls, **JVM on the build host — NOT a device number** |
-| L1-ADAPT | Adaptive next-word, shipped config, vs static on the identical split | **+0.57 top-1 (+333), +0.45 top-3 (+262)**; offer rate 88.68% → 88.78% | 58,343 positions, 120 pseudo-users, slice `d8177a78…` |
+| L1-ADAPT | Adaptive next-word, shipped config, vs static on the identical split | **+0.67 top-1 (+392), +0.48 top-3 (+279)**; offer rate 88.68% → 88.78% | 58,343 positions, 120 pseudo-users, slice `d8177a78…` |
 | L1-COLD | Cold start | +0.00 at 0 sentences of history, +0.14 at 10, +0.57 at 40 | same slice |
 | L1-PROTECT | What the once-seen protection costs | −0.32 top-1, −0.39 top-3 vs `minimumSessions=1` | same slice — **the cheaper setting is not shipped** |
 | L1-WITHHELD | Share of learned pairs that are eligible to be suggested | **5.8%** (mean 52 of 888 per pseudo-user) | 120 pseudo-users |
@@ -294,7 +294,7 @@ working.
 | M5-NOSUGGEST | Splitting the 12.08% no-suggestion cases into stripper false-accepts vs no-candidate | Per-case human adjudication |
 | M1-TYPO | Prefix-stripper typo-rejection rate (the spec's 88.4% at MIN_STEM 4) | A typo corpus and a correctly-constructed prefix-free non-word control |
 | M10-REGISTER | Prediction accuracy on **phone typing** rather than Wikipedia prose | No corpus of Hebrew phone typing exists here. The register is wrong and held-out discipline does not fix that. |
-| M11-BASERATE | How often real Hebrew typing produces an error **inside** the confusion inventory | Needs a corpus of genuine human errors. Without it, 64.58% recall answers only "given the error is one this detector can express", and no precision figure can be computed from a 0.26% false-alarm rate. |
+| M11-BASERATE | How often real Hebrew typing produces an error **inside** the confusion inventory | Needs a corpus of genuine human errors. Without it, 62.31% recall answers only "given the error is one this detector can express", and no precision figure can be computed from a 0.25% false-alarm rate. |
 | M11-KTIV-PAIR | Whether the `ו`/`י` pair is worth including | Available as `HebrewConfusions.KTIV_MALE` and **not measured**. It is the largest source of real-word pairs and mostly not a confusion at all. |
 | M12-PERSONAL-RANK | Whether ranking personal words above lexicon words is right | No corpus of personal dictionaries. Recorded as a design decision with no measurement behind it. |
 | L1-REALUSER | What adaptive learning is worth to **a person**, as opposed to a block of encyclopedia sentences | No corpus of one person's typing exists here. The pseudo-user protocol is a substitute and its central limitation — a Wikipedia article is not a person — is stated in `docs/LEARNING_MEASUREMENTS.md` rather than argued away. The **direction** of the bias is UNVERIFIED. |

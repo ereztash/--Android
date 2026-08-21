@@ -37,6 +37,17 @@ tasks.withType<Test>().configureEach {
     systemProperty("bigram.file", rootProject.file("lexicon/assets/he_bigrams.bin.gz").absolutePath)
     systemProperty("skipgram.file", rootProject.file("lexicon/experimental/he_skipgrams.bin.gz").absolutePath)
     systemProperty("abbreviation.file", rootProject.file("lexicon/assets/he_abbreviations.txt.gz").absolutePath)
+    // The pre-blend table, kept OUT of lexicon/assets so it is never packaged. It exists only
+    // so the register change can be measured as a before/after in one run rather than asserted.
+    systemProperty("bigram.wikionly.file", rootProject.file("lexicon/experimental/he_bigrams_wikionly.bin.gz").absolutePath)
+
+    // Assets are read through absolute paths, so Gradle does not see them as task inputs and
+    // will happily serve a CACHED PASS after the shipped table changes underneath it. Declaring
+    // them makes a data change invalidate the tests that measure that data.
+    inputs.files(
+        rootProject.file("lexicon/assets"),
+        rootProject.file("lexicon/eval"),
+    ).withPathSensitivity(PathSensitivity.RELATIVE)
     systemProperty("eval.dir", rootProject.file("lexicon/eval").absolutePath)
     // The confusion margin is swept on the dev slice and reported on the test slice, which
     // share no sentence -- see scripts/slice_eval_corpus.py, which proves it before writing.

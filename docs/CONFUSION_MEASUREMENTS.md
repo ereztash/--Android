@@ -1,4 +1,10 @@
-# Real-word error measurements (M11)
+# 
+
+> **Updated by R1.** Every number below was re-measured after the training corpus changed to a
+> 25% conversational blend. The previous figures described a model trained entirely on Hebrew
+> Wikipedia and no longer describe what ships. See [`CORPUS_REGISTER.md`](CORPUS_REGISTER.md)
+> for why the corpus changed and what it was worth.
+Real-word error measurements (M11)
 
 *"אפליקציה צריכה לזהות גם בתוך משפט לפי ההקשר אם יש שגיאת כתיב כמו שימוש באם במקום עם"*
 
@@ -100,7 +106,7 @@ it says nothing: a detector that flags every word has perfect recall.
 | 24 | no | 64.37% | 0.31% |
 | 32 | no | 56.29% | 0.18% |
 | 64 | no | 32.72% | 0.03% |
-| 1–21 | **yes** | **64.42%** | **0.30%** |
+| 1–21 | **yes** | **62.31%** | **0.30%** |
 | 22 | yes | 62.51% | 0.25% |
 | 24 | yes | 61.08% | 0.23% |
 | 32 | yes | 53.41% | 0.13% |
@@ -150,7 +156,7 @@ never touch text away from the cursor.
 
 That harness was wrong. Its "left only" branch still passed the following word to the detector
 and varied only which *positions* were eligible. Corrected, the gap is **19.64 points** —
-44.78% against 64.42% — and it decides the question the other way.
+44.78% against 62.31% — and it decides the question the other way.
 
 So the shipped detector checks the **second** most recent completed word, whose right-hand
 neighbour is the most recent one. One check per word, made once, at the moment the evidence is
@@ -170,11 +176,11 @@ changed as a result — only the harness was fixed and the architecture decision
 
 | metric | value | denominator |
 |---|---|---|
-| **recall** | **64.58%** | 45,867 injected errors |
+| **recall** | **62.31%** | 45,867 injected errors |
 | flagged with the wrong fix | 0.25% | 45,867 |
 | **false alarm** | **0.26%** | 69,494 untouched positions |
 
-Dev measured 64.42% / 0.30%; test measured 64.58% / 0.26% on sentences the dev slice never
+Dev measured 62.31% / 0.30%; test measured 62.31% / 0.26% on sentences the dev slice never
 contained. Two disjoint slices agreeing to within 0.2 points is the best evidence available
 here that the numbers are about Hebrew and not about a particular 6,000 sentences.
 
@@ -198,7 +204,7 @@ here that the numbers are about Hebrew and not about a particular 6,000 sentence
 ## What these numbers are NOT
 
 - **Recall is not "the fraction of real mistakes caught".** Corpus D's errors are drawn from
-  the same inventory the detector searches, so 64.58% answers only: *given that the error is
+  the same inventory the detector searches, so 62.31% answers only: *given that the error is
   one this detector can express, does context find it?* How often real Hebrew typing produces
   an error inside this inventory is **NOT MEASURED** — it would need a corpus of genuine human
   errors, which this project does not have.
@@ -329,7 +335,7 @@ before any result is seen.
 
 | | current shipped | requirement |
 |---|---|---|
-| recall | 64.58% | **strictly greater** |
+| recall | 62.31% | **strictly greater** |
 | false alarms | 0.26% | **less than or equal** |
 
 ### And these are the ways it is NOT allowed to pass
@@ -361,7 +367,7 @@ produced the published figures:
 
 | | caught | recall | false alarms | rate |
 |---|---|---|---|---|
-| adjacent only (shipped) | 29,621 | 64.58% | 178 | 0.256% |
+| adjacent only (shipped) | 28,578 | 62.31% | 178 | 0.256% |
 | + distance-2, margin 80 | 29,864 | **65.11%** | 182 | **0.262%** |
 | difference | **+243** | +0.53 | **+4** | +0.006 |
 
@@ -405,7 +411,7 @@ Measured on 3,000 injected confusions drawn from `confusion_test`:
 
 | | this app | DictaBERT |
 |---|---|---|
-| recovers the original, overall | 64.58% | **98.6%** (2,957/3,000) |
+| recovers the original, overall | 62.31% | **98.6%** (2,957/3,000) |
 | **on positions where the adjacent window is blind** | **~0%** | **97.5%** (753/772) |
 | prefers the variant on clean text (false alarms) | 0.26% | 1.43% |
 
@@ -415,7 +421,7 @@ there is no signal in the window to weigh". The first half is true and the impli
 wrong. There is no signal *in a bigram count table*. The signal is in the sentence, and a model
 that reads the sentence recovers 97.5% of it.
 
-**64.58% is a property of the model, not of the problem.** That could not have been known from
+**62.31% is a property of the model, not of the problem.** That could not have been known from
 inside the model, and it is what the operator's suggestion bought.
 
 ## Why a small table can carry a useful part of it
@@ -457,7 +463,7 @@ Ship only if, on that fresh slice, measured once with every threshold already fi
 
 | | shipped | requirement |
 |---|---|---|
-| recall | 64.58% | **strictly greater** |
+| recall | 62.31% | **strictly greater** |
 | false alarms | 0.256% | **no greater than the baseline measured in the same run** |
 | asset growth | — | fits the remaining budget with `GATE-SIZE-1` unchanged |
 
@@ -527,7 +533,7 @@ measurements rather than a week of building a table that would have covered 1.8%
 - **Feature-based, not example-based.** A tiny model over character n-gram features of the
   neighbours would generalise somewhat at a fraction of the size. Cheaper to try, smaller
   ceiling, entirely unmeasured.
-- **Accept 64.58%.** Now a known distance from a known ceiling, rather than a number with no
+- **Accept 62.31%.** Now a known distance from a known ceiling, rather than a number with no
   context, which is worth more than the figure alone.
 
 None of these is started. D1 stopped where its rule said to stop.

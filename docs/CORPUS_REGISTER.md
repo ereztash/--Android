@@ -86,3 +86,119 @@ sounded handled.
 
 The operator asked whether every available resource had been used. That question is what
 produced this document.
+
+
+---
+
+# R1 — shipping the 25% blend
+
+The operator chose **25% subtitles**. What follows is the plan and, first, the prediction, so
+that the real pipeline has something to be checked against rather than merely producing numbers
+that are then declared good.
+
+## Prediction, recorded before building
+
+The Python A/B ran in a simplified harness. The Kotlin pipeline uses different eligibility rules
+and hash-locked slices, so the **absolute** values will differ. What should carry across is the
+**direction and rough magnitude**:
+
+| | Python harness said | Kotlin pipeline should show |
+|---|---|---|
+| conversational recall | 60.77% → 72.31% (**+11.5**) | a large gain, same sign, order of +8 to +15 |
+| conversational false alarms | 0.739% → 0.526% (**down**) | must not rise |
+| encyclopedic recall | 62.51% → 60.06% (**−2.5**) | a small loss, order of −1 to −5 |
+| encyclopedic false alarms | 0.524% → 0.521% (flat) | must not rise materially |
+
+**If the Kotlin pipeline disagrees with this in sign, or by more than roughly double the
+magnitude, something is wrong with the port and it gets reported rather than shipped.** A
+prediction written afterwards to match whatever came out is not a check.
+
+## What is being built
+
+1. `scripts/build_subtitle_corpus.py` — stream OpenSubtitles Hebrew, clean, tokenise, cache with
+   provenance. The cleaning filter is part of the artifact, not an ad-hoc step.
+2. `scripts/build_bigrams.py --subtitle-weight 0.25` — blend counts before pruning.
+3. A **conversational evaluation slice**, hash-locked and disjoint from subtitle training, so
+   that from here on every claim about conversational text has a slice behind it. The repository
+   has never had one.
+4. Re-measure everything in the Kotlin harness and rewrite every number in every document.
+
+## What does not change
+
+The lexicon, the frequency table, and the abbreviation list are untouched. Only the **bigram
+table** is rebuilt, so `GATE-LEX-1/2/3` still verify the same artifacts and only
+`GATE-BIGRAM-1`'s hash moves.
+
+
+---
+
+## R1 RESULT: the prediction held
+
+Measured in the Kotlin pipeline, on hash-locked slices, with the blend already fixed at 0.25.
+
+### Conversational register — the reason for the change
+
+`he_conversational_test.txt.gz`, sha256 `d4cec6cf2c0241a6…`, 6,000 sentences, 16,010 injections.
+Both tables measured **in the same run on the same sentences**, so this is a comparison and not
+a recollection.
+
+| | recall | false alarms |
+|---|---|---|
+| wikipedia only (before) | 61.40% | 0.568% |
+| **25% subtitles (shipped)** | **74.13%** | **0.344%** |
+| delta | **+12.73** | **−0.225** |
+
+Predicted before building: **+8 to +15 points, false alarms must not rise.** Actual: **+12.73**,
+false alarms down 39%. The Python experiment transferred.
+
+### Encyclopedic register — what it cost
+
+| | before | after |
+|---|---|---|
+| recall | 64.58% | **62.31%** |
+| false alarms | 0.26% | **0.25%** |
+
+Predicted: −1 to −5 recall, false alarms must not rise materially. Actual: **−2.27**, and false
+alarms **improved**.
+
+### Everything else that moved
+
+| | before | after |
+|---|---|---|
+| next-word top-3 | 9.80% | 9.09% |
+| prefix-3 completion top-3 | 49.28% | 47.98% |
+| adaptive learning gain | +0.57 | **+0.67** |
+| bigram table | 532,168 pairs, 2.85 MiB | 477,180 pairs, 1.60 MiB |
+
+Two of these deserve a note rather than a cheer.
+
+**Adaptive learning appears to improve, and mostly has not.** Its gain is measured against the
+static baseline, and that baseline dropped on the Wikipedia eval slice. A larger gap over a
+weaker starting point is not the same as helping the user more.
+
+**The prediction figures fell, and are still measured on Wikipedia.** `PredictionAccuracyTest`
+and `PredictionMeasurementTest` evaluate on `hewiki_eval_sample.txt.gz`, so they now report a
+partly-conversational model judged on encyclopedic text — the worst case for it. The honest
+reading is that **those numbers have become less relevant, not that prediction got worse**, and
+cutting a conversational slice for prediction as well is left open and NOT DONE.
+
+### What was found on the way
+
+- **The test task did not declare the lexicon assets as inputs.** Assets are read through
+  absolute paths, so Gradle served a full CACHED PASS after the shipped table changed
+  underneath it. A data change could have shipped with every test reporting green on the old
+  data. Now declared.
+- **The bigram manifest was written to a fixed path.** Building the comparison table second left
+  `BIGRAM_MANIFEST.json` describing a table that is not shipped — and `GATE-BIGRAM-1` could not
+  catch it, because the gate verifies the APK against that same manifest. The manifest now lives
+  beside the artifact it describes.
+- **Building with `--subtitle-weight 0` reproduces the pre-R1 table byte-for-byte**
+  (sha256 `90cd6525…`, 532,168 pairs), so the blend code is provably a no-op at zero.
+
+### Re-pinned numbers
+
+Several test floors moved. Stated plainly because this repository treats moving a threshold as a
+serious act: these were re-pinned because **the training data changed under an operator
+decision**, and the change was checked against a prediction written before the table existed.
+That is a different act from adjusting a constant until a suite goes green, which remains
+forbidden.

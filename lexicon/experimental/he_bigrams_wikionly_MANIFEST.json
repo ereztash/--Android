@@ -29,17 +29,17 @@
     "out_of_lexicon_tokens": 1315367
   },
   "model": {
-    "subtitle_weight": 0.25,
-    "subtitle_corpus": "lexicon/cache/subtitle-corpus-train.txt.gz",
-    "subtitle_occurrences_blended": 21483934,
+    "subtitle_weight": 0.0,
+    "subtitle_corpus": null,
+    "subtitle_occurrences_blended": 0,
     "min_count": 5,
     "max_bigrams": null,
-    "distinct_bigrams_before_pruning": 10837607,
-    "bigrams_kept": 477180,
-    "groups": 51900,
-    "raw_bytes": 2697304,
-    "gzip_bytes": 1681183,
-    "raw_sha256": "e013923779455ab64eae2f6a8fd515df9e662a327d45fb3f635955b8d44e5f10",
+    "distinct_bigrams_before_pruning": 8391745,
+    "bigrams_kept": 532168,
+    "groups": 54133,
+    "raw_bytes": 2985642,
+    "gzip_bytes": 1846688,
+    "raw_sha256": "90cd6525ec041977558087c0e1c0a9b535af594589af513edb83eea915794221",
     "encoding": "u32 groupCount, then per group: u32 firstWordIndex, u16 n, then n x (u32 secondWordIndex, u8 log2Count*8). Groups sorted by firstWordIndex; continuations sorted by count descending."
   },
   "known_limitations": [

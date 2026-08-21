@@ -1,4 +1,10 @@
-# Prediction measurements (M10)
+# 
+
+> **Updated by R1.** Every number below was re-measured after the training corpus changed to a
+> 25% conversational blend. The previous figures described a model trained entirely on Hebrew
+> Wikipedia and no longer describe what ships. See [`CORPUS_REGISTER.md`](CORPUS_REGISTER.md)
+> for why the corpus changed and what it was worth.
+Prediction measurements (M10)
 
 Every number here is a claim about **exactly one thing**: this engine, on this corpus, with
 this lexicon and this bigram table. Corpus hashes sit beside the tables. Latency figures are
@@ -8,10 +14,10 @@ this lexicon and this bigram table. Corpus hashes sit beside the tables. Latency
 
 | top-3 accuracy | context-free ranking | shipped engine |
 |---|---|---|
-| prefix 1 | 2.15% | **5.73%** |
-| prefix 2 | 14.80% | **25.77%** |
-| prefix 3 | 36.58% | **49.28%** |
-| next-word | 0.00% — structurally impossible without context | **9.80%** |
+| prefix 1 | 2.15% | **5.43%** |
+| prefix 2 | 14.80% | **24.92%** |
+| prefix 3 | 36.58% | **47.98%** |
+| next-word | 0.00% — structurally impossible without context | **9.09%** |
 
 The left column is control 1 below: the same lexicon and the same prefix constraint, ranked by
 unigram frequency alone. It is a measured floor, not a hypothetical. It is **not** "the app
@@ -89,16 +95,16 @@ cap is stated rather than hidden, and `PredictionAccuracyTest` fails if any cell
 
 | metric | top-1 | top-3 | n |
 |---|---|---|---|
-| next-word | 5.55% | 9.80% | 20,000 |
+| next-word | 5.55% | 9.09% | 20,000 |
 | prefix 1 | 0.73% | 2.15% | 20,000 |
 | prefix 2 | 6.71% | 15.80% | 20,000 |
 | prefix 3 | 20.04% | 38.27% | 20,000 |
 
 Next-word is unaffected by the weight — that path reads the bigram table directly and has no
-unigram score to balance against — so its 9.80% is the same in every row of every table below.
+unigram score to balance against — so its 9.09% is the same in every row of every table below.
 It is listed once here rather than repeated as though it were varying.
 
-**A next-word answer is offered at all in 88.36% of positions.** The other 11.64% are words
+**A next-word answer is offered at all in 86.64% of positions.** The other 11.64% are words
 the pruned model has no continuation for, and the strip stays empty rather than guessing.
 
 ## The weight sweep, in full
@@ -110,7 +116,7 @@ Every value tried, including the ones that are worse. Top-3, at the shipped mix.
 | 0.0 (baseline) | 2.15% | 15.80% | 38.27% | 269 |
 | 0.5 | 4.67% | 22.52% | 45.67% | 253 |
 | 1.0 | 5.45% | 25.09% | 48.15% | 248 |
-| **2.0 — shipped** | **5.73%** | **25.77%** | **49.28%** | 249 |
+| **2.0 — shipped** | **5.43%** | **24.92%** | **47.98%** | 249 |
 | 4.0 | 5.77% | 25.92% | 49.49% | 249 |
 
 **2.0 was chosen after this table existed, not before it.** It takes almost all of the
@@ -136,9 +142,9 @@ correction wins the completion corpus outright; one that never completes wins th
 
 | mix | prefix 1 | prefix 2 | prefix 3 | typo top-1 | typo top-3 |
 |---|---|---|---|---|---|
-| CORRECTIONS_FIRST (baseline) | 5.73% | 25.77% | 43.52% | 52.95% | 66.68% |
-| **COMPLETIONS_FIRST — shipped** | 5.73% | 25.77% | **49.28%** | **53.05%** | 67.28% |
-| INTERLEAVED | 5.73% | 25.77% | 48.64% | 53.05% | **67.40%** |
+| CORRECTIONS_FIRST (baseline) | 5.43% | 24.92% | 42.90% | 52.95% | 66.68% |
+| **COMPLETIONS_FIRST — shipped** | 5.43% | 24.92% | **47.98%** | **53.05%** | 67.28% |
+| INTERLEAVED | 5.43% | 24.92% | 48.64% | 53.05% | **67.40%** |
 
 Denominators: 20,000 per prefix cell (held-out corpus), 4,000 for the typo columns
 (`lexicon/golden/a_uniform.tsv.gz`, sha256 `f9f4ed809b31bef0…`).
@@ -172,7 +178,7 @@ and picks by unigram frequency within it, never looking at the previous word.
 | | prefix 1 | prefix 2 | prefix 3 | next-word |
 |---|---|---|---|---|
 | context-free control | 2.15% | 14.80% | 36.58% | **0.00%** |
-| real engine | 5.73% | 25.77% | 49.28% | 9.80% |
+| real engine | 5.43% | 24.92% | 47.98% | 9.09% |
 
 The gap is what the bigram model is worth. The 0.00% is structural — a context-free predictor
 cannot answer the next-word question at all — and `PredictionAccuracyTest` asserts it exactly,
@@ -221,7 +227,7 @@ report to the operator, not an edit to make.
   register is wrong and no amount of held-out discipline fixes that.
 - **The next-word figure is measured with a known previous word and no punctuation.** In the
   app, `InputContextBuffer.previousWord` returns null across a sentence boundary, so the real
-  offer rate at a sentence start is zero where this corpus reports 88.36%. That is deliberate —
+  offer rate at a sentence start is zero where this corpus reports 86.64%. That is deliberate —
   the model was never trained on pairs that straddle a boundary — but it means the app's
   aggregate next-word rate is lower than the table, by an amount not measured here.
 - **They say nothing about latency on a device.** Every µs figure is a JVM number on the build
