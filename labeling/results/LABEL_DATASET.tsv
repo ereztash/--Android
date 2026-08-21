@@ -414,3 +414,53 @@ b002-312	batch-002	real	adjacent	30	2	3773	in-text	overruled	כ/ק	כה	קה	116
 b002-313	batch-002	real	adjacent	22	2	4229	unclear	unclear	ו/ב	ול	בל	90	97	3	5	firing-132330-3	לתלותמו הפי רעיש ול היה
 b002-314	batch-002	injected	known			15704	suggested	control-pass	א/ע	אד	עד	106	141	4	7	injected-1064-4	ושלא יגלו את הגופה אד היום הבא
 b002-315	batch-002	repeat:batch-001	adjacent	22	2	7289	unclear	unclear	ו/ב	מולי	מבלי	103	107	2	4	firing-258807-2	החברה שלו מולי חולה
+b003-001	batch-003	repeat:batch-001	adjacent	21	2	15198	both-fine	both-fine	ח/כ	חבר	כבר	136	143	2	5	firing-165408-2	תעשה סיבוב חבר תעשה סיבוב
+b003-002	batch-003	repeat:batch-001	adjacent	45	2	10926	in-text	overruled	ב/ו	הבא	הוא	125	164	4	9	firing-178965-4	כן היום זה יום הבא לעבודה קרוב משפחה רחוק
+b003-003	batch-003	repeat:batch-002	adjacent	26	2	2453	in-text	overruled	א/ע	אליי	עליי	124	131	2	9	firing-211215-2	אל תתקרבי אליי מפני שאני לא רוצה לפגוע בך
+b003-004	batch-003	repeat:batch-002	adjacent	39	2	5414	unclear	unclear	ב/ו	בג	וג	103	110	4	6	firing-142449-4	אנחנו לא יכולות לבטוח בג ונתן
+b003-005	batch-003	repeat:batch-001	adjacent	38	2	10313	in-text	overruled	ו/ב	לסוך	לסבך	0	77	6	18	firing-28919-6	באופן רגיל פועלות צינוריות הדמעות כדי לסוך את העין ולהגן עליה כשמתרגשים הן מגיבות באופן מוגזם ויוצרות דמעות
+b003-006	batch-003	repeat:batch-002	adjacent	24	2	4514	unclear	unclear	ב/ו	בג	וג	103	110	2	4	firing-259776-2	תתקשר לאימי בג ולייט
+b003-007	batch-003	repeat:batch-002	adjacent	31	2	5835	in-text	overruled	א/ע	באולם	בעולם	90	121	4	9	firing-180858-4	האקוסטיקה שם דומה לאקוסטיקה באולם ו תראו מי הופיעה
+b003-008	batch-003	repeat:batch-002	adjacent	90	2	3644	both-fine	both-fine	ס/ש	לסחרר	לשחרר	41	106	1	4	firing-52561-1	כדי לסחרר אותי כמוך
+b003-009	batch-003	repeat:batch-001	adjacent	67	2	3742	both-fine	both-fine	ו/ב	הגור	הגבר	71	105	2	4	firing-3161-2	של מי הגור הזה
+b003-010	batch-003	clean	none			10396	in-text	control-pass	א/ע	אני	עני	177	88	1	5	clean-104759-1	לא אני התכוונתי בלי הכסף
+b003-011	batch-003	repeat:batch-002	adjacent	106	2	5781	in-text	overruled	ח/כ	חי	כי	118	145	3	8	firing-119275-3	הוא נשאר עד חי למרות הברבריות של התליינים
+b003-012	batch-003	repeat:batch-001	adjacent	25	2	1882	in-text	overruled	ב/ו	בלב	בלו	96	87	6	9	firing-214983-6	לפחות נימוסי הרופא שלך משאירים תקווה בלב ג ק
+b003-013	batch-003	clean	none			1897	in-text	control-pass	ח/כ	חשבתי	כשבתי	138	40	5	9	clean-92630-5	אני מניחה שאף פעם לא חשבתי על זה ככה
+b003-014	batch-003	repeat:batch-002	adjacent	21	2	12134	unclear	unclear	ס/ש	הגיסה	הגישה	57	98	10	12	firing-140136-10	זהו פולחן עבור זה משהו שכל אמא הגיסה שולחת לבת הגיסה שלה
+b003-015	batch-003	repeat:batch-002	adjacent	72	2	8092	in-text	overruled	א/ע	אל	על	148	164	7	10	firing-232927-7	האם היא היתה מחברת מחדש את החלק אל גופה הלטאתי
+b003-016	batch-003	repeat:batch-002	adjacent	34	2	2122	in-text	overruled	ט/ת	לטבוע	לתבוע	79	90	2	5	firing-117312-2	גבר יכול לטבוע בעיניים האלו
+b003-017	batch-003	repeat:batch-002	adjacent	29	2	2834	in-text	overruled	א/ע	אל	על	148	164	5	14	firing-194709-5	לכן רק שירו שיר לשלום אל תלחשו תפילה מוטב תשירו שיר לשלום בצעקה גדולה
+b003-018	batch-003	repeat:batch-002	adjacent	65	2	6832	suggested	agreed	ו/ב	וובי	בובי	48	107	4	15	firing-212505-4	ג וי לראות את וובי זה הרבה יותר כיף ממשהו שקרה ברכב של דוד שלי
+b003-019	batch-003	repeat:batch-002	adjacent	22	2	3719	both-fine	both-fine	ת/ט	שתף	שטף	63	73	1	4	firing-9433-1	בהחלט שתף את כולנו
+b003-020	batch-003	repeat:batch-001	adjacent	22	2	2130	in-text	overruled	א/ע	אל	על	148	164	3	5	firing-247916-3	ולנסות ולהיות נחמד אל מלקולם
+b003-021	batch-003	repeat:batch-002	adjacent	30	2	5887	in-text	overruled	כ/ק	כה	קה	116	78	11	22	firing-21512-11	יש ברשותי תדפיס סודי ביותר של פרטי המכירות של חנות ספרים כה חסרת חשיבות אך כה מלאה בצדקנות עד שמיד חשתי אליה
+b003-022	batch-003	repeat:batch-002	adjacent	23	2	2849	in-text	overruled	ב/ו	בכאב	וכאב	80	69	4	7	firing-146496-4	האם התנסת אי פעם בכאב ראש מיידי
+b003-023	batch-003	repeat:batch-001	adjacent	21	2	4492	unclear	unclear	ו/ב	וקטע	בקטע	41	97	1	4	firing-24739-1	אהבה וקטע עם כלב
+b003-024	batch-003	repeat:batch-002	adjacent	32	2	4935	in-text	overruled	ח/כ	החול	הכול	87	126	5	16	firing-113328-5	כמה הריסות אפשר לראות אבל החול החם והמים הכחולים זה בשבילי אני לא רוצה לזרז אתכם
+b003-025	batch-003	repeat:batch-002	adjacent	21	2	6690	in-text	overruled	ו/ב	ואנשים	באנשים	92	99	2	12	firing-97387-2	אני מסכים ואנשים צעירים ותמימים צריכים להודות על מזלם להיות אסירי תודה
+b003-026	batch-003	repeat:batch-001	adjacent	37	2	5580	in-text	overruled	ו/ב	ושנית	בשנית	78	78	9	16	firing-146855-9	קודם כן זה פשע של זעם לא משיכה מינית ושנית את לא דוחה את מאוד יפה
+b003-027	batch-003	repeat:batch-002	adjacent	32	2	8174	in-text	overruled	ע/א	ועף	ואף	51	104	5	18	firing-156542-5	עוזב את הגלגל של ב ועף אל הגלגל של אופניים א קדימה ואחורה עד ששני זוגות האופניים מתנגשים
+b003-028	batch-003	repeat:batch-002	adjacent	57	2	22447	in-text	overruled	א/ע	אבד	עבד	83	111	6	9	firing-48598-6	לצערי הספר נאבד במאה ה לא אבד אלא נלקח
+b003-029	batch-003	repeat:batch-002	adjacent	26	2	2625	in-text	overruled	א/ע	אל	על	148	164	4	6	firing-151792-4	פקסס עותק של הצו אל הפקיד
+b003-030	batch-003	injected	known			2865	suggested	control-pass	ו/ב	אוהו	אוהב	65	136	3	9	injected-74935-3	אם אתה לא אוהו ספגטי וקציצת בשר צא החוצה
+b003-031	batch-003	repeat:batch-001	adjacent	63	2	4432	suggested	agreed	ע/א	יעבד	יאבד	33	79	8	18	firing-93321-8	אנדרו עבד עבורי במשך שנה אף אחד לא יעבד את מקום פרנסתו בטח שאין חשש בלבצע עידכונים כאלה
+b003-032	batch-003	injected	known			1626	suggested	control-pass	ע/א	עת	את	91	178	2	6	injected-58649-2	יש לך עת המשקה שלי לא
+b003-033	batch-003	repeat:batch-002	adjacent	45	2	3254	in-text	overruled	ת/ט	השתן	השטן	83	102	9	11	firing-217873-9	אל תחשבי שהוא שלך רק מכיוון שסימנת אותו עם השתן שלך
+b003-034	batch-003	clean	none			4096	in-text	control-pass	ב/ו	בני	וני	123	109	5	9	clean-54897-5	מה חשבת שהם יכולים לאלץ בני אדם להישאר כאן
+b003-035	batch-003	repeat:batch-002	adjacent	55	2	2407	suggested	agreed	ת/ט	תצתרך	תצטרך	40	111	1	7	firing-53401-1	אתה תצתרך אנחנו נקח את זה מכאן
+b003-036	batch-003	injected	known			4432	suggested	control-pass	ס/ש	סלי	שלי	61	158	9	11	injected-5242-9	אם תשמור על הפה שלך אני אשמור על הסבלנות סלי ברור
+b003-037	batch-003	repeat:batch-001	adjacent	48	2	3652	in-text	overruled	ב/ו	עבד	עוד	111	143	8	12	firing-253375-8	עכשיו לאחר שהוא טעם בשר אדם הכלב יהיה עבד לתאוות הבשר שלו
+b003-038	batch-003	repeat:batch-001	adjacent	35	2	3982	in-text	overruled	א/ע	אל	על	148	164	11	13	firing-24621-11	לא לא כדי להגיע לביתו של נד כדאי שתפנה ימינה ותחזור אל הגבעות
+b003-039	batch-003	repeat:batch-002	adjacent	38	2	2631	in-text	overruled	ס/ש	המסטר	המשטר	54	65	6	15	firing-19976-6	זה בלתי נמנע שהתלמידים יתעלו על המסטר זה הגורל בני אנוש לא יכולים להתנגד לו
+b003-040	batch-003	repeat:batch-002	adjacent	22	2	5917	in-text	overruled	ו/ב	ולרדוף	בלרדוף	54	46	10	14	firing-93358-10	אמא אני איש מאוד עסוק אין לי זמן לעזור לזה ולרדוף אחרי תביעות מגוכחות
+b003-041	batch-003	repeat:batch-002	adjacent	38	2	5459	unclear	unclear	ט/ת	בט	בת	78	122	1	5	firing-253785-1	אז בט תשיר שני שירים
+b003-042	batch-003	repeat:batch-002	adjacent	26	2	5639	unclear	unclear	א/ע	שאלי	שעלי	78	84	4	6	firing-251544-4	טוב אתה יודע מה שאלי רוצה
+b003-043	batch-003	injected	known			8529	suggested	control-pass	ב/ו	הבא	הוא	125	164	7	11	injected-11563-7	ועכשיו עם החיים שאני תמיד רציתי בשבילו הבא עוזב את הבית
+b003-044	batch-003	repeat:batch-002	adjacent	29	2	4657	in-text	overruled	ו/ב	וכוח	בכוח	75	98	1	6	firing-179892-1	וסיבולת וכוח כדי לנצח במאבק ארוך
+b003-045	batch-003	clean	none			3351	in-text	control-pass	א/ע	את	עת	178	91	2	8	clean-44618-2	בואו נשמור את הידיים והזרועות שלנו לעצמנו בסדר
+b003-046	batch-003	repeat:batch-002	adjacent	25	2	3427	in-text	overruled	ו/ב	ועוד	בעוד	109	121	2	6	firing-4723-2	אלף עכשיו ועוד אלף אחרי החתונה
+b003-047	batch-003	clean	none			2408	in-text	control-pass	כ/ח	כמו	חמו	148	41	3	6	clean-63338-3	להשאיר אותך בוערת כמו כלב מגורה
+b003-048	batch-003	repeat:batch-002	adjacent	44	1	2789	in-text	overruled	ח/כ	חי	כי	118	145	1	10	firing-229698-1	אורניזם חי אולי משהו בסגנון מחשב מבוסס די אנ איי
+b003-049	batch-003	injected	known			1927	suggested	control-pass	ש/ס	כשף	כסף	59	128	1	7	injected-104574-1	שפך כשף כמו מים אבל במשחק המודרני
+b003-050	batch-003	repeat:batch-001	adjacent	39	2	3997	unclear	unclear	ט/ת	טא	תא	55	107	8	10	firing-195306-8	מס התותח הראשי הוא בחוץ ואני השקנו כל טא אה

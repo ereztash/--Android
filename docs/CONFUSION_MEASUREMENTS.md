@@ -1020,5 +1020,4 @@ The one lever batch 001 suggested — never propose a rarer word — **failed to
 removes 25% of firings and 8 of the 32 agreements, against a pre-registered ceiling of one.
 
 Two independent samples now bound this detector's precision below 44%, and no threshold,
-feature, or filter found so far moves it. Full record and the open proposal:
-`docs/LABELING_PROTOCOL.md`.
+feature, or filter found so far moves it. Full record: `docs/LABELING_LOG.md`; the rules it was collected under, `docs/LABELING_PROTOCOL.md`.

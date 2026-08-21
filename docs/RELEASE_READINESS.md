@@ -169,7 +169,7 @@ under Policy status in Play Console. See `docs/OPERATOR_NOTICES.md` NOTICE 1.
   fixes it — agreements and disagreements carry the same evidence. **A second, larger sample
   (n=240, disjoint) bounds it at [13.3%, 38.3%]** and the one candidate filter failed to
   replicate. Both batches fell short of a formal verdict on different bars, and neither
-  ceiling reaches 60% at any confidence. See `docs/LABELING_PROTOCOL.md`.
+  ceiling reaches 60% at any confidence. **A third batch then measured the labeller rather than the detector and found direction stability of 96.2%, which makes those floors publishable: 10.0% and 13.3%, both far below the 40% the pre-registered rule calls withdrawable.** Margin, letter-pair and frequency restrictions were all tested and none reaches it. See `docs/LABELING_LOG.md`.
   **This is an open question against a shipped feature, and it is the operator's to decide.**
 - **This keyboard never replaces anything by itself.** `shouldAutoReplace` exists and is
   measured; it is not called. Every change to the user's text is a tap. On the golden corpus

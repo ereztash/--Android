@@ -234,21 +234,29 @@ def main():
     w("| | " + " | ".join(b["batch_id"] for b in batches) + " |")
     w("|---|" + "---|" * len(batches))
     S = {b["batch_id"]: summarise(rows, b["batch_id"]) for b in batches}
-    def row(label, fn):
-        w(f"| {label} | " + " | ".join(fn(S[b['batch_id']]) for b in batches) + " |")
+    def row(label, fn, needs_real=False):
+        # A batch with no fresh firings has no precision, no abstention rate and nothing to
+        # agree with. Those cells are em-dashes, not zeroes: a 0.0% floor for a batch that
+        # measured nothing is a fabricated number, and fabricated numbers get averaged.
+        cells = []
+        for b in batches:
+            st = S[b["batch_id"]]
+            cells.append("—" if needs_real and not st["n_real"] else fn(st))
+        w(f"| {label} | " + " | ".join(cells) + " |")
     row("screens", lambda s: f"{s['screens']}")
-    row("real firings judged", lambda s: f"{s['n_real']}")
+    row("real firings judged", lambda s: f"{s['n_real']}" if s['n_real']
+        else "0 — instrument check")
     row("controls", lambda s: f"{s['controls_ok']} / {s['controls']} passed")
     row("repeats from an earlier batch", lambda s: f"{s['repeats']}")
-    row("**agreed with the detector**", lambda s: f"**{s['agreed']}**")
-    row("preferred the word in the text", lambda s: f"{s['overruled']}")
-    row("both fine", lambda s: f"{s['both']}")
-    row("neither / unclear", lambda s: f"{s['unclear']}")
-    row("abstention rate", lambda s: pct(s['abstain'], s['n_real']))
+    row("**agreed with the detector**", lambda s: f"**{s['agreed']}**", needs_real=True)
+    row("preferred the word in the text", lambda s: f"{s['overruled']}", needs_real=True)
+    row("both fine", lambda s: f"{s['both']}", needs_real=True)
+    row("neither / unclear", lambda s: f"{s['unclear']}", needs_real=True)
+    row("abstention rate", lambda s: pct(s['abstain'], s['n_real']), needs_real=True)
     row("**precision floor**", lambda s: f"**{100*s['floor']:.1f}%** "
-        f"[{100*s['floor_ci'][0]:.1f}, {100*s['floor_ci'][1]:.1f}]")
+        f"[{100*s['floor_ci'][0]:.1f}, {100*s['floor_ci'][1]:.1f}]", needs_real=True)
     row("**precision ceiling**", lambda s: f"**{100*s['ceiling']:.1f}%** "
-        f"[{100*s['ceiling_ci'][0]:.1f}, {100*s['ceiling_ci'][1]:.1f}]")
+        f"[{100*s['ceiling_ci'][0]:.1f}, {100*s['ceiling_ci'][1]:.1f}]", needs_real=True)
     row("median seconds per item", lambda s: f"{s['median_ms']/1000:.1f}")
     row("total minutes", lambda s: f"{s['total_ms']/60000:.0f}")
 

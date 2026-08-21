@@ -43,6 +43,8 @@ file the labelling screen does not load.
 | batch-001 protocol sha256 | `20b2bf0877012e95…` |
 | batch-002 seed | `20260823` |
 | batch-002 protocol sha256 | `74b1707eef3c5ebe…` |
+| batch-003 seed | `20260824` |
+| batch-003 protocol sha256 | `2be3c7540686f545…` |
 | detector | shipped defaults; `checkWide` with `next2 = null`, the shape the app runs |
 | labeller | one person, native Hebrew, the project's operator |
 
@@ -63,21 +65,21 @@ adjacent path. These labels say nothing about the other two.
 
 ## Results by batch
 
-| | batch-001 | batch-002 |
-|---|---|---|
-| screens | 100 | 315 |
-| real firings judged | 80 | 240 |
-| controls | 18 / 20 passed | 57 / 60 passed |
-| repeats from an earlier batch | 0 | 15 |
-| **agreed with the detector** | **8** | **32** |
-| preferred the word in the text | 45 | 148 |
-| both fine | 4 | 18 |
-| neither / unclear | 23 | 42 |
-| abstention rate | 33.8% | 25.0% |
-| **precision floor** | **10.0%** [5.2, 18.5] | **13.3%** [9.6, 18.2] |
-| **precision ceiling** | **43.8%** [33.4, 54.7] | **38.3%** [32.4, 44.6] |
-| median seconds per item | 4.5 | 4.0 |
-| total minutes | 11 | 30 |
+| | batch-001 | batch-002 | batch-003 |
+|---|---|---|---|
+| screens | 100 | 315 | 50 |
+| real firings judged | 80 | 240 | 0 — instrument check |
+| controls | 18 / 20 passed | 57 / 60 passed | 10 / 10 passed |
+| repeats from an earlier batch | 0 | 15 | 40 |
+| **agreed with the detector** | **8** | **32** | — |
+| preferred the word in the text | 45 | 148 | — |
+| both fine | 4 | 18 | — |
+| neither / unclear | 23 | 42 | — |
+| abstention rate | 33.8% | 25.0% | — |
+| **precision floor** | **10.0%** [5.2, 18.5] | **13.3%** [9.6, 18.2] | — |
+| **precision ceiling** | **43.8%** [33.4, 54.7] | **38.3%** [32.4, 44.6] | — |
+| median seconds per item | 4.5 | 4.0 | 4.4 |
+| total minutes | 11 | 30 | 4 |
 
 **floor** counts every abstention as a loss; **ceiling** counts every abstention as a
 win. The true precision lies between them for any resolution of the ambiguous items,
@@ -97,14 +99,14 @@ all here. Say that you did.
 ## Self-agreement, and why the two kinds of disagreement differ
 
 
-15 items were re-shown in a later batch, re-shuffled, at least a day apart.
+55 items were re-shown in a later batch, re-shuffled, at least a day apart.
 
 
-- identical answer: **12 / 15**
+- identical answer: **42 / 55**
 
-- **direction reversals** (agreed ↔ overruled): **0**
+- **direction reversals** (agreed ↔ overruled): **1**
 
-- moved across the abstain boundary: **3**
+- moved across the abstain boundary: **12**
 
 
 This distinction is the single most important thing to carry into any reanalysis.
@@ -132,6 +134,46 @@ Hebrew does to a careful reader.
 | b002-253 | boundary | in-text → both-fine | יספרו / ישפרו |
 | b002-256 | same | in-text → in-text | ואותו / באותו |
 | b002-315 | boundary | in-text → unclear | מולי / מבלי |
+| b003-001 | boundary | suggested → both-fine | חבר / כבר |
+| b003-002 | boundary | unclear → in-text | הבא / הוא |
+| b003-003 | same | in-text → in-text | אליי / עליי |
+| b003-004 | boundary | in-text → unclear | בג / וג |
+| b003-005 | boundary | unclear → in-text | לסוך / לסבך |
+| b003-006 | same | unclear → unclear | בג / וג |
+| b003-007 | same | in-text → in-text | באולם / בעולם |
+| b003-008 | boundary | unclear → both-fine | לסחרר / לשחרר |
+| b003-009 | same | both-fine → both-fine | הגור / הגבר |
+| b003-011 | same | in-text → in-text | חי / כי |
+| b003-012 | same | in-text → in-text | בלב / בלו |
+| b003-014 | boundary | in-text → unclear | הגיסה / הגישה |
+| b003-015 | same | in-text → in-text | אל / על |
+| b003-016 | **REVERSAL** | suggested → in-text | לטבוע / לתבוע |
+| b003-017 | same | in-text → in-text | אל / על |
+| b003-018 | boundary | unclear → suggested | וובי / בובי |
+| b003-019 | boundary | in-text → both-fine | שתף / שטף |
+| b003-020 | same | in-text → in-text | אל / על |
+| b003-021 | same | in-text → in-text | כה / קה |
+| b003-022 | same | in-text → in-text | בכאב / וכאב |
+| b003-023 | same | unclear → unclear | וקטע / בקטע |
+| b003-024 | same | in-text → in-text | החול / הכול |
+| b003-025 | same | in-text → in-text | ואנשים / באנשים |
+| b003-026 | same | in-text → in-text | ושנית / בשנית |
+| b003-027 | same | in-text → in-text | ועף / ואף |
+| b003-028 | same | in-text → in-text | אבד / עבד |
+| b003-029 | same | in-text → in-text | אל / על |
+| b003-031 | same | suggested → suggested | יעבד / יאבד |
+| b003-033 | same | in-text → in-text | השתן / השטן |
+| b003-035 | same | suggested → suggested | תצתרך / תצטרך |
+| b003-037 | same | in-text → in-text | עבד / עוד |
+| b003-038 | same | in-text → in-text | אל / על |
+| b003-039 | same | in-text → in-text | המסטר / המשטר |
+| b003-040 | same | in-text → in-text | ולרדוף / בלרדוף |
+| b003-041 | same | unclear → unclear | בט / בת |
+| b003-042 | boundary | both-fine → unclear | שאלי / שעלי |
+| b003-044 | same | in-text → in-text | וכוח / בכוח |
+| b003-046 | same | in-text → in-text | ועוד / בעוד |
+| b003-048 | same | in-text → in-text | חי / כי |
+| b003-050 | same | unclear → unclear | טא / תא |
 
 ## By confusion pair
 
@@ -225,7 +267,7 @@ reanalysis should filter on it — the `words` column and a lexicon check will f
 The same rows are in `LABEL_DATASET.tsv` beside this file, tab separated.
 
 
-## All 415 items
+## All 465 items
 
 The target word is wrapped in ⟦ ⟧. `answer` is what the labeller chose; the option
 numbers they saw were randomised per item and are not meaningful here.
@@ -648,3 +690,53 @@ numbers they saw were randomised per item and are not meaningful here.
 | b002-313 | real | adjacent | 22 | 4229 | unclear | unclear | ול | בל | לתלותמו הפי רעיש ⟦ול⟧ היה |
 | b002-314 | injected | known |  | 15704 | suggested | control-pass | אד | עד | ושלא יגלו את הגופה ⟦אד⟧ היום הבא |
 | b002-315 | repeat:batch-001 | adjacent | 22 | 7289 | unclear | unclear | מולי | מבלי | החברה שלו ⟦מולי⟧ חולה |
+| b003-001 | repeat:batch-001 | adjacent | 21 | 15198 | both-fine | both-fine | חבר | כבר | תעשה סיבוב ⟦חבר⟧ תעשה סיבוב |
+| b003-002 | repeat:batch-001 | adjacent | 45 | 10926 | in-text | overruled | הבא | הוא | כן היום זה יום ⟦הבא⟧ לעבודה קרוב משפחה רחוק |
+| b003-003 | repeat:batch-002 | adjacent | 26 | 2453 | in-text | overruled | אליי | עליי | אל תתקרבי ⟦אליי⟧ מפני שאני לא רוצה לפגוע בך |
+| b003-004 | repeat:batch-002 | adjacent | 39 | 5414 | unclear | unclear | בג | וג | אנחנו לא יכולות לבטוח ⟦בג⟧ ונתן |
+| b003-005 | repeat:batch-001 | adjacent | 38 | 10313 | in-text | overruled | לסוך | לסבך | באופן רגיל פועלות צינוריות הדמעות כדי ⟦לסוך⟧ את העין ולהגן עליה כשמתרגשים הן מגיבות באופן מוגזם ויוצרות דמעות |
+| b003-006 | repeat:batch-002 | adjacent | 24 | 4514 | unclear | unclear | בג | וג | תתקשר לאימי ⟦בג⟧ ולייט |
+| b003-007 | repeat:batch-002 | adjacent | 31 | 5835 | in-text | overruled | באולם | בעולם | האקוסטיקה שם דומה לאקוסטיקה ⟦באולם⟧ ו תראו מי הופיעה |
+| b003-008 | repeat:batch-002 | adjacent | 90 | 3644 | both-fine | both-fine | לסחרר | לשחרר | כדי ⟦לסחרר⟧ אותי כמוך |
+| b003-009 | repeat:batch-001 | adjacent | 67 | 3742 | both-fine | both-fine | הגור | הגבר | של מי ⟦הגור⟧ הזה |
+| b003-010 | clean | none |  | 10396 | in-text | control-pass | אני | עני | לא ⟦אני⟧ התכוונתי בלי הכסף |
+| b003-011 | repeat:batch-002 | adjacent | 106 | 5781 | in-text | overruled | חי | כי | הוא נשאר עד ⟦חי⟧ למרות הברבריות של התליינים |
+| b003-012 | repeat:batch-001 | adjacent | 25 | 1882 | in-text | overruled | בלב | בלו | לפחות נימוסי הרופא שלך משאירים תקווה ⟦בלב⟧ ג ק |
+| b003-013 | clean | none |  | 1897 | in-text | control-pass | חשבתי | כשבתי | אני מניחה שאף פעם לא ⟦חשבתי⟧ על זה ככה |
+| b003-014 | repeat:batch-002 | adjacent | 21 | 12134 | unclear | unclear | הגיסה | הגישה | זהו פולחן עבור זה משהו שכל אמא הגיסה שולחת לבת ⟦הגיסה⟧ שלה |
+| b003-015 | repeat:batch-002 | adjacent | 72 | 8092 | in-text | overruled | אל | על | האם היא היתה מחברת מחדש את החלק ⟦אל⟧ גופה הלטאתי |
+| b003-016 | repeat:batch-002 | adjacent | 34 | 2122 | in-text | overruled | לטבוע | לתבוע | גבר יכול ⟦לטבוע⟧ בעיניים האלו |
+| b003-017 | repeat:batch-002 | adjacent | 29 | 2834 | in-text | overruled | אל | על | לכן רק שירו שיר לשלום ⟦אל⟧ תלחשו תפילה מוטב תשירו שיר לשלום בצעקה גדולה |
+| b003-018 | repeat:batch-002 | adjacent | 65 | 6832 | suggested | agreed | וובי | בובי | ג וי לראות את ⟦וובי⟧ זה הרבה יותר כיף ממשהו שקרה ברכב של דוד שלי |
+| b003-019 | repeat:batch-002 | adjacent | 22 | 3719 | both-fine | both-fine | שתף | שטף | בהחלט ⟦שתף⟧ את כולנו |
+| b003-020 | repeat:batch-001 | adjacent | 22 | 2130 | in-text | overruled | אל | על | ולנסות ולהיות נחמד ⟦אל⟧ מלקולם |
+| b003-021 | repeat:batch-002 | adjacent | 30 | 5887 | in-text | overruled | כה | קה | יש ברשותי תדפיס סודי ביותר של פרטי המכירות של חנות ספרים ⟦כה⟧ חסרת חשיבות אך כה מלאה בצדקנות עד שמיד חשתי אליה |
+| b003-022 | repeat:batch-002 | adjacent | 23 | 2849 | in-text | overruled | בכאב | וכאב | האם התנסת אי פעם ⟦בכאב⟧ ראש מיידי |
+| b003-023 | repeat:batch-001 | adjacent | 21 | 4492 | unclear | unclear | וקטע | בקטע | אהבה ⟦וקטע⟧ עם כלב |
+| b003-024 | repeat:batch-002 | adjacent | 32 | 4935 | in-text | overruled | החול | הכול | כמה הריסות אפשר לראות אבל ⟦החול⟧ החם והמים הכחולים זה בשבילי אני לא רוצה לזרז אתכם |
+| b003-025 | repeat:batch-002 | adjacent | 21 | 6690 | in-text | overruled | ואנשים | באנשים | אני מסכים ⟦ואנשים⟧ צעירים ותמימים צריכים להודות על מזלם להיות אסירי תודה |
+| b003-026 | repeat:batch-001 | adjacent | 37 | 5580 | in-text | overruled | ושנית | בשנית | קודם כן זה פשע של זעם לא משיכה מינית ⟦ושנית⟧ את לא דוחה את מאוד יפה |
+| b003-027 | repeat:batch-002 | adjacent | 32 | 8174 | in-text | overruled | ועף | ואף | עוזב את הגלגל של ב ⟦ועף⟧ אל הגלגל של אופניים א קדימה ואחורה עד ששני זוגות האופניים מתנגשים |
+| b003-028 | repeat:batch-002 | adjacent | 57 | 22447 | in-text | overruled | אבד | עבד | לצערי הספר נאבד במאה ה לא ⟦אבד⟧ אלא נלקח |
+| b003-029 | repeat:batch-002 | adjacent | 26 | 2625 | in-text | overruled | אל | על | פקסס עותק של הצו ⟦אל⟧ הפקיד |
+| b003-030 | injected | known |  | 2865 | suggested | control-pass | אוהו | אוהב | אם אתה לא ⟦אוהו⟧ ספגטי וקציצת בשר צא החוצה |
+| b003-031 | repeat:batch-001 | adjacent | 63 | 4432 | suggested | agreed | יעבד | יאבד | אנדרו עבד עבורי במשך שנה אף אחד לא ⟦יעבד⟧ את מקום פרנסתו בטח שאין חשש בלבצע עידכונים כאלה |
+| b003-032 | injected | known |  | 1626 | suggested | control-pass | עת | את | יש לך ⟦עת⟧ המשקה שלי לא |
+| b003-033 | repeat:batch-002 | adjacent | 45 | 3254 | in-text | overruled | השתן | השטן | אל תחשבי שהוא שלך רק מכיוון שסימנת אותו עם ⟦השתן⟧ שלך |
+| b003-034 | clean | none |  | 4096 | in-text | control-pass | בני | וני | מה חשבת שהם יכולים לאלץ ⟦בני⟧ אדם להישאר כאן |
+| b003-035 | repeat:batch-002 | adjacent | 55 | 2407 | suggested | agreed | תצתרך | תצטרך | אתה ⟦תצתרך⟧ אנחנו נקח את זה מכאן |
+| b003-036 | injected | known |  | 4432 | suggested | control-pass | סלי | שלי | אם תשמור על הפה שלך אני אשמור על הסבלנות ⟦סלי⟧ ברור |
+| b003-037 | repeat:batch-001 | adjacent | 48 | 3652 | in-text | overruled | עבד | עוד | עכשיו לאחר שהוא טעם בשר אדם הכלב יהיה ⟦עבד⟧ לתאוות הבשר שלו |
+| b003-038 | repeat:batch-001 | adjacent | 35 | 3982 | in-text | overruled | אל | על | לא לא כדי להגיע לביתו של נד כדאי שתפנה ימינה ותחזור ⟦אל⟧ הגבעות |
+| b003-039 | repeat:batch-002 | adjacent | 38 | 2631 | in-text | overruled | המסטר | המשטר | זה בלתי נמנע שהתלמידים יתעלו על ⟦המסטר⟧ זה הגורל בני אנוש לא יכולים להתנגד לו |
+| b003-040 | repeat:batch-002 | adjacent | 22 | 5917 | in-text | overruled | ולרדוף | בלרדוף | אמא אני איש מאוד עסוק אין לי זמן לעזור לזה ⟦ולרדוף⟧ אחרי תביעות מגוכחות |
+| b003-041 | repeat:batch-002 | adjacent | 38 | 5459 | unclear | unclear | בט | בת | אז ⟦בט⟧ תשיר שני שירים |
+| b003-042 | repeat:batch-002 | adjacent | 26 | 5639 | unclear | unclear | שאלי | שעלי | טוב אתה יודע מה ⟦שאלי⟧ רוצה |
+| b003-043 | injected | known |  | 8529 | suggested | control-pass | הבא | הוא | ועכשיו עם החיים שאני תמיד רציתי בשבילו ⟦הבא⟧ עוזב את הבית |
+| b003-044 | repeat:batch-002 | adjacent | 29 | 4657 | in-text | overruled | וכוח | בכוח | וסיבולת ⟦וכוח⟧ כדי לנצח במאבק ארוך |
+| b003-045 | clean | none |  | 3351 | in-text | control-pass | את | עת | בואו נשמור ⟦את⟧ הידיים והזרועות שלנו לעצמנו בסדר |
+| b003-046 | repeat:batch-002 | adjacent | 25 | 3427 | in-text | overruled | ועוד | בעוד | אלף עכשיו ⟦ועוד⟧ אלף אחרי החתונה |
+| b003-047 | clean | none |  | 2408 | in-text | control-pass | כמו | חמו | להשאיר אותך בוערת ⟦כמו⟧ כלב מגורה |
+| b003-048 | repeat:batch-002 | adjacent | 44 | 2789 | in-text | overruled | חי | כי | אורניזם ⟦חי⟧ אולי משהו בסגנון מחשב מבוסס די אנ איי |
+| b003-049 | injected | known |  | 1927 | suggested | control-pass | כשף | כסף | שפך ⟦כשף⟧ כמו מים אבל במשחק המודרני |
+| b003-050 | repeat:batch-001 | adjacent | 39 | 3997 | unclear | unclear | טא | תא | מס התותח הראשי הוא בחוץ ואני השקנו כל ⟦טא⟧ אה |
