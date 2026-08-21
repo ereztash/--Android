@@ -996,3 +996,29 @@ noise does not explain the result.
 
 This is a strong signal against a feature that has been shipping since M11. It is not yet a
 confirmed one, and the difference matters enough to say twice.
+
+
+## A1 batch 002 — a second, larger sample says the same thing
+
+240 fresh firings, disjoint from batch 001, plus 15 repeats. Controls 57/60. Abstentions 25.0%.
+
+| | n | precision floor | precision ceiling |
+|---|---|---|---|
+| batch 001 | 80 | 10.0% [5.2, 18.5] | 43.8% [33.4, 54.7] |
+| batch 002 | 240 | **13.3% [9.6, 18.2]** | **38.3% [32.4, 44.6]** |
+
+The batch's formal verdict is **NOISE** — self-agreement 12/15 against a 90% bar — so no
+filtered precision figure is published from it. The bound is, per the rule that applies to
+every batch.
+
+**All three self-disagreements were abstain-boundary moves; direction reversals were 0 of 15,
+and the 8 repeats decided both times agreed 8/8.** The labeller is stable about which word
+belongs and unstable about whether the position is decidable — which is what the 25–34%
+abstention rate is already saying.
+
+The one lever batch 001 suggested — never propose a rarer word — **failed to replicate**: it
+removes 25% of firings and 8 of the 32 agreements, against a pre-registered ceiling of one.
+
+Two independent samples now bound this detector's precision below 44%, and no threshold,
+feature, or filter found so far moves it. Full record and the open proposal:
+`docs/LABELING_PROTOCOL.md`.

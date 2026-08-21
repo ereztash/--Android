@@ -188,6 +188,42 @@ def report(key_doc, answers, prior_answers=None):
         lines.append("=" * 72)
         return "NOT-MEASURED", "\n".join(lines)
 
+    if prior_answers:
+        same = tot = reversals = boundary = 0
+        decided_set = ("suggestion", "text")
+        for source_id, bucket in s["repeats"].items():
+            before = prior_answers.get(source_id)
+            if before is None:
+                continue
+            tot += 1
+            if before == bucket:
+                same += 1
+            elif before in decided_set and bucket in decided_set:
+                reversals += 1
+            else:
+                boundary += 1
+        if tot:
+            agree = same / tot
+            lines.append("")
+            lines.append(f"  self-agreement: {same} / {tot} = {100*agree:.1f}%  "
+                         f"(bar: >= {100*MIN_SELF_AGREEMENT:.0f}%)")
+            # Which KIND of disagreement, because they do not cost the same thing. A
+            # direction reversal (suggestion <-> text) moves the precision floor. A move
+            # across the abstain boundary does not: the floor counts agreements over the
+            # full denominator, and an item that becomes "unclear" was not an agreement
+            # either way. Reported so the verdict below can be read for what it is.
+            lines.append(f"    of which direction reversals: {reversals}, "
+                         f"abstain-boundary moves: {boundary}")
+            if agree < MIN_SELF_AGREEMENT:
+                lines.append("")
+                lines.append("  VERDICT: NOISE -- disagreement with oneself is large relative")
+                lines.append("           to the effect. No precision figure is published from")
+                lines.append("           this run. The bound above stands: it is stated in the")
+                lines.append("           protocol as reported on every batch, and its FLOOR")
+                lines.append("           moves only on a direction reversal.")
+                lines.append("=" * 72)
+                return "NOISE", "\n".join(lines)
+
     lo, hi = wilson(r["suggestion"], decided)
     lines.append("")
     lines.append(f"  PRECISION   : {r['suggestion']} / {decided} = "
@@ -200,26 +236,6 @@ def report(key_doc, answers, prior_answers=None):
         rate = f"{100*slot['suggestion']/d:.1f}%" if d else "n/a"
         lines.append(f"    {path:<12} {slot['suggestion']:>3} / {d:<3} = {rate:<7} "
                      f"({slot['abstain']} abstained)")
-
-    if prior_answers:
-        same = tot = 0
-        for source_id, bucket in s["repeats"].items():
-            before = prior_answers.get(source_id)
-            if before is None:
-                continue
-            tot += 1
-            same += 1 if before == bucket else 0
-        if tot:
-            agree = same / tot
-            lines.append("")
-            lines.append(f"  self-agreement: {same} / {tot} = {100*agree:.1f}%  "
-                         f"(bar: >= {100*MIN_SELF_AGREEMENT:.0f}%)")
-            if agree < MIN_SELF_AGREEMENT:
-                lines.append("")
-                lines.append("  VERDICT: NOISE -- disagreement with oneself is large relative")
-                lines.append("           to the effect. No figure is published from this run.")
-                lines.append("=" * 72)
-                return "NOISE", "\n".join(lines)
 
     band = ("SHIP AS IS" if lo >= DECIDE_GOOD
             else "TIGHTEN AND RE-MEASURE ON A FRESH BATCH" if lo >= DECIDE_POOR

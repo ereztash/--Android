@@ -334,3 +334,104 @@ Not to tune. There is nothing to tune to. It exists to test the two things batch
 
 240 real + 30 clean + 30 injected + 15 repeats = 315 screens, about 24 minutes at the pace
 batch 001 actually measured.
+
+---
+
+# Batch 002 — NOISE, a failed replication, and a bug in the scorer
+
+**315 screens, 30 minutes, median 4.0 s per item.** Controls **57 / 60** against a bar of 54 —
+passed comfortably, unlike batch 001 which scraped it. Abstentions **25.0%**, under the 30%
+bar this time.
+
+## Verdict: NOISE. No precision figure is published from this run.
+
+Self-agreement on the 15 repeats from batch 001 came in at **12 / 15 = 80%**, below the 90%
+bar. The rule says no precision figure, and there is none here.
+
+**The bar was flagged as underpowered before the batch was cut**, and it is: the 95% interval
+on 12/15 runs from roughly 55% to 93%, so "below 90%" is itself barely distinguishable from
+"above". That was written down in advance and it does not change the verdict. A bar that only
+binds when it is convenient is not a bar.
+
+## What the three disagreements actually were
+
+| before → after | count |
+|---|---|
+| **direction reversal** (agreed ↔ overruled) | **0** |
+| moved across the abstain boundary | 3 |
+| both-fine ↔ unclear | 0 |
+
+Among the 8 repeats decided both times, agreement was **8 / 8**.
+
+```
+unclear → text   שזה [הביט] עליהם כמחלה מדבקת בכמה גלקסיות     (offered: הבית)
+text → both      אתה יודע יום אחד [יספרו] את הסיפור            (offered: ישפרו)
+text → unclear   החברה שלו [מולי] חולה                          (offered: מבלי)
+```
+
+So the labeller was **perfectly stable about which word belongs** and unstable only about
+whether the position is decidable at all — which is what unpointed Hebrew does to a careful
+reader, and is the same instability the 25–34% abstention rate is already reporting.
+
+This matters for which statistic survives. The **floor** counts agreements over the full
+denominator, so it moves only on a direction reversal — of which there were none in 15
+repeats. The **filtered precision** excludes exactly the items whose classification is
+unstable, so it is the statistic the noise attacks. The rule suppressing the filtered figure
+and publishing the bound turns out to be suppressing the right one, for a reason nobody knew
+when it was written.
+
+**That is an observation, not a licence.** It is not grounds for publishing a figure from a
+NOISE run, and none is published.
+
+## The pre-registered filter test: FAILED to replicate
+
+Batch 001 found that a suggestion **rarer** than the typed word was never right — 0 of 12
+decided. The rule, fixed before batch 002 was cut: *adopt only if it removes at least 15% of
+firings while removing no more than one agreement.*
+
+| | batch 002 | required |
+|---|---|---|
+| firings removed | 60 of 240 = **25.0%** | ≥ 15% ✓ |
+| agreements lost | **8** | ≤ 1 ✗ |
+
+**Not adopted.** The batch-001 signal was 0 of 12 on a sample too small to carry it, and a
+fresh sample dissolved it. This is what pre-registration and a held-out batch are for, and it
+is the second time in this project that a promising lever failed on the slice it had not been
+chosen on.
+
+## The bound, from both batches
+
+Independent samples, disjoint items, same detector, same frame:
+
+| | n | floor | ceiling |
+|---|---|---|---|
+| batch 001 | 80 | 10.0% [5.2, 18.5] | 43.8% [33.4, 54.7] |
+| **batch 002** | **240** | **13.3% [9.6, 18.2]** | **38.3% [32.4, 44.6]** |
+
+Neither batch's ceiling reaches the 60% band at any confidence. They are not pooled: each
+failed a different bar, and pooling two batches that each failed to reach a verdict in order
+to manufacture one is the exact move this protocol exists to prevent.
+
+## A bug in the scorer, found by this batch
+
+The self-agreement gate ran **after** precision had already been printed, so a NOISE run
+leaked the figure the verdict exists to suppress — the same defect this project keeps finding
+in other clothes: a check placed where it cannot do its job. The gate now runs first, and the
+verdict text says which statistic survives and why.
+
+## What would settle it — proposed, not adopted
+
+The self-agreement rule as written compares the full four-way bucket, so an abstain-boundary
+move costs exactly as much as a direction reversal. For the floor, they are not remotely the
+same, and the data shows the two happen at very different rates.
+
+**Proposal for batch 003, requiring the operator's approval and a commit before any labels are
+collected:** measure the two separately, and let the direction bar govern whether the floor may
+be published, while the four-way bar continues to govern the filtered figure.
+
+If approved, the cheapest possible test of it is **40 repeats drawn from batches 001 and 002
+and nothing else — about 3 minutes** — which is enough to distinguish a direction-reversal rate
+near 0% from one near 10%. No fresh items are needed, because the question is about the
+labeller and not about the detector.
+
+**This proposal is recorded here and is not in force.** Batch 002's verdict stands at NOISE.

@@ -166,8 +166,10 @@ under Policy status in Play Console. See `docs/OPERATOR_NOTICES.md` NOTICE 1.
 - **A first human measurement now bounds that precision, and it is bad.** 80 positions where
   the detector actually fires, judged blind on held-out conversational text: agreed with 8,
   overruled 45, undecidable 27. Precision is bounded in **[10.0%, 43.8%]** and no margin
-  fixes it — agreements and disagreements carry the same evidence. One labeller, unrepeated,
-  n=80; the confirming batch is cut and not yet labelled. See `docs/LABELING_PROTOCOL.md`.
+  fixes it — agreements and disagreements carry the same evidence. **A second, larger sample
+  (n=240, disjoint) bounds it at [13.3%, 38.3%]** and the one candidate filter failed to
+  replicate. Both batches fell short of a formal verdict on different bars, and neither
+  ceiling reaches 60% at any confidence. See `docs/LABELING_PROTOCOL.md`.
   **This is an open question against a shipped feature, and it is the operator's to decide.**
 - **This keyboard never replaces anything by itself.** `shouldAutoReplace` exists and is
   measured; it is not called. Every change to the user's text is a tap. On the golden corpus
