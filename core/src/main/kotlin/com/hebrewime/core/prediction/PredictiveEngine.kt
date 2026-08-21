@@ -340,17 +340,47 @@ class PredictiveEngine(
         }
         val expanded = abbreviations.canonicalFor(bareLetters)
         if (expanded != null && expanded != word) {
+            // ### The bare form is very often a real word, and that changes who leads
+            //
+            // Measured on the shipped table: **506 of 861 bare forms — 58.8% — are themselves
+            // valid lexicon words.** `מס` is "tax" and abbreviates `מס׳`. `צהל` is a verb and
+            // abbreviates `צה״ל`. An earlier version gave every abbreviation `Double.MAX_VALUE`
+            // and put it first, so typing a real word offered its abbreviation ahead of the
+            // word's own completions. That is the feature hijacking ordinary typing, and it
+            // shipped because the table was built and never measured against the lexicon.
+            //
+            // So the abbreviation leads ONLY when the letters are not a word in their own
+            // right. When they are, it is still offered — the user may well have meant it —
+            // but behind what they actually typed.
+            // ### Whether the abbreviation may LEAD, and why this is not a tuned threshold
+            //
+            // A direct lexicon entry, not `corrections.isValid` — that accepts prefix-stripped
+            // forms, a much weaker claim that the user meant this word.
+            //
+            // Frequency was tried as a tie-breaker and **does not separate the cases**. Measured
+            // log-frequencies: `ככ` 46, `האום` 47, `וכו` 83, `מס` 115. `וכו׳` is obviously what
+            // someone typing `וכו` means, and `מס׳` is obviously not what someone typing `מס`
+            // means, and the bare forms sit the wrong way round for any threshold to separate
+            // them. What distinguishes them is whether the bare form is a live word in modern
+            // usage, which a 355,587-form inflected lexicon cannot say.
+            //
+            // So there is no rule here that gets both right, and one was not invented. The
+            // conservative side is taken: **an automatic suggestion never outranks a form the
+            // user literally typed**, which is the same stance as `shouldAutoReplace` never
+            // being called. The cost is that `ככ` offers `ככה` first and `כ״כ` second — one tap
+            // either way, and never a hijack.
+            val bareIsAWord = HebrewText.isHebrewWord(word) && lexicon.indexOf(word) >= 0
             val abbreviation = Prediction(
                 word = expanded,
                 wordIndex = ABBREVIATION_WORD_INDEX,
                 kind = SuggestionKind.ABBREVIATION,
-                score = Double.MAX_VALUE,
+                score = if (bareIsAWord) 0.0 else Double.MAX_VALUE,
                 replaces = word,
             )
             // Ordinary suggestions still follow: `ככ` is a real prefix of real words, and a
             // user typing one of those must not be forced through the abbreviation.
             val rest = if (HebrewText.isHebrewWord(word)) {
-                if (corrections.isValid(word)) completions(word, previousIndex)
+                if (bareIsAWord) completions(word, previousIndex)
                 else corrections.suggest(word).map {
                     Prediction(it.word, it.wordIndex, SuggestionKind.CORRECTION,
                         -it.cost.toDouble())
@@ -358,7 +388,15 @@ class PredictiveEngine(
             } else {
                 emptyList()
             }
-            return (listOf(abbreviation) + rest).distinctBy { it.word }.take(config.limit)
+            // Second, not last. Appending it left the abbreviation truncated away entirely by
+            // `take(limit)` once completions filled the strip -- demotion turned into deletion,
+            // and a user typing `מס` meaning `מס׳` was offered nothing at all.
+            val ordered = when {
+                !bareIsAWord -> listOf(abbreviation) + rest
+                rest.isEmpty() -> listOf(abbreviation)
+                else -> listOf(rest.first(), abbreviation) + rest.drop(1)
+            }
+            return ordered.distinctBy { it.word }.take(config.limit)
         }
 
         if (!HebrewText.isHebrewWord(word)) return emptyList()

@@ -592,3 +592,85 @@ the direction where the prior is wrong, and the shipped detector reaches its rec
 false-alarm rate the control cannot match at any margin above it. But the claim is now bounded,
 and `FrequencyPriorControlTest` fails if the context detector ever stops beating the prior —
 at which point the documentation would have to say the feature is a frequency table.
+
+
+---
+
+# D5 — auditing the remaining claims for missing controls
+
+D4 exposed a pattern: a number quoted without knowing what a trivial method would score. The
+operator asked whether the pattern recurred elsewhere. It did, twice, and one of the two was a
+claim this document made confidently.
+
+## The 98.6% ceiling was mostly the prior
+
+`docs/CONFUSION_MEASUREMENTS.md` reported DictaBERT recovering **98.6%** against this app's
+62.31%, and called the difference **33 points of headroom**. That framing drove D1.
+
+Run on the **identical 3,000 cases**, with a control that ignores the sentence entirely and
+always picks the commoner of the two candidates:
+
+| | overall (n=3,000) | blind positions only (n=1,253) |
+|---|---|---|
+| frequency prior alone | **85.7%** | **81.2%** |
+| DictaBERT | 98.6% | 97.8% |
+| **attributable to context** | **+12.8** | **+16.5** |
+
+**Most of 98.6% is the prior.** The injection replaces a word with a rarer variant, so on a
+forced binary choice "always pick the commoner one" is already right 85.7% of the time.
+
+And the "33 points of headroom" comparison was not like for like. DictaBERT there is making a
+**forced choice between two candidates**; `RealWordErrorDetector` must also decide **whether to
+speak at all**, under a false-alarm budget, with abstention as the usual answer. Comparing an
+operating point against a forced choice overstates the gap, and I did not notice because the
+number pointed the way I expected.
+
+The conclusion D1 rested on survives — a model that reads the sentence does better, and the
+blind positions are not all genuinely ambiguous — but **the size of the prize is much smaller
+than 33 points**, and D1's structural failure was the more important half of that finding
+anyway.
+
+### What this control suggests, and has not been done
+
+**81.2% of blind positions are resolvable by the prior alone.** The shipped detector declines to
+act on them entirely: its evidence is bigram counts, and where those are zero it abstains. A rule
+that fell back to the unigram prior *specifically at blind positions*, with its own margin, is
+suggested by this control and is **NOT MEASURED**. It is the obvious next experiment and it has
+not been run.
+
+## The abbreviation table had no precision control at all
+
+`HebrewAbbreviationsTest` checked that the table maps what it should and never asked how often it
+fires on a word the user meant. Measured for the first time:
+
+**506 of 861 bare forms — 58.8% — are themselves valid lexicon words.**
+
+`מס` means *tax* and abbreviates `מס׳`. `צהל` is a verb and abbreviates `צה״ל`. The shipped
+version gave every abbreviation `Double.MAX_VALUE` and placed it first, so **typing an ordinary
+word offered its abbreviation ahead of the word's own completions**. That shipped, and no test
+would have caught it.
+
+Fixed: an abbreviation leads only when the bare form is not a direct lexicon entry; otherwise it
+is offered in second place. `AbbreviationPrecisionTest` measures 0 hijacks across 291 colliding
+forms, with a positive control showing 355 of 355 non-word forms still lead.
+
+### The rule is a judgement, and says so
+
+Frequency was tried as a tie-breaker and **does not separate the cases**: `ככ` 46, `האום` 47,
+`וכו` 83, `מס` 115. `וכו׳` is obviously intended and `מס׳` obviously is not, and the bare forms
+sit the wrong way round for any threshold. What distinguishes them is whether the bare form is
+live in modern usage, which an inflected lexicon cannot say.
+
+So no threshold was invented. The conservative side is taken — an automatic suggestion never
+outranks a form the user literally typed — at the cost that `ככ` now offers `ככה` first and
+`כ״כ` second.
+
+## Claims checked and found already controlled
+
+- **Next-word and completion accuracy** — `aContextFreePredictorScoresMeasurablyWorse` is the
+  null arm, and the `bigramWeight = 0` row of every sweep is a frequency-only baseline.
+- **Adaptive learning +0.67** — measured against the static layer on the identical split.
+- **The conversational blend +12.73** — measured against the pre-blend table in the same run.
+- **Correction accuracy** — two control corpora, and the neutral-cost configuration is the
+  baseline every weight was chosen against.
+- **Every privacy gate** — each ships a planted defect demonstrated red in the same run.
