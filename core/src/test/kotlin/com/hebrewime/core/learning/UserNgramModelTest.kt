@@ -160,6 +160,30 @@ class UserNgramModelTest {
         assertEquals(1, reloaded.pairCount, "but it is still remembered as seen once")
     }
 
+    /**
+     * REGRESSION. Personal word frequency was added to the model before it was added to the
+     * codec, so it worked inside a session and reset on every process restart — the failure
+     * that looks to a user like "it stopped learning" and to a developer like nothing at all,
+     * because every in-memory test passes.
+     */
+    @Test
+    fun personalWordFrequencySurvivesTheRoundTrip() {
+        val m = UserNgramModel(minimumSessions = 2)
+        m.recordWord(42)
+        m.endSession()
+        m.recordWord(42)
+        m.recordWord(99)
+        assertTrue(m.unigramLogCountOf(42) > 0)
+
+        val back = UserNgramCodec.decode(UserNgramCodec.encode(m))
+        assertEquals(
+            m.unigramLogCountOf(42), back.unigramLogCountOf(42),
+            "personal word frequency did not survive being written and read back",
+        )
+        assertEquals(0, back.unigramLogCountOf(99), "a once-seen word stays ineligible on reload")
+        assertEquals(2, back.unigramCount, "but both words are still remembered as seen")
+    }
+
     @Test
     fun aTruncatedOrRewrittenBlobIsRefusedNotMisparsed() {
         val m = UserNgramModel(minimumSessions = 1)

@@ -78,6 +78,31 @@ class UserNgramModel(
     private val table = HashMap<Int, Successors>()
 
     /**
+     * How often the user has typed each word, independent of what surrounds it — L2 direction 1.
+     *
+     * The pair table only helps when the preceding word is known and the pair recurs. A person
+     * with a vocabulary of their own — a job, a hobby, a city they mention constantly — gets no
+     * benefit from that at all until the exact pair repeats. This is the cheaper signal: **you
+     * use this word a lot**, which sharpens completion ranking everywhere rather than only after
+     * a known predecessor.
+     *
+     * Same units, same eligibility discipline, same absence of text.
+     */
+    private val unigrams = HashMap<Int, Int>()
+    private val unigramSessions = HashMap<Int, Int>()
+    private val unigramCreditedThisSession = HashSet<Int>()
+
+    /**
+     * Per-bucket pair counts — L2 direction 2, the app-bias mechanism with the app removed.
+     *
+     * A bucket is an opaque small integer supplied by the caller. It is **never a package name
+     * and never anything derived from one**: keying learned counts by app would put a record on
+     * disk saying what the user writes in which app, which is more than this store has ever
+     * held. What ships, if this direction ships, is a number with no meaning outside the model.
+     */
+    private val buckets = HashMap<Long, Int>()
+
+    /**
      * Pairs already credited with a session in the current session, so a pair repeated inside
      * one field does not manufacture the separate sightings [minimumSessions] asks for.
      *
@@ -100,6 +125,57 @@ class UserNgramModel(
      * none: the safest way not to learn from a password field is for the call never to happen.
      * `GATE-LEARN-2` checks statically that the one call site is guarded.
      */
+    /**
+     * Record a word the user typed, for personal frequency. L2 direction 1.
+     *
+     * Separate from [record] because a word is worth counting even when its predecessor is
+     * unknown — at the start of a field, after a desync, or after any word this model dropped.
+     */
+    fun recordWord(word: Int) {
+        if (word < OOV) return
+        unigrams[word] = (unigrams[word] ?: 0) + 1
+        if (unigramCreditedThisSession.add(word)) {
+            unigramSessions[word] = (unigramSessions[word] ?: 0) + 1
+        }
+    }
+
+    /**
+     * Personal frequency of [word] in the same log units as everything else, or 0 when it is not
+     * yet eligible. Same session gate as pairs: a word typed once in one field is not evidence
+     * about how this person writes.
+     */
+    fun unigramLogCountOf(word: Int): Int {
+        if ((unigramSessions[word] ?: 0) < minimumSessions) return 0
+        return logScale(unigrams[word] ?: return 0)
+    }
+
+    /** Distinct words with any personal count, eligible or not. */
+    val unigramCount: Int get() = unigrams.size
+
+    /**
+     * Record a pair inside an opaque context bucket. L2 direction 2.
+     *
+     * @param bucket a small non-negative integer with no meaning outside this model.
+     * @param weight how much this observation counts. Above 1 for an observation the user
+     *   explicitly endorsed by tapping a suggestion — L2 direction 3.
+     */
+    fun record(first: Int, second: Int, bucket: Int, weight: Int = 1) {
+        if (bucket in 0..MAX_BUCKET && weight > 0) {
+            val key = bucketKey(first, second, bucket)
+            buckets[key] = (buckets[key] ?: 0) + weight
+        }
+        repeat(weight.coerceIn(1, MAX_WEIGHT)) { record(first, second) }
+    }
+
+    /** Evidence for a pair within [bucket] alone, in log units. */
+    fun bucketLogCountOf(first: Int, second: Int, bucket: Int): Int {
+        if (bucket !in 0..MAX_BUCKET) return 0
+        // Gated on the GLOBAL eligibility, so a bucket cannot become a way to surface a pair
+        // that the session rule has withheld.
+        if (logCountOf(first, second) == 0) return 0
+        return logScale(buckets[bucketKey(first, second, bucket)] ?: return 0)
+    }
+
     fun record(first: Int, second: Int) {
         if (first < OOV || second < OOV) return
         val successors = table.getOrPut(first) { Successors() }
@@ -122,6 +198,7 @@ class UserNgramModel(
      */
     fun endSession() {
         creditedThisSession.clear()
+        unigramCreditedThisSession.clear()
     }
 
     /**
@@ -194,6 +271,28 @@ class UserNgramModel(
         return out
     }
 
+    /**
+     * Every stored personal word count, for serialization. `(word, count, sessions)`, ids only.
+     *
+     * Without this the personal-frequency layer would work inside one session and reset on every
+     * process restart — which is exactly the failure that looks like "it stopped learning".
+     */
+    fun unigramEntries(): List<IntArray> {
+        val out = ArrayList<IntArray>(unigrams.size)
+        for ((word, count) in unigrams) {
+            out.add(intArrayOf(word, count, unigramSessions[word] ?: 0))
+        }
+        out.sortBy { it[0] }
+        return out
+    }
+
+    /** Restore one personal word count. Used by deserialize. */
+    fun restoreWord(word: Int, count: Int, sessions: Int) {
+        if (count <= 0 || word < OOV) return
+        unigrams[word] = count
+        unigramSessions[word] = sessions.coerceAtLeast(0)
+    }
+
     /** Restore one pair without touching session-credit bookkeeping. Used by deserialize. */
     fun restore(first: Int, second: Int, count: Int, sessions: Int) {
         if (count <= 0 || first < OOV || second < OOV) return
@@ -207,6 +306,10 @@ class UserNgramModel(
     fun clear() {
         table.clear()
         creditedThisSession.clear()
+        unigrams.clear()
+        unigramSessions.clear()
+        unigramCreditedThisSession.clear()
+        buckets.clear()
         pairCount = 0
     }
 
@@ -250,6 +353,15 @@ class UserNgramModel(
         fun logScale(count: Int): Int =
             Math.round(Math.log((count + 1).toDouble()) / Math.log(2.0) * 8).toInt()
                 .coerceIn(0, 255)
+
+        /** Buckets are a handful, because each one splits the evidence it conditions on. */
+        const val MAX_BUCKET: Int = 7
+
+        /** Cap on how much one endorsed observation may count for. */
+        const val MAX_WEIGHT: Int = 8
+
+        private fun bucketKey(first: Int, second: Int, bucket: Int): Long =
+            (pairKey(first, second) * 8L) + bucket
 
         private fun pairKey(first: Int, second: Int): Long =
             (first.toLong() shl 32) or (second.toLong() and 0xffffffffL)

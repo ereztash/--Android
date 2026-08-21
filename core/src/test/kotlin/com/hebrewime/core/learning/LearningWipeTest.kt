@@ -105,6 +105,8 @@ class LearningWipeTest {
         m.clear()
         assertEquals(0, m.pairCount)
         assertTrue(m.entries().isEmpty())
-        assertEquals(0, UserNgramCodec.encode(m).size - 5, "an empty model encodes to a header")
+        // version byte + pair count + word count. Both counts, since v2 carries personal word
+        // frequency as well as pairs.
+        assertEquals(9, UserNgramCodec.encode(m).size, "an empty model encodes to a bare header")
     }
 }

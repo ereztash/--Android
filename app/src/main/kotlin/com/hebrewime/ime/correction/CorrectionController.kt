@@ -318,6 +318,10 @@ class CorrectionController(
         val model = userModel
         scope.launch {
             model.record(idFor(ready, first), idFor(ready, second))
+            // Personal word frequency, which sharpens COMPLETIONS. Recorded for the completed
+            // word regardless of whether its predecessor was known, because a word is worth
+            // counting even when the pair is not -- at the start of a field, or after a desync.
+            model.recordWord(idFor(ready, second))
             userStore.scheduleSave(model)
         }
     }

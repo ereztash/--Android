@@ -392,6 +392,26 @@ class PredictiveEngine(
         return out
     }
 
+    /**
+     * ### Personal word frequency belongs to completions and NOWHERE else
+     *
+     * How often this user types a word is a **context-free** signal. Added to completion
+     * ranking — "which of the words starting with these two letters did they mean" — it is
+     * exactly the right evidence, and measured on the held-out slice it is worth **+1.98 top-1
+     * and +2.59 top-3**, roughly three times the entire pair-learning layer.
+     *
+     * Added to **next-word** ranking it is worth **−1.62 top-1**. There the question already
+     * has a context — which word follows *this* one — and a context-free score promotes words
+     * the person uses a lot whether or not they belong after the preceding word, drowning the
+     * pair evidence that makes the prediction worth anything.
+     *
+     * Both numbers come from the same run of `LearningDirectionsTest`. The first measurement
+     * scored it on next-word only and reported a loss; the idea was fine and the measurement
+     * was in the wrong place.
+     *
+     * It is therefore applied in [completions] and deliberately absent from here. That is not a
+     * detail to remember — it is why the two functions score differently at all.
+     */
     private fun nextWord(previousIndex: Int?): List<Prediction> {
         if (previousIndex == null) return emptyList()
         // Take more static candidates than will be shown, so the learned layer can reorder
@@ -450,11 +470,15 @@ class PredictiveEngine(
                 val learned =
                     if (previousIndex == null || config.userWeight == 0.0) 0.0
                     else userContribution(userModel.logCountOf(previousIndex, index))
+                // Personal word frequency, and ONLY here. See [personalFrequency].
+                val personal =
+                    if (config.userWeight == 0.0) 0.0
+                    else userContribution(userModel.unigramLogCountOf(index))
                 Prediction(
                     lexicon.wordAt(index),
                     index,
                     SuggestionKind.COMPLETION,
-                    unigram + config.bigramWeight * bigram + learned,
+                    unigram + config.bigramWeight * bigram + learned + personal,
                 )
             }
             .sortedByDescending { it.score }

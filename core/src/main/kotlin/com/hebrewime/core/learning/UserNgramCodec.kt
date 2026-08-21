@@ -30,11 +30,20 @@ package com.hebrewime.core.learning
  */
 object UserNgramCodec {
 
-    const val VERSION: Byte = 1
+    /**
+     * 2 — pairs **and** personal word counts.
+     *
+     * Version 1 stored pairs only. When personal frequency was added it worked inside a session
+     * and reset on every restart, because nothing wrote it down. A v1 blob is rejected outright
+     * rather than read as a v2 with a truncated tail.
+     */
+    const val VERSION: Byte = 2
     const val BYTES_PER_PAIR = 16
 
     /** Why a blob was refused. Enumerated, not free text — see [CorruptedException]. */
     enum class Reason { VERSION, TRUNCATED_HEADER, NEGATIVE_COUNT, LENGTH_MISMATCH }
+
+    const val BYTES_PER_WORD = 12
 
     /**
      * A refusal, carrying a [Reason] and two integers rather than a formatted message.
@@ -57,7 +66,10 @@ object UserNgramCodec {
 
     fun encode(model: UserNgramModel): ByteArray {
         val entries = model.entries()
-        val out = ByteArray(1 + 4 + entries.size * BYTES_PER_PAIR)
+        val words = model.unigramEntries()
+        val out = ByteArray(
+            1 + 4 + entries.size * BYTES_PER_PAIR + 4 + words.size * BYTES_PER_WORD
+        )
         var p = 0
         out[p++] = VERSION
         p = writeInt(out, p, entries.size)
@@ -66,6 +78,12 @@ object UserNgramCodec {
             p = writeInt(out, p, e[1])
             p = writeInt(out, p, e[2])
             p = writeInt(out, p, e[3])
+        }
+        p = writeInt(out, p, words.size)
+        for (e in words) {
+            p = writeInt(out, p, e[0])
+            p = writeInt(out, p, e[1])
+            p = writeInt(out, p, e[2])
         }
         return out
     }
@@ -83,10 +101,11 @@ object UserNgramCodec {
         if (bytes.size < 5) throw CorruptedException(Reason.TRUNCATED_HEADER, bytes.size, 5)
         val count = readInt(bytes, 1)
         if (count < 0) throw CorruptedException(Reason.NEGATIVE_COUNT, count, 0)
-        val expected = 1 + 4 + count.toLong() * BYTES_PER_PAIR
-        if (bytes.size.toLong() != expected) {
+        val pairsEnd = 1L + 4 + count.toLong() * BYTES_PER_PAIR
+        if (bytes.size.toLong() < pairsEnd + 4) {
             throw CorruptedException(
-                Reason.LENGTH_MISMATCH, bytes.size, expected.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
+                Reason.LENGTH_MISMATCH, bytes.size,
+                (pairsEnd + 4).coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
             )
         }
         var p = 5
@@ -97,6 +116,21 @@ object UserNgramCodec {
             val sessions = readInt(bytes, p + 12)
             p += BYTES_PER_PAIR
             model.restore(first, second, occurrences, sessions)
+        }
+
+        val wordCount = readInt(bytes, p)
+        p += 4
+        if (wordCount < 0) throw CorruptedException(Reason.NEGATIVE_COUNT, wordCount, 0)
+        val expected = pairsEnd + 4 + wordCount.toLong() * BYTES_PER_WORD
+        if (bytes.size.toLong() != expected) {
+            throw CorruptedException(
+                Reason.LENGTH_MISMATCH, bytes.size,
+                expected.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
+            )
+        }
+        repeat(wordCount) {
+            model.restoreWord(readInt(bytes, p), readInt(bytes, p + 4), readInt(bytes, p + 8))
+            p += BYTES_PER_WORD
         }
         return model
     }

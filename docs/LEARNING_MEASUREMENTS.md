@@ -245,3 +245,67 @@ the product one.
 That substitution is also what would ship. Storing learned counts keyed by package name puts a
 record on disk saying *what you write in which app*. `ImeDiagnostics` already refuses to record
 package names for weaker reasons than this.
+
+
+## L2 RESULTS
+
+Measured on `learning_test`, 120 pseudo-users, 40 sentences of history, n=58,343 next-word
+positions and n=45,031 completion positions.
+
+| direction | result | verdict |
+|---|---|---|
+| **D1 personal word frequency** | **+1.98 top-1, +2.59 top-3** on completions | **SHIPS** |
+| D2 context bucket | +0.146 top-1, +0.161 top-3 | measured, not shipped |
+| D3 endorsed pairs weigh more | +0.017 top-1, +0.000 top-3 | fails |
+| D4 out-of-lexicon words keyed individually | ceiling ≈ 0 | refusal costs nothing |
+
+### D1 — and the measurement that was in the wrong place
+
+The first run scored personal word frequency on **next-word** prediction, where it lost **1.62
+points**, and that nearly ended it. The idea was fine; the measurement was in the wrong place.
+
+Personal frequency is **context-free**. Added to next-word ranking — a question that already has
+a context — it promotes words the person uses often whether or not they belong after the
+preceding word, drowning the pair evidence that makes the prediction worth anything. Added to
+**completion** ranking, where the question is "which of the words starting with these letters did
+they mean", it is exactly the right evidence:
+
+| 2-letter prefix, n=45,031 | top-1 | top-3 |
+|---|---|---|
+| lexicon frequency only | 3.66% | 9.75% |
+| + personal word frequency | **5.64%** | **12.34%** |
+| delta | **+1.98** | **+2.59** |
+
+**Three times the entire pair-learning layer**, which is worth +0.67. It ships in `completions`
+and is deliberately absent from `nextWord`, and both numbers are in the KDoc so that the absence
+reads as a decision rather than an oversight.
+
+A bug found on the way: personal counts were added to the model before the codec, so they worked
+inside one session and reset on every restart — invisible to every in-memory test.
+`personalWordFrequencySurvivesTheRoundTrip` is the regression, and the format is now v2.
+
+### D2 — real, and not worth it
+
++0.146 points is about 85 additional correct first suggestions in 58,343. It is above noise and
+it is not worth a second storage table, a second eligibility interaction, and a mechanism whose
+natural next step is keying by application. **Measured, reported, not shipped.**
+
+### D3 — fails
+
++0.017 points. Weighting endorsed observations more heavily does approximately nothing here,
+and the simulated endorsement (a pair the corpus strongly attests standing in for one the user
+tapped) is a weak proxy for a real tap. The honest reading is that this was **not really
+tested**, and the number is too small to justify testing it properly.
+
+### D4 — the privacy refusal is nearly free, and now has a price tag
+
+The shipped model collapses every out-of-lexicon word to one sentinel, so it can never learn a
+name. Measured in the pseudo-users' histories: **3,133 out-of-lexicon occurrences across 2,519
+distinct forms — a mean of 1.24 occurrences each.**
+
+They almost never repeat. With the two-session eligibility rule they would be withheld anyway,
+so storing their text would buy close to nothing while creating exactly the record the design
+refuses to create.
+
+**That is the number this direction was for.** It does not reopen the decision; it prices it,
+and the price is approximately zero.
