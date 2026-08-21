@@ -151,18 +151,6 @@ def _gates(strict: bool) -> list[dict]:
             "requires": [debug_apk],
         },
         {
-            # A second control on the same detector, because a table-driven check that covers
-            # two artifacts has been shown red on only one of them. The first table's control
-            # says nothing about whether the loop reaches the second.
-            "id": "GATE-BIGRAM-2",
-            "what": "the distance-2 table INSIDE the apk is the one S1+P1 was measured on",
-            "real": [PY, apk, "--apk", debug_apk, "--json"] + s,
-            "control": [PY, apk, "--apk", debug_apk, "--inject-defect", "skipgram_content",
-                        "--json"],
-            "control_desc": "one byte appended to the packaged distance-2 table",
-            "requires": [debug_apk],
-        },
-        {
             "id": "GATE-NET-3",
             "what": "the RELEASE artifact -- the one that ships -- has no network capability",
             "real": [PY, apk, "--apk", release_apk, "--baseline", release_baseline,

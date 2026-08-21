@@ -198,29 +198,40 @@ class WideContextVerdictTest {
         )
     }
 
-    /** The shipped defaults are the operating point that was chosen, not something near it. */
+    /**
+     * S1 is withdrawn; P1 is not.
+     *
+     * The distance-2 margin is back to 0, which is off. The prior fallback keeps the operating
+     * point this file measured. Withdrawing one of a pair that was measured jointly is only
+     * legitimate because the joint measurement reported their marginal contributions
+     * separately — S1's was +0.11 recall points, against 387,300 bytes.
+     */
     @Test
-    fun theShippedDefaultsAreTheChosenOperatingPoint() {
-        assertEquals(SKIP_MARGIN, RealWordErrorDetector.DEFAULT_SKIP_MARGIN)
+    fun theDistance2LayerIsWithdrawnAndThePriorIsNot() {
+        assertEquals(0, RealWordErrorDetector.DEFAULT_SKIP_MARGIN)
         assertEquals(PRIOR_MARGIN, RealWordErrorDetector.DEFAULT_PRIOR_MARGIN)
     }
 
     /**
-     * The layers are wired into production, which is what the operator decided.
+     * The app matches the docs: the prior fallback is wired, the distance-2 table is gone.
      *
-     * This is the inverse of the assertion that stood here while the verdict was FAILED, and it
-     * guards the same thing from the other side: that the state of the app matches the state
-     * written in the docs. A layer measured and then not wired is the failure this catches.
+     * This assertion has now pointed in both directions — it asserted the layer was NOT wired
+     * while its verdict stood at FAILED, then that it WAS after the operator shipped it, and
+     * now that it is not again. That is the point of it. It does not encode an opinion about
+     * the layer, only that the artifact and the documentation say the same thing.
      */
     @Test
-    fun bothLayersAreWiredIntoProduction() {
+    fun theAppMatchesWhatTheDocsSayShips() {
         fun source(path: String): String {
             val f = File(path)
             return if (f.exists()) f.readText() else File("../$path").readText()
         }
         val controller =
             source("app/src/main/kotlin/com/hebrewime/ime/correction/CorrectionController.kt")
-        assertTrue("he_skipgrams" in controller, "the distance-2 table is not loaded")
+        assertTrue(
+            "he_skipgrams" !in controller,
+            "the distance-2 table is still loaded in production after being withdrawn",
+        )
         assertTrue(
             "frequency" in controller.substringAfter("RealWordErrorDetector("),
             "the detector is built without frequencies, so the prior fallback cannot fire",
@@ -229,7 +240,7 @@ class WideContextVerdictTest {
             source("core/src/main/kotlin/com/hebrewime/core/prediction/PredictiveEngine.kt")
         assertTrue(
             "checkWide" in engine,
-            "the engine still calls check(), so neither layer can ever run in the app",
+            "the engine calls check(), so the prior fallback can never run in the app",
         )
     }
 

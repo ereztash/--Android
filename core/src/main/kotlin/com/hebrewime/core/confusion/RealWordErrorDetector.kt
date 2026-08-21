@@ -315,17 +315,18 @@ class RealWordErrorDetector(
 
     companion object {
         /**
-         * The shipped distance-2 margin, chosen on `confusion_dev` jointly with
-         * [DEFAULT_PRIOR_MARGIN] and reported on `confusion_test` and the conversational slice.
+         * **0 — the distance-2 layer is WITHDRAWN.**
          *
-         * Not the table's floor. `build_skipgrams.py` prunes at a count of 12, so
-         * `round(log2(12 + 1) * 8)` = 30 is the lowest a stored pair can carry, and 30 would
-         * state the rule "the corpus has seen this pair at all". 80 is far above it: distance-2
-         * evidence is weaker than adjacent evidence and buying recall with it costs false alarms
-         * quickly. 80 is the lowest margin in the joint sweep at which the false-alarm rate is
-         * **unchanged** from the adjacent-only baseline to four decimal places.
+         * It shipped at 80 for one commit. Measured against human judgement on 320 authentic
+         * firings it added 0.11 recall points over the prior fallback alone, cost 387,300 bytes
+         * in the release APK, and spoke **twice in 1.8 million words** of clean conversational
+         * text. `docs/LABELING_LOG.md` has the numbers.
+         *
+         * The code and the sweep stay so the result is reproducible; the table moved to
+         * `lexicon/experimental/` and is not packaged. 80 remains the operating point if it is
+         * ever re-enabled — it was chosen on `confusion_dev` and is not what failed.
          */
-        const val DEFAULT_SKIP_MARGIN: Int = 80
+        const val DEFAULT_SKIP_MARGIN: Int = 0
 
         /**
          * The shipped blind-position prior margin, chosen on `confusion_dev` jointly with

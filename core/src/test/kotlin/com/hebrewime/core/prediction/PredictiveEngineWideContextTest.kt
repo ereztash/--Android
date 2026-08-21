@@ -50,8 +50,14 @@ class PredictiveEngineWideContextTest {
         return PredictiveEngine(
             lexicon, trie, frequency, bigrams,
             CorrectionEngine(lexicon, trie, frequency, NeutralCostModel, CorrectionEngine.Config()),
+            // skipMargin is passed EXPLICITLY. The shipped default is now 0, which is off:
+            // S1 is withdrawn. Handing the constructor a table is no longer enough to turn the
+            // layer on, and that is the withdrawal working rather than a test to fix.
             realWordErrors = RealWordErrorDetector(
                 lexicon, bigrams, skipgrams, if (prior) frequency else null,
+                RealWordErrorDetector.Config(
+                    skipMargin = if (skip) 80 else 0,
+                ),
             ),
         )
     }
@@ -65,8 +71,14 @@ class PredictiveEngineWideContextTest {
     /** `למערכת החוקים [נעמר] שהתאוריה` — no counts anywhere; decided by the prior. */
     private fun priorCase() = context("שהתאוריה", "נעמר", "החוקים", "למערכת")
 
+    /**
+     * Kept, and no longer a statement about production: S1 is withdrawn and
+     * `CorrectionController` passes no skip table. This asserts the CODE PATH still works when
+     * a table is handed to it, so the sweep and verdict stay reproducible and re-enabling is a
+     * constant rather than a rebuild.
+     */
     @Test
-    fun theDistance2LayerReachesTheStrip() {
+    fun theDistance2LayerReachesTheStripWhenItIsGivenATable() {
         val f = assertNotNull(
             flagged(engine(skip = true, prior = false), skipCase()),
             "the distance-2 layer produced nothing at a position the sweep says it catches",
@@ -79,9 +91,10 @@ class PredictiveEngineWideContextTest {
     /**
      * The fourth completed word is load-bearing, not decoration.
      *
-     * `HebrewImeService.CONTEXT_WORDS` went from 3 to 4 for this. If it ever goes back, the
-     * distance-2 table stays in the APK, keeps passing every artifact gate, and silently stops
-     * contributing anything — which is precisely the failure mode this project keeps finding.
+     * `CONTEXT_WORDS` went 3 → 4 for this and back to 3 when the layer was withdrawn, so in
+     * production the fourth word is now absent by design. The test still pins the dependency,
+     * because the pair "table in the APK, context not supplied" is exactly the silent-nothing
+     * failure this project keeps finding, and re-enabling S1 means restoring both.
      */
     @Test
     fun withoutTheFourthCompletedWordTheDistance2LayerCannotFire() {

@@ -48,7 +48,6 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BASELINE = os.path.join(ROOT, "tools", "apk_dex_baseline.json")
 LEXICON_MANIFEST = os.path.join(ROOT, "lexicon", "MANIFEST.json")
 BIGRAM_MANIFEST = os.path.join(ROOT, "lexicon", "BIGRAM_MANIFEST.json")
-SKIPGRAM_MANIFEST = os.path.join(ROOT, "lexicon", "SKIPGRAM_MANIFEST.json")
 
 NETWORK_PERMISSIONS = {
     "android.permission.INTERNET",
@@ -191,7 +190,7 @@ def check_lexicon_asset(apk: str, inject: str | None) -> Detector:
     # runtime crash on first suggestion rather than a build error.
     expected_names = {
         "assets/he_lexicon.txt", "assets/he_freq.bin", "assets/he_bigrams.bin",
-        "assets/he_abbreviations.txt", "assets/he_skipgrams.bin",
+        "assets/he_abbreviations.txt",
     }
     if inject == "asset_name":
         # PLANTED DEFECT: pretend the code expects a name AGP does not produce, which is what
@@ -245,11 +244,6 @@ COUNT_TABLES = [
      "CorrectionController opens assets/he_bigrams.bin by that exact name and degrades to "
      "BigramModel.EMPTY when it is absent, so the app would run and quietly score prefix-1 "
      "top-3 2.15% instead of 5.73% with nothing at runtime reporting a problem"),
-    ("he_skipgrams", SKIPGRAM_MANIFEST, "lexicon/SKIPGRAM_MANIFEST.json", "skipgram_content",
-     "CorrectionController opens assets/he_skipgrams.bin by that exact name and degrades to "
-     "BigramModel.EMPTY when it is absent, which silently returns the real-word-error "
-     "detector to the adjacent-only behaviour it had before S1+P1 -- 0.16 points of recall "
-     "with nothing at runtime reporting a problem"),
 ]
 
 
@@ -383,7 +377,7 @@ def main() -> int:
     ap.add_argument("--strict", action="store_true")
     ap.add_argument("--inject-defect",
                     choices=["permission", "dex", "service", "lexicon", "asset_name",
-                             "bigram_content", "skipgram_content"],
+                             "bigram_content"],
                     help="PLANT A DEFECT. Positive control; every value must go red.")
     args = ap.parse_args()
 

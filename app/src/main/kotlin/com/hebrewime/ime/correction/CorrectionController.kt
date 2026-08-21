@@ -102,7 +102,6 @@ class CorrectionController(
         val trie: LexiconTrie,
         val frequency: HebrewFrequency,
         val bigrams: BigramModel,
-        val skipgrams: BigramModel,
         val abbreviations: HebrewAbbreviations,
     )
 
@@ -166,17 +165,6 @@ class CorrectionController(
                     degraded.add(BIGRAM_ASSET)
                     BigramModel.EMPTY
                 }
-                // Distance-2 co-occurrence, read by the real-word-error detector where the
-                // adjacent window is blind. Same format, same reader, same degradation rule:
-                // BigramModel.EMPTY turns the layer off and the keyboard still starts.
-                val skipgrams = try {
-                    context.assets.open(SKIPGRAM_ASSET).use { BigramModel.load(it) }
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (unreadable: Throwable) {
-                    degraded.add(SKIPGRAM_ASSET)
-                    BigramModel.EMPTY
-                }
                 // Same treatment as the bigram table: worth having, not worth losing the
                 // keyboard over. GATE-ASSET-1 is what keeps this a diagnostic rather than a
                 // way for a packaging mistake to reach a user unnoticed.
@@ -192,9 +180,7 @@ class CorrectionController(
                 personal = readPersonalDictionary()
                 learningEnabled = LearningPreferences.isEnabled(context)
                 userModel = if (learningEnabled) readUserModel() else UserNgramModel.empty()
-                artifacts = Artifacts(
-                    lexicon, trie, frequency, bigrams, skipgrams, abbreviations,
-                )
+                artifacts = Artifacts(lexicon, trie, frequency, bigrams, abbreviations)
                 engine = build(artifacts!!, personal, userModel)
                 loaded = Loaded(
                     lexiconWords = lexicon.size,
@@ -431,12 +417,13 @@ class CorrectionController(
         // lexicon on demand, so the adjacent path still costs no asset bytes. Both thresholds
         // come from a dev slice that shares no sentence with the slice they were measured on.
         //
-        // The skip table and the frequency table are what let it speak at BLIND positions --
-        // those where the adjacent window has evidence for neither candidate. Handing it
-        // BigramModel.EMPTY and a null frequency reduces it exactly to the adjacent detector
-        // that shipped before, which is what a missing asset does.
+        // The frequency table is what lets it speak at BLIND positions -- those where the
+        // adjacent window has evidence for neither candidate. The distance-2 table that used
+        // to sit in the third slot is WITHDRAWN: measured against human judgement it earned
+        // 0.11 recall points for 387,300 bytes, and spoke twice in 1.8 million words of clean
+        // text. BigramModel.EMPTY is its default and Config.skipMargin is 0, which is off.
         realWordErrors = RealWordErrorDetector(
-            a.lexicon, a.bigrams, a.skipgrams, a.frequency,
+            a.lexicon, a.bigrams, frequency = a.frequency,
         ),
         personal = personal,
         // Empty unless the user opted in, and an empty model is arithmetically identical to no
@@ -471,7 +458,6 @@ class CorrectionController(
         const val FREQUENCY_ASSET = "he_freq.bin"
         const val BIGRAM_ASSET = "he_bigrams.bin"
         const val ABBREVIATION_ASSET = "he_abbreviations.txt"
-        const val SKIPGRAM_ASSET = "he_skipgrams.bin"
 
         /**
          * Trace section names, matched by the M7 macrobenchmark.

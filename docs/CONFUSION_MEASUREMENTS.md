@@ -1021,3 +1021,26 @@ removes 25% of firings and 8 of the 32 agreements, against a pre-registered ceil
 
 Two independent samples now bound this detector's precision below 44%, and no threshold,
 feature, or filter found so far moves it. Full record: `docs/LABELING_LOG.md`; the rules it was collected under, `docs/LABELING_PROTOCOL.md`.
+
+
+## S1 WITHDRAWN
+
+Shipped for one commit on the operator's decision, then measured against human judgement and
+taken out again. In the shape the app runs it earned **+0.11 recall points** over the prior
+fallback alone, spoke **twice in 1,815,379 words** of clean conversational text, and cost
+**387,300 bytes** in the release APK.
+
+`DEFAULT_SKIP_MARGIN` is 0. `CorrectionController` loads no skip table. The asset moved to
+`lexicon/experimental/`, out of the directory AGP packages. The sweep, the verdict and the
+engine path all stay, so the result is reproducible and re-enabling is a constant rather than
+a rebuild — 80 was chosen on `confusion_dev` and is not what failed.
+
+**P1 stays.** It costs zero bytes, and the joint measurement reported the two layers' marginal
+contributions separately, which is the only reason one of a pair measured together can be
+withdrawn without re-measuring the other.
+
+| | before | after |
+|---|---|---|
+| release APK | 5,457,116 | **5,069,695** |
+| assets in artifact | 3,250,074 | **2,862,144** |
+| assets headroom | 349,926 | **737,856** |

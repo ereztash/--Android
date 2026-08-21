@@ -42,15 +42,16 @@ reports today rather than what M10 recorded:
 
 | | bytes |
 |---|---|
-| release APK, now | 5,457,116 of 6,500,000 |
-| assets in the artifact | 3,250,074 of 3,600,000 |
-| of which the bigram table (R1's 25% blend) | 1,682,421 |
-| of which the distance-2 table (S1) | 387,300 |
-| budget headroom left for assets | 349,926 |
+| release APK, now | **5,069,695** of 6,500,000 |
+| assets in the artifact | **2,862,144** of 3,600,000 |
+| of which the bigram table (R1's 25% blend) | 1,682,421 — **59% of all assets** |
+| of which the distance-2 table (S1) | **0 — withdrawn** |
+| budget headroom left for assets | **737,856** |
 
-The distance-2 table took 52% of the headroom that existed before it, for +0.11 points of
-real-word-error recall. That trade is argued — and argued against — in
-[`CONFUSION_MEASUREMENTS.md`](CONFUSION_MEASUREMENTS.md).
+The distance-2 table took 52% of the headroom for +0.11 points of real-word-error recall, and
+has been withdrawn; the headroom came back. What remains is that **the bigram table is 59% of
+all shipped assets**, which is what makes how those bytes are allocated inside it the question
+worth asking.
 
 ---
 

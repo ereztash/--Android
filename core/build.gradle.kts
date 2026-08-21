@@ -35,7 +35,7 @@ tasks.register<JavaExec>("harvestLabelCandidates") {
         "lexicon.file" to "lexicon/assets/he_lexicon.txt.gz",
         "frequency.file" to "lexicon/assets/he_freq.bin.gz",
         "bigram.file" to "lexicon/assets/he_bigrams.bin.gz",
-        "skipgram.file" to "lexicon/assets/he_skipgrams.bin.gz",
+        "skipgram.file" to "lexicon/experimental/he_skipgrams.bin.gz",
         "subtitle.heldout.file" to "lexicon/cache/subtitle-corpus-heldout.txt.gz",
     )) systemProperty(key, rootProject.file(file).absolutePath)
     maxHeapSize = "3g"
@@ -57,7 +57,9 @@ tasks.withType<Test>().configureEach {
     systemProperty("frequency.file", rootProject.file("lexicon/assets/he_freq.bin.gz").absolutePath)
     systemProperty("golden.dir", rootProject.file("lexicon/golden").absolutePath)
     systemProperty("bigram.file", rootProject.file("lexicon/assets/he_bigrams.bin.gz").absolutePath)
-    systemProperty("skipgram.file", rootProject.file("lexicon/assets/he_skipgrams.bin.gz").absolutePath)
+    // WITHDRAWN from the APK; kept out of lexicon/assets so it can never be packaged,
+    // and kept on disk so the S1 sweep and verdict stay reproducible.
+    systemProperty("skipgram.file", rootProject.file("lexicon/experimental/he_skipgrams.bin.gz").absolutePath)
     systemProperty("abbreviation.file", rootProject.file("lexicon/assets/he_abbreviations.txt.gz").absolutePath)
     // The pre-blend table, kept OUT of lexicon/assets so it is never packaged. It exists only
     // so the register change can be measured as a before/after in one run rather than asserted.
