@@ -264,3 +264,31 @@ python3 scripts/slice_eval_corpus.py        # re-cuts the committed slice from i
 ./gradlew :core:test --tests '*OrderingSweepTest*' -PrunWeightSweep=1
 python3 scripts/check_size.py
 ```
+
+
+---
+
+## Re-run against the shipped table, and one number that was in the wrong document
+
+Re-measured with `PredictionMeasurementTest` on the shipped artefacts:
+
+| bigramWeight | next-word top-1 | next-word top-3 | offered |
+|---|---|---|---|
+| 0.0 – 4.0 | 5.12% | **9.09%** | 86.64% |
+
+| | prefix 1 | prefix 2 | prefix 3 |
+|---|---|---|---|
+| weight 0.0 (no context) | 2.15% | 15.80% | 38.27% |
+| **weight 2.0 (shipped)** | **5.43%** | **24.92%** | **47.98%** |
+
+**`README.md` published 16.33% as the next-word figure. That number is real but belongs to a
+different measurement**: it is `docs/LEARNING_MEASUREMENTS.md`'s next-word top-3 **with
+adaptive learning switched on**, on the learning slice, n=58,343. Adaptive learning is off by
+default and the README says so four rows above the table it appeared in. Corrected to 9.09%.
+
+`RELEASE_READINESS.md`'s M10 row likewise carried pre-R1 completion figures. Corrected.
+
+**The next-word curve is completely flat across bigramWeight.** That is by design, not a bug —
+`predictNextWord` reads `continuationsOf` directly and never mixes a unigram score for this
+weight to balance against — but it means the parameter is inert on that path, and any attempt
+to improve next-word by tuning it will measure nothing.
