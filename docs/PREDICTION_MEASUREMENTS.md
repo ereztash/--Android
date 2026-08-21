@@ -293,3 +293,59 @@ default and the README says so four rows above the table it appeared in. Correct
 `predictNextWord` reads `continuationsOf` directly and never mixes a unigram score for this
 weight to balance against — but it means the parameter is inert on that path, and any attempt
 to improve next-word by tuning it will measure nothing.
+
+---
+
+# B1 — the allocation experiment. Prediction recorded before the first table is built.
+
+## The question
+
+The bigram table is **59% of all shipped assets**. Measured on the eval slice, its bytes are
+allocated in near-inverse proportion to where prediction succeeds:
+
+| previous word's group | % of positions | next-word top-3 | completion prefix-1 top-3 |
+|---|---|---|---|
+| 128+ continuations | **31%** | **6.45%** | 8.05% |
+| 32–127 | 18% | 12.34% | 6.04% |
+| 8–31 | 18% | **13.40%** | 4.22% |
+| 1–7 | 19% | 12.10% | 3.84% |
+| no group at all | 14% | **0.00%** | 2.19% |
+
+| group size | groups | bytes | share of table |
+|---|---|---|---|
+| 512+ | **74** | 559,169 | **20.7%** |
+| 128–511 | 352 | 408,057 | 15.1% |
+| 1–3 | 36,535 | 483,280 | 17.9% |
+
+426 words consume 36% of the table to serve the 31% of positions that score worst, and
+`predictNextWord` reads `continuationsOf(limit = 8)` — it never looks past the eighth entry.
+
+## The experiment
+
+Hold the byte budget fixed at the shipped table's 2,697,304 raw bytes. Vary a **per-group cap**
+on stored continuations, and lower `--min-count` until the budget refills with new groups.
+Measure next-word and completion on the same held-out slice, same harness, same
+`bigramWeight = 2.0`.
+
+## The prediction, written now
+
+1. **Next-word top-3 improves, by less than +2.0 points.** Capping at ≥8 costs that path
+   nothing, since it reads only the top 8. The gain has to come from converting
+   no-group positions — 14% of the total, currently scoring 0.00% — into small-group
+   positions, and those score about 12%. 0.14 × 0.12 ≈ 1.7 points is the ceiling on the
+   mechanism, and new groups will not cover every uncovered word.
+2. **Completion top-3 at prefix 1 degrades, by at least 1.0 point.** It reads
+   `logCountOf` for a *specific* pair, so a cap deletes exactly the deep entries the band
+   table shows are worth 8.05% against 2.19%.
+3. **The net is a trade, not a win.** If both paths improve at a fixed budget, the harness is
+   wrong and gets checked before the result is believed.
+
+## The stopping rule
+
+Adopt a capped table only if **next-word top-3 rises by ≥ 1.0 point AND completion top-3 at
+every prefix length falls by < 0.5 points**, at equal or smaller byte cost. Anything else is
+reported as a trade and left to the operator, because the two paths do not have equal weight
+to a user and nothing here has measured which one they would rather have.
+
+`GATE-BIGRAM-1` pins the shipped table to its manifest, so any variant that wins has to be
+rebuilt as the shipped artefact and re-hashed rather than swapped in.
