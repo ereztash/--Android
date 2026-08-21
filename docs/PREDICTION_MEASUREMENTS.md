@@ -349,3 +349,74 @@ to a user and nothing here has measured which one they would rather have.
 
 `GATE-BIGRAM-1` pins the shipped table to its manifest, so any variant that wins has to be
 rebuilt as the shipped artefact and re-hashed rather than swapped in.
+
+## B1 RESULT — the lever is real, and it is tiny. NOT ADOPTED.
+
+Five tables, one harness, one slice, `bigramWeight = 2.0`. Every variant holds at or under the
+shipped table's byte budget.
+
+| table | groups | pairs | next-3 | offered | p1-top3 | p2-top3 | p3-top3 | APK bytes vs shipped |
+|---|---|---|---|---|---|---|---|---|
+| **shipped** (mc5, no cap) | 51,900 | 477,180 | **9.09%** | 86.64% | **5.43%** | **24.92%** | **47.98%** | — |
+| cap 64 / mc 5 | 51,900 | 477,180 | 9.09% | 86.64% | 5.14% | 22.57% | 44.43% | **−609,592** |
+| cap 64 / mc 4 | 60,823 | 602,868 | 9.21% | 88.08% | 5.22% | 22.86% | 44.73% | −367,221 |
+| cap 32 / mc 3 | 78,712 | 932,110 | 9.55% | 90.69% | 5.01% | 22.33% | 44.34% | −85,251 |
+| cap 8 / mc 2 | **101,765** | **1,428,037** | **9.70%** | **92.32%** | 4.45% | 20.12% | 42.20% | −327,637 |
+
+### Against the rule fixed beforehand
+
+*Adopt only if next-word top-3 rises by ≥ 1.0 point AND completion top-3 at every prefix falls
+by < 0.5.*
+
+**All four variants fail, on both clauses.** Next-word never rises a full point. Completion at
+prefixes 2 and 3 always falls by more than 0.5. **Nothing is adopted and the shipped table does
+not change.**
+
+### What it establishes
+
+**Doubling the groups and tripling the pairs buys +0.61 points of next-word top-3.** That is the
+coverage lever pushed as far as the byte budget allows — 51,900 → 101,765 first-words, 477,180
+→ 1,428,037 pairs — and it is worth well under one point.
+
+This is the same conclusion the human labelling reached for the real-word-error layer, now
+measured independently on the prediction path: **reallocating bytes inside a count table over
+surface forms does not move the numbers. The representation is the ceiling, not the allocation.**
+
+### Where the prediction was wrong
+
+It said completion at prefix 1 would fall **by at least 1.0 point**. It fell 0.29–0.98 and never
+reached 1.0. **The real damage is at prefixes 2 and 3** — down 2.3 to 5.8 points — which the
+prediction did not name. Direction right, location wrong.
+
+### Two findings worth more than the experiment's own question
+
+**1. The offer rate moves where accuracy does not.** 86.64% → **92.32%**, +5.68 points: far more
+positions get *some* next-word suggestion. That was not in the stopping rule, it is user-visible,
+and a strip that is empty a seventh of the time is a different product from one that is empty a
+thirteenth of the time. It does not override the rule, and it is on the table for a rule of its
+own.
+
+**2. `cap 64 / mc 5` costs next-word exactly nothing and saves 609,592 APK bytes.** Groups,
+next-word top-1, top-3 and offer rate are all *identical* to the shipped table, to the digit —
+which independently confirms the mechanism, since `predictNextWord` never reads past the eighth
+continuation. The whole cost lands on completion: −0.29 / −2.35 / −3.55. **If bytes ever become
+the binding constraint, that is the measured lever**, and it is a product decision rather than a
+tuning one.
+
+### Reproducing
+
+```sh
+python3 scripts/build_bigrams.py --subtitle-weight 0.25 --min-count 5 --per-group-cap 64 \
+  --out lexicon/experimental/he_bigrams_cap64_mc5.bin.gz
+python3 scripts/build_bigrams.py --subtitle-weight 0.25 --min-count 4 --per-group-cap 64 \
+  --out lexicon/experimental/he_bigrams_cap64_mc4.bin.gz
+python3 scripts/build_bigrams.py --subtitle-weight 0.25 --min-count 3 --per-group-cap 32 \
+  --out lexicon/experimental/he_bigrams_cap32_mc3.bin.gz
+python3 scripts/build_bigrams.py --subtitle-weight 0.25 --min-count 2 --per-group-cap 8 \
+  --out lexicon/experimental/he_bigrams_cap8_mc2.bin.gz
+./gradlew :core:test --tests '*AllocationExperimentTest*' -PrunConfusionSweep=1
+```
+
+The variant binaries are ~5 MB and are **not committed**; their manifests are, carrying the
+hashes and sizes above. `AllocationExperimentTest` skips any variant that is not on disk and
+says which.

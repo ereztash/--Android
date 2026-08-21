@@ -229,6 +229,14 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--chunks", type=int, default=DEFAULT_CHUNKS)
     ap.add_argument("--chunk-bytes", type=int, default=DEFAULT_CHUNK_BYTES)
+    ap.add_argument("--per-group-cap", type=int, default=None,
+                    help="keep at most this many continuations per first-word. Continuations "
+                         "are stored count-descending, and predictNextWord reads only the top "
+                         "8, so a cap above 8 costs that path nothing while freeing budget for "
+                         "words that have no group at all. Completion pays for it: it looks up "
+                         "a SPECIFIC pair and a cap deletes the deep entries. See B1 in "
+                         "docs/PREDICTION_MEASUREMENTS.md, where the trade was predicted before "
+                         "this flag existed.")
     ap.add_argument("--min-count", type=int, default=None,
                     help="prune bigrams below this count. Omit to only REPORT the "
                          "distribution and write nothing.")
@@ -320,6 +328,23 @@ def main() -> int:
               file=sys.stderr)
     del cumulative
 
+    # The B1 grid: for each (cap, min-count), what does the artefact cost? Printed so the
+    # budget-matched operating point is read off a table rather than guessed at.
+    print("\nB1 grid -- raw bytes for (per-group cap x min-count); shipped table is 2,697,304:",
+          file=sys.stderr)
+    print("      cap " + "".join(f"{m:>12}" for m in (2, 3, 4, 5)), file=sys.stderr)
+    for cap in (8, 16, 32, 64, None):
+        row = []
+        for mc in (2, 3, 4, 5):
+            k = {kk: vv for kk, vv in bigrams.items() if vv >= mc}
+            g: dict[int, int] = collections.defaultdict(int)
+            for (a, _b) in k:
+                g[a] += 1
+            conts = sum(min(c, cap) if cap else c for c in g.values())
+            row.append(len(g) * 6 + conts * 5)
+        print(f"  {str(cap) if cap else 'none':>7} " + "".join(f"{b:>12,}" for b in row),
+              file=sys.stderr)
+
     if args.min_count is None:
         print("\nNo --min-count given: reporting only, nothing written.", file=sys.stderr)
         return 0
@@ -334,6 +359,14 @@ def main() -> int:
         groups[a].append((b, c))
     for a in groups:
         groups[a].sort(key=lambda t: -t[1])
+    if args.per_group_cap:
+        # After the sort, so what survives is the top-N by count -- which is exactly what
+        # continuationsOf() would have returned anyway.
+        dropped = sum(max(0, len(v) - args.per_group_cap) for v in groups.values())
+        for a in groups:
+            del groups[a][args.per_group_cap:]
+        print(f"per-group cap {args.per_group_cap}: dropped {dropped:,} continuations",
+              file=sys.stderr)
 
     buf = io.BytesIO()
     buf.write(struct.pack("<I", len(groups)))
@@ -363,6 +396,7 @@ def main() -> int:
                                 if args.subtitle_weight > 0 else None),
             "subtitle_occurrences_blended": subtitle_pairs,
             "min_count": args.min_count,
+            "per_group_cap": args.per_group_cap,
             "max_bigrams": args.max_bigrams,
             "distinct_bigrams_before_pruning": len(bigrams),
             "bigrams_kept": len(kept),
