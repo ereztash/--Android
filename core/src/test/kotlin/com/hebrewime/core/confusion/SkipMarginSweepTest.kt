@@ -38,7 +38,7 @@ class SkipMarginSweepTest {
         for (margin in listOf(64, 66, 68, 70, 72, 74, 76, 78, 80, 84, 88)) {
             val detector = RealWordErrorDetector(
                 lexicon, bigrams, skip,
-                RealWordErrorDetector.Config(skipMargin = margin),
+                config = RealWordErrorDetector.Config(skipMargin = margin),
             )
             val r = evaluate(detector, sentences, lexicon, wide = true)
             println("%-8d %-10s %-10s %-12s %s".format(

@@ -715,3 +715,49 @@ And the conditions that stop "it passed" being manufactured:
   never been TUNED on, and it is not being tuned on now. Recorded because a test set reported on
   repeatedly is worth less each time, and pretending otherwise is how a slice quietly becomes a
   dev set.
+
+
+## P1 VERDICT: FAILED on one slice. Not shipped.
+
+Margin 104 chosen on `confusion_dev` — the **lowest margin at which the fallback's false alarms
+return to the baseline**, not the margin with the best recall, which was 8 at nearly nine times
+the false-alarm rate.
+
+| slice | | recall | false alarms |
+|---|---|---|---|
+| encyclopedic | before | 59.47% | 0.493% |
+| | after | **60.66%** | **0.499%** |
+| | delta | **+1.19** | **+0.0057** |
+| conversational | before | 74.13% | 0.344% |
+| | after | **75.28%** | **0.344%** |
+| | delta | **+1.16** | **+0.0000** |
+
+**It passes cleanly on conversational text and fails on encyclopedic text by two sites.**
+
+In counts: **+420 correct catches for +2 false alarms** on the encyclopedic slice — 209 to 1 —
+and **+186 catches for zero additional false alarms** on the conversational one.
+
+The rule said *both* slices. It failed. The margin is **not** being re-picked: `confusion_test`
+has now been observed for this question, and choosing a new value because the test failed is
+tuning on the test set, which the rule forbids in as many words.
+
+### The pattern worth naming
+
+**This is the second time a "false alarms must not rise at all" rule has killed a favourable
+trade.** S1 died at 61:1 over four sites; P1 dies at 209:1 over two.
+
+A rule that rejects 209-to-1 is either protecting something the ratio does not capture — and
+false alarms genuinely are worse than misses for a keyboard, because a wrong suggestion
+interrupts correct writing while a missed one costs nothing — or it is simply too strict.
+
+Which of those it is, is an operator decision, and it is not one to be taken by the person who
+keeps wanting the feature to pass. Recorded as such rather than resolved.
+
+### Worth noting about the split
+
+The failure is on the register nobody types in, and the pass is on the one they do. That is
+decision-relevant and it is not a reason to declare victory: the rule was written knowing both
+slices would be measured, precisely so that a favourable half could not be reported alone.
+
+The fallback is built, measured, and left disabled: `DEFAULT_PRIOR_MARGIN = 0`, with a test
+asserting it stays that way while the verdict stands.

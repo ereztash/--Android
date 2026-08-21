@@ -46,6 +46,14 @@ class RealWordErrorDetector(
      * Empty by default. An empty table makes [checkWide] behave exactly like [check].
      */
     private val skip: BigramModel = BigramModel.EMPTY,
+    /**
+     * Unigram frequencies, for the blind-position fallback. Null disables it entirely.
+     *
+     * Measured in D5: **81.2% of blind positions are resolvable by the prior alone**, and this
+     * detector abstains on all of them because bigram counts are its only evidence. See
+     * [Config.priorMargin].
+     */
+    private val frequency: com.hebrewime.core.correction.HebrewFrequency? = null,
     private val config: Config = Config(),
 ) {
 
@@ -99,6 +107,18 @@ class RealWordErrorDetector(
          * Swept on `confusion_dev`; see `docs/CONFUSION_MEASUREMENTS.md`.
          */
         val skipMargin: Int = DEFAULT_SKIP_MARGIN,
+
+        /**
+         * Margin required when the decision rests on **unigram frequency alone**, at a position
+         * where neither candidate has any adjacent evidence at all.
+         *
+         * 0 disables the fallback. See `docs/CONFUSION_MEASUREMENTS.md` P1 for the sweep and the
+         * rule that was fixed before it ran.
+         *
+         * This is not "use frequency" — the detector still refuses to contradict corpus evidence
+         * it has. It fires only where there is none.
+         */
+        val priorMargin: Int = DEFAULT_PRIOR_MARGIN,
     )
 
     /** One real-word error, with the evidence that produced it. */
@@ -145,6 +165,37 @@ class RealWordErrorDetector(
         if (variants.isEmpty()) return null
 
         val typedEvidence = evidence(typedIndex, previousIndex, nextIndex)
+
+        // ### The blind-position fallback
+        //
+        // Where neither the typed word nor any variant has adjacent evidence, the context has
+        // nothing to say and this detector has always abstained. D5 measured that 81.2% of such
+        // positions are resolvable by the unigram prior. This acts on that, and ONLY there --
+        // the branch is unreachable whenever any candidate carries corpus evidence, so the
+        // detector still never contradicts evidence it has.
+        val f = frequency
+        if (config.priorMargin > 0 && f != null && typedEvidence == 0 &&
+            variants.all { evidence(it, previousIndex, nextIndex) == 0 }
+        ) {
+            val typedFrequency = f.logFrequencyOf(typedIndex)
+            var best: Finding? = null
+            for (candidate in variants) {
+                val advantage = f.logFrequencyOf(candidate) - typedFrequency
+                if (advantage < config.priorMargin) continue
+                if (best != null && f.logFrequencyOf(candidate) <= best.suggestedEvidence) continue
+                best = Finding(
+                    typed = typed,
+                    typedIndex = typedIndex,
+                    suggested = lexicon.wordAt(candidate),
+                    suggestedIndex = candidate,
+                    typedEvidence = typedFrequency,
+                    suggestedEvidence = f.logFrequencyOf(candidate),
+                    contextWords = contextWords,
+                )
+            }
+            return best
+        }
+
         if (config.requireNoSupportForTyped && typedEvidence > 0) return null
 
         var best: Finding? = null
@@ -255,5 +306,12 @@ class RealWordErrorDetector(
          * after the sweep on `confusion_dev`.
          */
         const val DEFAULT_SKIP_MARGIN: Int = 28
+
+        /**
+         * BASELINE, not a chosen value. 0 disables the blind-position prior fallback, which is
+         * exactly what shipped before P1 ran. It moves only if the sweep on `confusion_dev`
+         * finds an operating point that clears P1's stopping rule.
+         */
+        const val DEFAULT_PRIOR_MARGIN: Int = 0
     }
 }

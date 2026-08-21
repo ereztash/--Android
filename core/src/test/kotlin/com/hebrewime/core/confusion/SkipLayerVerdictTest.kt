@@ -121,7 +121,7 @@ class SkipLayerVerdictTest {
         val (baseRecall, baseAlarm) = measure(RealWordErrorDetector(lexicon, bigrams), false)
         val wide = RealWordErrorDetector(
             lexicon, bigrams, skip,
-            RealWordErrorDetector.Config(skipMargin = CHOSEN_SKIP_MARGIN),
+            config = RealWordErrorDetector.Config(skipMargin = CHOSEN_SKIP_MARGIN),
         )
         val (wideRecall, wideAlarm) = measure(wide, true)
 
