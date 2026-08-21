@@ -74,7 +74,45 @@ class CandidateStripView(context: Context) : View(context) {
         strokeWidth = 2f
     }
 
+    /**
+     * Briefly show what was just applied, then go quiet.
+     *
+     * ### Why only this needs confirming
+     * Applying a completion or a correction changes the word under the cursor, where the user is
+     * already looking. A [SuggestionKind.REAL_WORD_ERROR] changes a word **two positions back**
+     * — text the eye has left — and on a phone that edit can happen entirely outside the
+     * reader's attention. A change the user does not notice is a change they cannot check.
+     *
+     * So the strip holds the applied word for [CONFIRM_MS] with a mark, instead of clearing
+     * instantly as every other application does.
+     */
+    fun confirmApplied(prediction: Prediction) {
+        if (prediction.wordsBack <= 0) {
+            setCandidates(emptyList())
+            return
+        }
+        confirmation = "${prediction.word} ✓"
+        slots = emptyList()
+        pressedIndex = -1
+        invalidate()
+        removeCallbacks(clearConfirmation)
+        postDelayed(clearConfirmation, CONFIRM_MS)
+    }
+
+    private var confirmation: String? = null
+    private val clearConfirmation = Runnable {
+        confirmation = null
+        invalidate()
+    }
+
+    override fun onDetachedFromWindow() {
+        removeCallbacks(clearConfirmation)
+        super.onDetachedFromWindow()
+    }
+
     fun setCandidates(list: List<Prediction>) {
+        confirmation = null
+        removeCallbacks(clearConfirmation)
         candidates = list
         pressedIndex = -1
         recomputeSlots()
@@ -120,6 +158,13 @@ class CandidateStripView(context: Context) : View(context) {
 
     override fun onDraw(canvas: Canvas) {
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), background)
+        confirmation?.let {
+            val m = correctionLabel.fontMetrics
+            canvas.drawText(
+                it, width / 2f, height / 2f - (m.descent + m.ascent) / 2f, correctionLabel,
+            )
+            return
+        }
         if (slots.isEmpty()) return
         val metrics = label.fontMetrics
         val baseline = height / 2f - (metrics.descent + metrics.ascent) / 2f
@@ -183,6 +228,9 @@ class CandidateStripView(context: Context) : View(context) {
     }
 
     private companion object {
+        /** Long enough to be seen while glancing back, short enough not to block the next word. */
+        const val CONFIRM_MS = 1_200L
+
         const val HEIGHT_DP = 44f
         const val LABEL_FRACTION = 0.42f
     }

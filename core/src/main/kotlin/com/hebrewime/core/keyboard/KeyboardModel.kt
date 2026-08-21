@@ -27,6 +27,18 @@ data class Key(
     val output: String? = null,
     val action: KeyAction = KeyAction.CHARACTER,
     val widthWeight: Float = 1f,
+    /**
+     * What a long press on this key commits instead, if anything.
+     *
+     * Exists so that characters a Hebrew keyboard genuinely needs but has no room for — above
+     * all the **gershayim** ״, without which `כ״כ` cannot be typed at all and the whole
+     * abbreviation feature is reachable only through the ASCII `"` — do not require a trip to
+     * the symbols layout.
+     *
+     * Null on most keys. A key with no alternate simply has no long press, rather than having
+     * one that does nothing.
+     */
+    val longPressOutput: String? = null,
 ) {
     init {
         require(widthWeight > 0f) { "widthWeight must be positive, was $widthWeight for $label" }
@@ -131,7 +143,11 @@ object Layouts {
             row("-/:;()₪&@\""),
             listOf(Key(".", ".", KeyAction.CHARACTER), Key(",", ",", KeyAction.CHARACTER),
                    Key("?", "?", KeyAction.CHARACTER), Key("!", "!", KeyAction.CHARACTER),
-                   Key("'", "'", KeyAction.CHARACTER),
+                   // Long press reaches the Hebrew punctuation the abbreviation feature needs.
+                   // Typing `כ״כ` with an ASCII quote works, because the lexicon folds both,
+                   // but the correct character should not be unreachable on a Hebrew keyboard.
+                   Key("'", "'", KeyAction.CHARACTER, longPressOutput = "\u05f3"),
+                   Key("\"", "\"", KeyAction.CHARACTER, longPressOutput = "\u05f4"),
                    Key("⌫", action = KeyAction.BACKSPACE, widthWeight = 1.5f))
                 .let(::KeyboardRow),
             functionRow(switchTo = HEBREW, altLetters = ENGLISH),

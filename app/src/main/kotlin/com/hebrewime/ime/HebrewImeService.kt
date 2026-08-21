@@ -109,6 +109,7 @@ class HebrewImeService : InputMethodService() {
         val keyboard = KeyboardView(this).apply {
             setLayout(Layouts.byId(currentLayoutId))
             onKeyPressed = ::handleKey
+            onLongPressAlternate = ::replaceWithAlternate
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -285,6 +286,31 @@ class HebrewImeService : InputMethodService() {
         correction.learn(completed[1], completed[0])
     }
 
+    /**
+     * A long press resolved to an alternate character — the gershayim under the quote key.
+     *
+     * The original was already committed on DOWN, so this removes exactly that and commits the
+     * alternate in its place, inside one batch so the editor sees a single update rather than a
+     * visible flicker of the wrong character.
+     *
+     * Deletion is in **code points**, not UTF-16 units, for the same reason every other deletion
+     * in this file is: a key whose output is a surrogate pair would otherwise be half-deleted.
+     */
+    private fun replaceWithAlternate(key: Key, alternate: String) {
+        val ic = currentInputConnection ?: return
+        val original = key.output ?: return
+        ic.beginBatchEdit()
+        try {
+            ic.deleteSurroundingTextInCodePoints(original.codePointCount(), 0)
+            ic.commitText(alternate, 1)
+        } finally {
+            ic.endBatchEdit()
+        }
+        contextBuffer.onCharsDeleted(original.length)
+        contextBuffer.onTextCommitted(alternate)
+        refreshSuggestions()
+    }
+
     private fun execute(command: EditCommand, ic: InputConnection) {
         when (command) {
             is EditCommand.CommitText -> {
@@ -377,7 +403,10 @@ class HebrewImeService : InputMethodService() {
         val original = contextBuffer.currentWord
 
         if (prediction.wordsBack > 0) {
-            applyToEarlierWord(prediction, ic)
+            // Confirm ONLY if the rewrite happened. See applyToEarlierWord's guard.
+            if (applyToEarlierWord(prediction, ic)) {
+                candidateStrip?.confirmApplied(prediction)
+            }
             return
         }
 
@@ -421,12 +450,18 @@ class HebrewImeService : InputMethodService() {
      * that is no longer there, and applying it would rewrite something the user did not ask to
      * change.
      */
-    private fun applyToEarlierWord(prediction: Prediction, ic: InputConnection) {
+    /**
+     * @return true when the edit was actually made. **The caller must not confirm a rewrite
+     *   this refused**: the guard below rejects a suggestion whose target has moved since the
+     *   request went out, and telling the user their sentence was fixed when it was not is
+     *   worse than saying nothing at all.
+     */
+    private fun applyToEarlierWord(prediction: Prediction, ic: InputConnection): Boolean {
         val replaced = prediction.replaces
         val tail = contextBuffer.tailFromCompletedWord(prediction.wordsBack)
         if (replaced == null || tail == null || !tail.startsWith(replaced)) {
             candidateStrip?.setCandidates(emptyList())
-            return
+            return false
         }
         val rewritten = prediction.word + tail.substring(replaced.length)
 
@@ -440,6 +475,7 @@ class HebrewImeService : InputMethodService() {
         contextBuffer.onCharsDeleted(tail.length)
         contextBuffer.onTextCommitted(rewritten)
         candidateStrip?.setCandidates(emptyList())
+        return true
     }
 
     private fun String.codePointCount(): Int = codePointCount(0, length)
