@@ -7,11 +7,23 @@ The app is not release-ready, and this document does not qualify that. There is 
 
 Two independent reasons, either of which is sufficient:
 
-1. **Nothing built since M9 has ever run on an Android device.** The operator did install and
-   type on it once — see below — but that was a build from before prediction, real-word error
-   detection and the personal-dictionary wiring existed, and the layout it exercised was the
-   mirrored one that session found. Everything asserted about the *current* build is a static
-   check or a JVM measurement.
+1. **Device coverage is partial, and this document no longer says by how much.**
+   It said so twice and was wrong twice — see the correction below. The authoritative list is
+   [`docs/QA_MATRIX.md`](QA_MATRIX.md), and `GATE-DOC-1` fails the build when the two disagree,
+   because the mechanism that produced both errors was a claim kept in step by hand.
+
+   What is device-blocked right now:
+
+   <!-- DEVICE-BLOCKED-BEGIN: generated from QA_MATRIX.md, checked by GATE-DOC-1 -->
+   M2-ENABLE-POST-M9, M2-INSETS, M2-SPELLCHECK, M4-DEVICE, M6-KEYSTORE, M6-UI, M7-LAT,
+   M7-TALKBACK, M7-CONTRAST, M8-NETCAPTURE, M12-RELOAD, L1-KEYSTORE, L1-SWITCH, L1-DEBOUNCE,
+   MI-PREVIEW, MI-REPEAT, MI-LONGPRESS, MI-CONFIRM, R1-FEEL, L2-PERSONAL
+   <!-- DEVICE-BLOCKED-END -->
+
+   Two of those are the ones flagged as highest risk and still unrun: **M2-INSETS**, the bottom
+   key row against the gesture bar, and **M4-DEVICE**, whether the framework really hands over
+   password plaintext. Both were in the test protocol and neither has been done.
+
 2. **The release artifact is unsigned**, and the signing secrets are the operator's to provide.
 
 ### Correction to this document

@@ -218,6 +218,7 @@ typing into WhatsApp. This one exercised everything built after the first sessio
 | M11-GENERALISES | A **second, different** confusion caught on device | `אני אוהב **עת** ברצלונה` → offered **`את (עת)`** | **OBSERVED** |
 | M11-COLOUR | Corrections are visually distinguished from ordinary suggestions | The real-word suggestion rendered amber, the two next-word suggestions white | **OBSERVED** |
 | M11-EDIT | **Accepting** a real-word suggestion: deleting a span two words back and committing a rewrite, against a real `InputConnection` | The operator tapped it: *"ואני ניסיתי, וזה עובד ללחוץ על להחליף מילה"* | **OBSERVED** |
+| M2-ROTATION | State survives rotation | The operator rotated mid-typing: *"הסיבוב עובר כמו שצריך"* | **OBSERVED** |
 | M10-TAP | A suggestion has been tapped at all | Same | **OBSERVED** |
 | M5-LOAD | The lexicon, trie and bigram table load from APK assets on a device | Suggestions could not appear otherwise | **OBSERVED** |
 
@@ -260,9 +261,7 @@ working.
 |---|---|---|
 | M2-ENABLE-POST-M9 | That the app still installs and the IME still enables **on the current build** | A device. The observation above is against a build four milestones old. |
 | M2-INSETS | The bottom key row clears the gesture bar at targetSdk 36 | A device with gesture navigation |
-| M2-ROTATION | State survives rotation and other configuration changes | A device. `configChanges` is now honoured, but the view is still recreated for changes outside the declared list, and that path has never been exercised. |
 | M2-SPELLCHECK | The system spell checker is actually suppressed on API 31+ | A device |
-| M3-TOUCH | A touch has ever been dispatched to `KeyboardView` | A device |
 | M4-DEVICE | That the framework really does hand over password plaintext, and that `setInitialSurroundingText("")` releases it | A device; `android.jar` ships stubs only |
 | M6-KEYSTORE | Keystore key generation, TEE/StrongBox backing, key destruction on wipe | A device |
 | M6-UI | The dictionary management screen has ever been displayed | A device |
@@ -273,6 +272,12 @@ working.
 | M12-RELOAD | Whether the personal dictionary reload in `onStartInput` picks up a word added in Settings while the IME is running | A device with both components live |
 | L1-KEYSTORE | That two Keystore aliases really are independent on hardware, and that deleting one leaves the other usable | A device. The JVM test proves the property the aliases exist for; the Keystore lookup itself has been NOT RUN since M6. |
 | L1-SWITCH | Whether the learning switch, the status count and "forget what you learned" behave on screen | A device |
+| MI-PREVIEW | The key-preview bubble, including the flip-below behaviour on the top row | A device |
+| MI-REPEAT | Accelerating backspace: that the repeat rate is usable and that a tap never triggers it | A device |
+| MI-LONGPRESS | The gershayim long press, and that it replaces rather than appends | A device |
+| MI-CONFIRM | The away-from-cursor confirmation is actually noticed | A device, and a person to notice it |
+| R1-FEEL | Whether the conversational corpus makes suggestions feel more useful in real messages | A device. The +12.73 points are measured on transcribed dialogue, not on written messages. |
+| L2-PERSONAL | Whether personal word frequency is noticeable in use | A device, with learning enabled |
 | L1-DEBOUNCE | Whether a 3-second debounced encrypted write actually stays off the input path | A device. The interval is a judgement, not a measurement. |
 
 ### Requires operator action

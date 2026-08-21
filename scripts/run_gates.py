@@ -32,6 +32,7 @@ def _gates(strict: bool) -> list[dict]:
     trace = os.path.join(ROOT, "scripts", "check_trace_sections.py")
     size = os.path.join(ROOT, "scripts", "check_size.py")
     learn = os.path.join(ROOT, "scripts", "check_learning.py")
+    docs = os.path.join(ROOT, "scripts", "check_docs.py")
     apk = os.path.join(ROOT, "scripts", "check_apk.py")
     debug_apk = os.path.join(ROOT, "app", "build", "outputs", "apk", "debug", "app-debug.apk")
     netc_apk = os.path.join(ROOT, "app", "build", "outputs", "apk", "netcontrol",
@@ -184,6 +185,14 @@ def _gates(strict: bool) -> list[dict]:
             "control": [PY, learn, "--root", ROOT, "--inject-defect", "guard", "--json"],
             "control_desc": "a planted second call site with no guard: it compiles, it looks "
                             "reasonable, and it learns from password fields",
+        },
+        {
+            "id": "GATE-DOC-1",
+            "what": "the readiness verdict's device-blocked list matches the QA matrix",
+            "real": [PY, docs, "--root", ROOT, "--json"] + s,
+            "control": [PY, docs, "--root", ROOT, "--inject-defect", "stale", "--json"],
+            "control_desc": "a readiness list still naming a check the matrix records as done "
+                            "-- the exact drift that made the same sentence stale twice",
         },
         {
             "id": "GATE-SIZE-1",

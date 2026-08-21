@@ -537,3 +537,58 @@ measurements rather than a week of building a table that would have covered 1.8%
   context, which is worth more than the figure alone.
 
 None of these is started. D1 stopped where its rule said to stop.
+
+
+---
+
+# D4 — attributing the recall between context and prior
+
+This control was **missing for the whole life of the feature**, and its absence was the
+operator's finding rather than mine.
+
+`RealWordErrorDetector` is described everywhere as context-aware, and its recall is quoted as
+evidence of that. But `אם`/`עם` is not a symmetric pair: one member is far commoner than the
+other, and the injection protocol usually replaces a common word with a rarer one. A detector
+that ignored context entirely — *always suggest the commoner variant* — therefore recovers a
+share of the injections for free. Until this ran, **62.31% could not be attributed.** It could
+have been context, or a unigram prior with a context-shaped API around it.
+
+## The control, held to the shipped detector's own false-alarm budget
+
+| frequency margin | recall | false alarms |
+|---|---|---|
+| 0 | 88.47% | 6.454% |
+| 24 | 72.54% | 1.848% |
+| 40 | 58.62% | 0.738% |
+| 48 | 51.17% | 0.482% |
+| 52 | 46.17% | 0.325% |
+| **56** | **43.29%** | **0.239%** |
+| 64 | 37.63% | 0.154% |
+
+| | recall | false alarms |
+|---|---|---|
+| best frequency-only within the shipped budget | 43.29% | 0.239% |
+| **shipped context detector** | **62.31%** | 0.250% |
+| **attributable to context** | **+19.02** | — |
+
+**The matching matters, and the first version of this got it wrong.** The initial run credited
+context with **+24.68** points by comparing against a control at 0.154% alarms — a stricter
+operating point than the shipped detector runs at. Crediting context with recall that is really
+the control being run more conservatively is exactly the flattering error this document exists
+to avoid, and it went in the flattering direction on the first attempt. The margin was swept
+finely to find the control's best row at or below **0.250%**, the shipped rate.
+
+## What this says
+
+**69% of the shipped recall is available with no context at all.** Context is worth 19 points on
+top of a prior that is already doing most of the work.
+
+That is a real contribution and it is much less than the headline number suggests. Anyone reading
+"64.58%" — or now "62.31%" — as a measure of contextual understanding was reading it wrong, and
+nothing in this document previously stopped them.
+
+The feature is not invalidated: 19 points is a large effect, it is what makes `אם`→`עם` work in
+the direction where the prior is wrong, and the shipped detector reaches its recall at a
+false-alarm rate the control cannot match at any margin above it. But the claim is now bounded,
+and `FrequencyPriorControlTest` fails if the context detector ever stops beating the prior —
+at which point the documentation would have to say the feature is a frequency table.
