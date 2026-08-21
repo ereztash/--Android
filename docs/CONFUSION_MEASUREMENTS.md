@@ -674,3 +674,44 @@ outranks a form the user literally typed — at the cost that `ככ` now offers 
 - **Correction accuracy** — two control corpora, and the neutral-cost configuration is the
   baseline every weight was chosen against.
 - **Every privacy gate** — each ships a planted defect demonstrated red in the same run.
+
+
+---
+
+# P1 — the prior fallback at blind positions: rule before build
+
+D5 measured that **81.2% of blind positions are resolvable by the unigram prior alone**, and that
+the shipped detector abstains on all of them because its only evidence is bigram counts. This
+experiment tests whether acting on the prior *there specifically* is worth its false alarms.
+
+## Why this is not simply "use frequency"
+
+The detector already refuses to contradict corpus evidence it has. This fallback fires **only
+where there is none** — both the typed word and every variant score zero on both neighbours. It
+is a different rule from D4's frequency-only control, which ignored context everywhere: this one
+keeps context primary and asks what to do when context is silent.
+
+## The rule
+
+Margin chosen on `confusion_dev` and nowhere else. Reported once on `confusion_test`, and also
+on `he_conversational_test.txt.gz`, because a keyboard is used on conversational text and the
+prior's shape differs between registers.
+
+Ship only if, measured in the same run:
+
+| | current | requirement |
+|---|---|---|
+| recall | 62.31% | **strictly greater** |
+| false alarms | 0.250% | **no greater than the baseline in that run** |
+
+And the conditions that stop "it passed" being manufactured:
+
+- **The false-alarm figure does not move**, on either slice.
+- **A failure is a result.** 81.2% of blind positions being prior-resolvable is not a promise
+  that a usable operating point exists — the same blind positions are where the false alarms
+  will come from, because a prior that is right 81% of the time on injected text is wrong on
+  clean text at a rate nothing here has measured.
+- **`confusion_test` has been reported on before**, for S1's verdict and D4's control. It has
+  never been TUNED on, and it is not being tuned on now. Recorded because a test set reported on
+  repeatedly is worth less each time, and pretending otherwise is how a slice quietly becomes a
+  dev set.
