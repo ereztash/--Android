@@ -947,3 +947,52 @@ constant and one asset: set `DEFAULT_SKIP_MARGIN = 0` and delete `lexicon/assets
 - **`confusion_test` has now been reported on four times** (M11, S1, D4's control, and this).
   A test set reported on repeatedly is worth less each time. A further question about this
   detector needs a fresh slice cut from the residual pool, not a fifth look at this one.
+
+
+---
+
+# A1 — the first time this detector was measured against a human
+
+Every number above is measured on **injected** errors. This one is not. 100 positions were
+drawn from held-out conversational text, 80 of them positions where the shipped detector
+actually fires, and a competent Hebrew reader judged each one blind — the typed word and the
+suggestion shown in random order, with no indication which was which.
+
+Full protocol, controls, and the pre-registered decision rule: `docs/LABELING_PROTOCOL.md`,
+committed before the first batch existed.
+
+| n = 80 real firings | |
+|---|---|
+| agreed with the detector | **8** |
+| preferred the word already in the text | **45** |
+| could not decide either way | **27** |
+| **precision floor** (every abstention a loss) | **10.0%** — 95% [5.2, 18.5] |
+| **precision ceiling** (every abstention a win) | **43.8%** — 95% [33.4, 54.7] |
+
+The batch's formal verdict is **NOT DECIDABLE** — abstentions came in at 33.8% against a 30%
+bar fixed beforehand — so no precision figure is computed on the decided subset. The bound
+above uses every item and needs no such assumption.
+
+**Even the ceiling's upper confidence bound, 54.7%, sits below the 60% band the rule calls
+shippable.** No resolution of the ambiguous positions puts this batch there.
+
+## And no threshold fixes it
+
+The evidence advantage that produced each finding was recorded, so every higher
+`Config.margin` was simulated over the labels at no further cost. Agreements and
+disagreements have the **same** advantage distribution — median 28 for both. Raising the
+margin discards correct catches at the same rate as wrong ones and past 64 discards all of
+them. Nothing else separates them either: not context words, word length, sentence position,
+or sentence length. The one candidate is that a suggestion **rarer** than the typed word was
+never right (0 of 12 decided), which lifts the floor to 12.7% and is a hypothesis for the
+next batch rather than a fix.
+
+## What this does not settle
+
+The labels are **one person's judgment, once**. The protocol's self-agreement check runs in
+the next batch and has not run. n is 80. The frame is edited subtitle text, and 17 of the 80
+sentences carried a corpus artefact — though on the 63 clean ones all 8 agreements remain, so
+noise does not explain the result.
+
+This is a strong signal against a feature that has been shipping since M11. It is not yet a
+confirmed one, and the difference matters enough to say twice.

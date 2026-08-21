@@ -164,6 +164,7 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | M10-NEXT | Next-word top-3 | **9.80%**, offered in 88.36% of positions | 20,000, same slice |
 | M10-MIX | Ordering policy: corrections-first vs completions-first | corrections-first **dominated** — worse on both corpora | 20,000 + 4,000 — baseline measured, then replaced |
 | M11-RECALL | Real-word error recall, shipped config | **63.73%** | 45,867 injected errors, test slice sha `9fc528ae…` |
+| A1-PRECISION | Real-word error precision against **human** judgement, blind, on held-out conversational text | **bounded [10.0%, 43.8%]**, formal verdict NOT DECIDABLE (33.8% abstention vs a 30% bar) | 80 firings judged, 20 controls, 18/20 passed |
 | S1P1-RECALL | The same, on conversational text | **78.45%** at 0.198% false alarms | 21,961 injected errors, 27,726 clean sites |
 | M11-FALSE | Real-word false-alarm rate on untouched text | **0.25%** | 69,494 positions, same slice — control: a permissive detector scores 15.08% |
 | M11-COST | One real-word check | 3.7 µs | 20,000 calls, **JVM on the build host — NOT a device number** |

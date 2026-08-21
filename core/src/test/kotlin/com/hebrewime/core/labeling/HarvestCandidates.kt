@@ -87,7 +87,8 @@ object HarvestCandidates {
                         else -> "prior"
                     }
                     firings.add(
-                        record("firing", sentenceIndex, i, s, w, finding.suggested, path)
+                        record("firing", sentenceIndex, i, s, w, finding.suggested, path,
+                            finding.advantage, finding.contextWords)
                     )
                     continue
                 }
@@ -149,7 +150,10 @@ object HarvestCandidates {
      * One candidate.
      *
      * [typed] is always the word standing in the sentence as shown, and [other] is always the
-     * word offered against it. Neither field says which is correct — that differs by stratum
+     * word offered against it. [advantage] is the finding's evidence margin, recorded so a
+     * labelled batch can be re-swept over `Config.margin` offline without labelling anything
+     * again — the labels are a fixed asset and every threshold question they can answer for
+     * free should be asked of them before another hour of anyone's time is spent. Neither field says which is correct — that differs by stratum
      * and is resolved in `scripts/score_labels.py` from the stratum, so no single field ever
      * means two things.
      */
@@ -161,13 +165,16 @@ object HarvestCandidates {
         typed: String,
         other: String,
         path: String,
+        advantage: Int = -1,
+        contextWords: Int = -1,
     ): String = buildString {
         append("""{"kind":"$kind","id":"$kind-$sentenceIndex-$position",""")
         append(""""sentence":""")
         append(sentence.joinToString(",", "[", "]") { json(it) })
         append(""","position":$position,"typed":""").append(json(typed))
         append(""","other":""").append(json(other))
-        append(""","path":"$path"}""")
+        append(""","path":"$path","advantage":$advantage,""")
+        append(""""context_words":$contextWords}""")
     }
 
     /** Minimal JSON string escaping. :core has no dependencies and is not getting one for this. */

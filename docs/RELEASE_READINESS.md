@@ -163,6 +163,12 @@ under Policy status in Play Console. See `docs/OPERATOR_NOTICES.md` NOTICE 1.
   MEASURED, and without it no precision figure can be derived from the 0.253% false-alarm rate.
   (This bullet read "64.58%" and "0.26%" until S1+P1 shipped; both were already stale against
   the figure R1 left behind, which was 62.31% / 0.250%.)
+- **A first human measurement now bounds that precision, and it is bad.** 80 positions where
+  the detector actually fires, judged blind on held-out conversational text: agreed with 8,
+  overruled 45, undecidable 27. Precision is bounded in **[10.0%, 43.8%]** and no margin
+  fixes it — agreements and disagreements carry the same evidence. One labeller, unrepeated,
+  n=80; the confirming batch is cut and not yet labelled. See `docs/LABELING_PROTOCOL.md`.
+  **This is an open question against a shipped feature, and it is the operator's to decide.**
 - **This keyboard never replaces anything by itself.** `shouldAutoReplace` exists and is
   measured; it is not called. Every change to the user's text is a tap. On the golden corpus
   the shipped configuration would auto-replace 24.25% of misspellings with **1.90% wrong** —

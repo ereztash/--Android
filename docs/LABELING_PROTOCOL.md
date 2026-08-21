@@ -206,3 +206,131 @@ Measuring the added layers would need a **stratified** batch and therefore its o
 pre-registered rule, because stratifying changes what the control bar and the decision band
 mean. It would also need a much larger corpus: the entire held-out slice contains **ten**
 such positions, which is not a denominator anything can be concluded from.
+
+---
+
+# Batch 001 — result, and one rule added afterwards
+
+**Labelled 2026-08-21 by the operator. 100 screens, 10.5 minutes, median 4.5 s per item.**
+The protocol guessed 15 seconds. It was **3.3× too pessimistic**, which changes the economics
+of every future batch: 300 items is about 23 minutes, not 75.
+
+## What the scorer said
+
+| | | |
+|---|---|---|
+| controls | **18 / 20** | passes, at the bar exactly |
+| abstentions | **27 / 80 = 33.8%** | above the 30% bar |
+| verdict | **NOT DECIDABLE** | precision not computed, as the rule requires |
+
+Both control misses are attributable to corpus noise rather than inattention, and both are
+worth naming because they are a property of the frame:
+
+- `b001-046` — *"ג ואנה ואה לכאן אל תדאג"*. That is `ג'ואנה` with its geresh stripped by the
+  corpus cleaner. The item is a garbled string, not a Hebrew sentence.
+- `b001-079` — a 20-word run-on of two merged subtitle lines. Answered "unclear", which is
+  the honest answer to it.
+
+## A rule added AFTER seeing the data, and why that is not threshold-shopping
+
+The abstention bar stops precision being computed on the decided subset, because that subset
+is the easy half by construction. It does **not** stop a bound computed over the **full**
+denominator:
+
+> **floor** = agreed / n — every abstention counted as a loss
+> **ceiling** = (agreed + abstained) / n — every abstention counted as a win
+
+This bracket is not an estimate of precision under a favourable assumption. It is arithmetic:
+for any a, b, c, d, `a/n ≤ a/(a+b) ≤ (a+c+d)/n`. **The bound always contains the filtered
+precision and is therefore a strictly weaker claim than the one the bar forbids.** Adding it
+cannot make a result look better than the forbidden number, which is the test for whether a
+rule added after the fact is self-serving. It is added here, in writing, on the day it was
+added, rather than applied silently.
+
+**The 30% abstention bar does not move, and neither does anything else above.**
+
+Two clarifications of what was already written, not changes to it:
+
+- The control bar "18 of 20" is **90% of controls**, and scales with batch size.
+- Every batch reports the bound alongside its verdict, including a NOT DECIDABLE one.
+
+## Batch 001's numbers
+
+| | n=80 real firings |
+|---|---|
+| agreed with the detector | **8** |
+| preferred the word in the text | **45** |
+| could not decide | **27** |
+| **precision floor** | **10.0%** — 95% Wilson [5.2, 18.5] |
+| **precision ceiling** | **43.8%** — 95% Wilson [33.4, 54.7] |
+
+**The "ship as is" band starts at 60% on the lower bound. It is excluded at every reading of
+this batch**, including the one that hands the detector every ambiguous position it could
+possibly want.
+
+## The margin sweep, run over the labels rather than over new labels
+
+The decision rule's middle band says *tighten thresholds and re-measure*. The labels are a
+fixed asset and can answer that for free, so they were asked first. Each labelled firing
+carries the evidence advantage that produced it, so any higher `Config.margin` can be
+simulated exactly:
+
+| margin | fires | agreed | preferred text | abstained | floor | ceiling |
+|---|---|---|---|---|---|---|
+| **21 (shipped)** | 80 | 8 | 45 | 27 | 10.0% | 43.8% |
+| 24 | 64 | 6 | 35 | 23 | 9.4% | 45.3% |
+| 28 | 43 | 4 | 24 | 15 | 9.3% | 44.2% |
+| 32 | 35 | 3 | 18 | 14 | 8.6% | 48.6% |
+| 40 | 21 | 2 | 10 | 9 | 9.5% | 52.4% |
+| 56 | 9 | 2 | 4 | 3 | 22.2% | 55.6% |
+| 64 | 4 | 0 | 3 | 1 | 0.0% | 25.0% |
+| 80 | 2 | 0 | 2 | 0 | 0.0% | 0.0% |
+
+**There is no margin to tighten to.** Agreements and disagreements have the *same* evidence
+distribution — median advantage 28 for both, ranges 21–63 and 21–104. Raising the bar discards
+correct catches at the same rate as wrong ones, and past 64 it discards all of them.
+
+The middle band of the decision rule assumed a threshold existed that traded recall for
+precision. On this evidence it does not.
+
+## Nothing else separates them either
+
+Every feature the detector could condition on, tested against the labels:
+
+| feature | separates agreement from disagreement? |
+|---|---|
+| evidence advantage | **no** — 16.0% / 12.5% / 16.7% across three bands |
+| context words available | no — 79 of 80 had both neighbours |
+| word length | no monotone signal |
+| position in sentence | no — 18.2% vs 12.9% |
+| sentence length | no |
+| **suggestion rarer than the typed word** | **the only candidate: 0 agreements in 12 decided items** |
+
+The last row is the one lever this batch found: when the detector proposes a word **less
+frequent** than the one already written, it was never right. Filtering those out removes 17 of
+80 firings and none of the 8 agreements. It lifts the floor from 10.0% to 12.7% — real, and
+nowhere near enough. On 12 decided items it is suggestive, not established, and it is a
+hypothesis for batch 002 rather than a change to make now.
+
+## What batch 001 does NOT establish
+
+- **The labels are unrepeated.** The protocol's self-agreement check runs in batch *n+1* and
+  has not run. Every number above rests on one person's judgment, once. This is the largest
+  open weakness and it is not a small one.
+- **n = 80.** The bound is wide.
+- **The frame is edited subtitle text**, 17 of 80 items of which carried a corpus artefact.
+  On the 63 artefact-free items all 8 agreements remain and abstention falls to 29%, so noise
+  does not explain the result — but the frame is still not phone typing.
+- **Nothing about S1 or P1**, for the reason in the addendum above.
+
+## Batch 002 — what it is for
+
+Not to tune. There is nothing to tune to. It exists to test the two things batch 001 could not:
+
+1. **Are the labels reliable?** 15 repeats from batch 001, per the rule.
+2. **Does the rarer-suggestion filter hold up?** Pre-registered here, before the batch is cut:
+   *the filter is worth adopting only if it removes at least 15% of firings while removing no
+   more than one agreement in the batch.*
+
+240 real + 30 clean + 30 injected + 15 repeats = 315 screens, about 24 minutes at the pace
+batch 001 actually measured.

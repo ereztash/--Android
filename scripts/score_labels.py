@@ -31,7 +31,8 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-CONTROL_BAR = 18          # of 20, from docs/LABELING_PROTOCOL.md
+CONTROL_RATE = 0.90       # "18 of 20" from docs/LABELING_PROTOCOL.md, expressed as the rate
+                          # it always was so it scales with batch size
 MAX_ABSTENTION = 0.30
 MIN_SELF_AGREEMENT = 0.90
 DECIDE_GOOD = 0.60        # Wilson lower bound
@@ -115,19 +116,24 @@ def report(key_doc, answers, prior_answers=None):
     if os.path.isfile(protocol):
         import hashlib
         on_disk = hashlib.sha256(open(protocol, "rb").read()).hexdigest()
+    # Drift is reported, never conflated with the scoring outcome. They are independent
+    # facts: a batch cut under an older revision of the protocol can still be scored, and a
+    # batch cut under the current one can still be void. An earlier version overwrote the
+    # verdict with PROTOCOL-DRIFT, which made the self-test unable to reach any verdict at
+    # all once the protocol was amended -- the check masking the thing it was meant to guard.
     if on_disk and on_disk != key_doc["protocol_sha256"]:
         lines.append("  !! docs/LABELING_PROTOCOL.md has CHANGED since this batch was cut.")
         lines.append("     The rule these labels were collected under is not the rule on "
                      "disk. Read the diff before reading anything below.")
-        verdict = "PROTOCOL-DRIFT"
 
     if s["unknown"]:
         lines.append(f"  !! {len(s['unknown'])} answers name items that are not in this key")
         verdict = "VOID"
 
     lines.append("")
+    bar = math.ceil(CONTROL_RATE * c["total"]) if c["total"] else 0
     lines.append(f"  controls    : {c['correct']} / {c['total']} correct "
-                 f"(bar: {CONTROL_BAR} of 20)")
+                 f"(bar: {bar}, {100*CONTROL_RATE:.0f}%)")
     for item_id, kind, choice in c["misses"][:8]:
         lines.append(f"                miss {item_id} [{kind}] answered {choice}")
 
@@ -136,7 +142,7 @@ def report(key_doc, answers, prior_answers=None):
         lines.append(f"  pace        : median {t[len(t)//2]/1000:.1f} s/item, "
                      f"{sum(t)/60000:.0f} min total over {len(t)} items")
 
-    if c["total"] and c["correct"] < CONTROL_BAR:
+    if c["total"] and c["correct"] < bar:
         lines.append("")
         lines.append("  VERDICT: VOID -- the labeller did not clear the control bar fixed in")
         lines.append("           docs/LABELING_PROTOCOL.md. No precision is computed, because")
@@ -149,11 +155,31 @@ def report(key_doc, answers, prior_answers=None):
     lines.append(f"  abstentions : {r['both'] + r['unclear']} / {total} = "
                  f"{100*abstention:.1f}%  (bar: <= {100*MAX_ABSTENTION:.0f}%)")
 
+    # The bound, reported on EVERY batch including a NOT DECIDABLE one. It is not precision
+    # under a favourable assumption: for any counts, a/n <= a/(a+b) <= (a+c+d)/n, so the
+    # bracket always contains the filtered figure and is a strictly weaker claim than it.
+    # Added after batch 001, in the open, for the reason recorded in the protocol.
+    if total:
+        floor_lo, floor_hi = wilson(r["suggestion"], total)
+        ceil_k = r["suggestion"] + r["both"] + r["unclear"]
+        ceil_lo, ceil_hi = wilson(ceil_k, total)
+        lines.append("")
+        lines.append(f"  BOUND over all {total} items, whatever the abstentions are:")
+        lines.append(f"    floor   {r['suggestion']:>3} / {total} = "
+                     f"{100*r['suggestion']/total:5.1f}%   95% [{100*floor_lo:.1f}, "
+                     f"{100*floor_hi:.1f}]   (every abstention a loss)")
+        lines.append(f"    ceiling {ceil_k:>3} / {total} = {100*ceil_k/total:5.1f}%   "
+                     f"95% [{100*ceil_lo:.1f}, {100*ceil_hi:.1f}]   (every abstention a win)")
+        if ceil_hi < DECIDE_GOOD:
+            lines.append(f"    even the ceiling's upper bound is below the {100*DECIDE_GOOD:.0f}% "
+                         f"ship band. No resolution of the")
+            lines.append("    abstentions puts this batch in that band.")
+
     if abstention > MAX_ABSTENTION:
         lines.append("")
-        lines.append("  VERDICT: NOT DECIDABLE -- abstentions above the bar. The open question")
-        lines.append("           is whether these positions are decidable at all, which is a")
-        lines.append("           different measurement from whether the detector is right.")
+        lines.append("  VERDICT: NOT DECIDABLE -- abstentions above the bar. Precision is not")
+        lines.append("           computed on the decided subset, which is the easy half by")
+        lines.append("           construction. The bound above stands; it uses every item.")
         lines.append("=" * 72)
         return "NOT-DECIDABLE", "\n".join(lines)
 
@@ -242,7 +268,10 @@ def main():
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--key", default=os.path.join(ROOT, "labeling", "batch-001.key.json"))
     ap.add_argument("--labels", help="the JSON the screen produced; '-' reads stdin")
-    ap.add_argument("--prior", help="an earlier scored labels file, for self-agreement")
+    ap.add_argument("--prior", help="a buckets file from an earlier batch, for self-agreement")
+    ap.add_argument("--emit-buckets",
+                    help="write this batch's per-source-id outcomes, so the NEXT batch can "
+                         "score self-agreement against it")
     ap.add_argument("--self-test", action="store_true",
                     help="POSITIVE CONTROL: score four synthetic labellers and require the "
                          "scorer to void one, call one undecidable, and send one to the "
@@ -255,6 +284,17 @@ def main():
         expected = {"perfect": "OK", "inattentive": "VOID",
                     "unsure": "NOT-DECIDABLE", "disagrees": "OK"}
         failures = []
+        # The drift check has its own control: it must fire when the hash differs and stay
+        # quiet when it does not.
+        drifted = dict(key_doc, protocol_sha256="0" * 64)
+        _, drift_text = report(drifted, synthetic(key_doc, "perfect"))
+        if "has CHANGED since this batch was cut" not in drift_text:
+            failures.append("drift: a mismatched protocol hash was not reported")
+        undrifted = dict(key_doc, protocol_sha256=__import__("hashlib").sha256(
+            open(os.path.join(ROOT, "docs", "LABELING_PROTOCOL.md"), "rb").read()).hexdigest())
+        _, quiet_text = report(undrifted, synthetic(key_doc, "perfect"))
+        if "has CHANGED since this batch was cut" in quiet_text:
+            failures.append("drift: reported a change when the hash matches")
         for mode, want in expected.items():
             got, text = report(key_doc, synthetic(key_doc, mode))
             print(f"--- self-test: {mode} (expect {want}) -> {got}")
@@ -273,8 +313,9 @@ def main():
                   "cannot produce its own unfavourable verdict.")
             return 1
         print("SELF-TEST PASSED: the scorer voids an inattentive labeller, reports NOT "
-              "DECIDABLE for one who abstains on the real items, and reaches the withdraw "
-              "band when the detector is mostly wrong. It is capable of failing.")
+              "DECIDABLE for one who abstains on the real items, reaches the withdraw "
+              "band when the detector is mostly wrong, and reports protocol drift only when "
+              "there is drift. It is capable of failing.")
         return 0
 
     if not args.labels:
@@ -289,6 +330,24 @@ def main():
         prior = p.get("buckets")
     _, text = report(key_doc, answers, prior)
     print(text)
+
+    if args.emit_buckets:
+        by_id = {row["id"]: row for row in key_doc["key"]}
+        buckets = {}
+        for item_id, given in answers.items():
+            row = by_id.get(item_id)
+            if row is None or row["stratum"] != "real":
+                continue
+            choice = given["choice"] if isinstance(given, dict) else given
+            buckets[row["source_id"]] = (
+                "suggestion" if choice == row["other_option"]
+                else "text" if choice == row["text_option"]
+                else "both" if choice == 3 else "unclear")
+        with open(args.emit_buckets, "w", encoding="utf-8") as fh:
+            json.dump({"batch_id": key_doc["batch_id"], "buckets": buckets}, fh,
+                      ensure_ascii=False, indent=1)
+            fh.write("\n")
+        print(f"wrote {len(buckets)} outcomes to {args.emit_buckets}")
     return 0
 
 
