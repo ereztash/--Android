@@ -397,3 +397,82 @@ in `CorrectionController.build`, and `he_skipgrams.bin` leaves the assets with i
   it stays silent on is untouched, and M11-BASERATE remains open.
 - **Phone typing.** Edited subtitle dialogue is the frame throughout.
 - **A second annotator.** Everything here is one person, checked against themselves.
+
+---
+
+# Why the number is what it is — and what more labelling would and would not buy
+
+Asked after batch 003: *would labelling more, up to some point, raise the precision?*
+
+## Labelling measures. It does not improve.
+
+More labels narrow the interval around the number. They do not move the number. Holding the
+observed rate at the pooled 12.5%:
+
+| n | labelling time | floor 95% CI | half-width |
+|---|---|---|---|
+| 80 | 6 min | [6.9, 21.5] | ±7.3 |
+| **320 (done)** | **22 min** | **[9.3, 16.6]** | **±3.6** |
+| 1,000 | 70 min | [10.6, 14.7] | ±2.1 |
+| 3,000 | 3.5 h | [11.4, 13.7] | ±1.2 |
+| 10,000 | 11.7 h | [11.9, 13.2] | ±0.6 |
+
+The decision threshold is **40%**, and the point estimate is **27.5 points** below it. The very
+first batch, n=80, already excluded it. Every row above is the same decision, and eleven hours
+of labelling buys three points of interval width and no new conclusion.
+
+## The mechanism, measured rather than assumed
+
+`BigramSparsityTest`, on unmodified and correctly written conversational Hebrew:
+
+> **37.7% of adjacent word pairs — both words in the lexicon — have never been seen in the
+> shipped bigram table.** 21.3% of mid-sentence positions have no evidence on either side.
+
+The detector fires when the typed word has no adjacent evidence and an alternative has some.
+That first condition is true of **more than a third of correct Hebrew**. It is not evidence of
+an error, and no threshold stacked on top of it can turn it into one.
+
+This is the same wall the margin sweep hit from the other side. The sweep found empirically
+that agreements and disagreements carry identical evidence; the sparsity measurement says why
+they must.
+
+**And it is a property of corpus size, not of any constant in this package.** 25.6M training
+tokens is simply not enough for "unseen" to mean anything about a language with Hebrew's
+morphology. That is why raising the margin, restricting the letters, and filtering on relative
+frequency all failed: they are all thresholds over a signal that is not there.
+
+## What that costs a user, at the measured rates
+
+Over 1.8M words of conversational text:
+
+| | |
+|---|---|
+| flags shown | 2,166 — **one per 838 words** |
+| of them right | ~271 — one per 6,705 words |
+| of them wrong | ~1,895 — **one per 958 words** |
+| **wrong to right** | **7 : 1** |
+
+## An inference, clearly labelled as one
+
+Combining three measured quantities — firing rate, precision floor, and recall on injected
+errors — implies a real-word-error base rate of roughly **0.059% of eligible positions, one per
+1,700 eligible words**, in edited subtitle dialogue.
+
+**M11-BASERATE stays NOT MEASURED.** This is an inference from three measurements, it assumes
+recall on injected errors transfers to authentic ones, and it is recorded as an estimate that
+a future measurement should be checked against rather than as a result.
+
+## What the labels ARE worth, which is more than what they measured
+
+The 320 judged firings are a **reusable test set**. Any replacement for this layer — a larger
+corpus, a model that generalises instead of counting, a different rule entirely — can be scored
+against them in seconds, with no further labelling. That is worth considerably more than the
+precision figure they produced.
+
+Two conditions on reusing them, both of which this project already applies everywhere else:
+
+1. **Selecting an approach on these 320 and reporting on the same 320 is tuning on the test
+   set.** Split them, or label a fresh batch as the test. The rarer-suggestion filter is the
+   cautionary example: it passed on 12 items and died on 240.
+2. **They only cover positions the current detector fires at.** A replacement that fires
+   somewhere else is not evaluable against them, and needs its own sample.
