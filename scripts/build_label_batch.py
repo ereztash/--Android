@@ -37,6 +37,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LABEL_DIR = os.path.join(ROOT, "labeling")
 CANDIDATES = os.path.join(LABEL_DIR, "candidates.jsonl")
+RESULTS = os.path.join(LABEL_DIR, "results")
 TEMPLATE = os.path.join(ROOT, "scripts", "label_screen_template.html")
 
 # The protocol's batch shape. Changing these changes what the control bar means.
@@ -87,9 +88,18 @@ def main():
     ap.add_argument("--real", type=int, default=PROTOCOL_REAL)
     ap.add_argument("--clean", type=int, default=PROTOCOL_CLEAN)
     ap.add_argument("--injected", type=int, default=PROTOCOL_INJECTED)
-    ap.add_argument("--repeat-from", default=None,
-                    help="an earlier batch key file; 15%% of its items are re-drawn for the "
-                         "self-agreement check, re-shuffled independently")
+    ap.add_argument("--repeat-from", nargs="*", default=None,
+                    help="earlier batch KEY files. Their real items become the pool the "
+                         "self-agreement repeats are drawn from, re-shuffled independently. "
+                         "Each file's outcomes are read from the matching buckets file in "
+                         "labeling/results/, which is what makes a stratified draw possible.")
+    ap.add_argument("--repeat-decided", type=int, default=None,
+                    help="how many repeats to draw from items DECIDED the first time. "
+                         "Direction stability is only defined on pairs decided twice, so an "
+                         "unstratified draw spends most of its items where it cannot be "
+                         "measured. See amendment 2 in docs/LABELING_PROTOCOL.md.")
+    ap.add_argument("--repeat-abstained", type=int, default=None,
+                    help="how many repeats to draw from items ABSTAINED the first time")
     ap.add_argument("--force", action="store_true",
                     help="allow stratum sizes that differ from the protocol")
     args = ap.parse_args()
@@ -127,24 +137,56 @@ def main():
 
     repeats = []
     if args.repeat_from:
-        # The KEY file, not the presented one: only the key knows which pool record each item
-        # came from, and the sentence has to be re-fetched from the pool so the repeat is
-        # rebuilt from source rather than copied from a file that has been edited by hand.
-        with open(args.repeat_from, encoding="utf-8") as fh:
-            prior = json.load(fh)
+        # The KEY files, not the presented ones: only a key knows which pool record each item
+        # came from, and the sentence is re-fetched from the pool so a repeat is rebuilt from
+        # source rather than copied from a file that may have been edited by hand.
         by_source = {r["id"]: r for pool in pools.values() for r in pool}
-        eligible = [row for row in prior["key"] if row["stratum"] == "real"]
-        k = max(1, round(0.15 * len(prior["key"])))
-        if len(eligible) < k:
-            sys.exit(f"batch {prior['batch_id']} has only {len(eligible)} real items to "
-                     f"repeat, need {k}")
-        for row in rng.sample(sorted(eligible, key=lambda r: r["id"]), k):
-            rec = by_source.get(row["source_id"])
+        already_repeated = set()
+        candidates, labels = [], {}
+        for path in args.repeat_from:
+            prior = json.load(open(path, encoding="utf-8"))
+            for row in prior["key"]:
+                if row["stratum"].startswith("repeat:"):
+                    already_repeated.add(row["source_id"])
+                elif row["stratum"] == "real":
+                    candidates.append((row["source_id"], prior["batch_id"]))
+            buckets_path = os.path.join(
+                RESULTS, f"{prior['batch_id']}.buckets.json")
+            if os.path.isfile(buckets_path):
+                labels.update(json.load(open(buckets_path, encoding="utf-8"))["buckets"])
+
+        # Every repeat must be a clean SECOND observation. An item already re-shown once
+        # would be a third, which measures something else and would sit in the same counter.
+        candidates = [c for c in candidates if c[0] not in already_repeated]
+
+        want_dec = args.repeat_decided
+        want_abs = args.repeat_abstained
+        if want_dec is None and want_abs is None:
+            # Unstratified, the original behaviour: 15% of the most recent prior batch.
+            n_prior = sum(1 for c in candidates if c[1] == candidates[-1][1])
+            want_dec, want_abs = 0, 0
+            picked = rng.sample(sorted(candidates), max(1, round(0.15 * n_prior)))
+        else:
+            decided = sorted(c for c in candidates
+                             if labels.get(c[0]) in ("suggestion", "text"))
+            abstained = sorted(c for c in candidates
+                               if labels.get(c[0]) in ("both", "unclear"))
+            if not labels:
+                sys.exit("a stratified repeat draw needs the earlier batches' buckets files; "
+                         "run score_labels.py --emit-buckets for each of them first")
+            for name, pool_, want in (("decided", decided, want_dec or 0),
+                                      ("abstained", abstained, want_abs or 0)):
+                if len(pool_) < want:
+                    sys.exit(f"only {len(pool_)} {name} items available to repeat, need {want}")
+            picked = (rng.sample(decided, want_dec or 0)
+                      + rng.sample(abstained, want_abs or 0))
+
+        for source_id, prior_batch in picked:
+            rec = by_source.get(source_id)
             if rec is None:
-                sys.exit(f"{row['source_id']} is not in the current pool; the harvest was "
-                         f"re-run against a different corpus and repeats would not be the "
-                         f"same items")
-            repeats.append((rec, "repeat:" + prior["batch_id"]))
+                sys.exit(f"{source_id} is not in the current pool; the harvest was re-run "
+                         f"against a different corpus and repeats would not be the same items")
+            repeats.append((rec, "repeat:" + prior_batch))
 
     items, key = [], []
     order = drawn + repeats

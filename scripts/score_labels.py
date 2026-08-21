@@ -34,7 +34,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONTROL_RATE = 0.90       # "18 of 20" from docs/LABELING_PROTOCOL.md, expressed as the rate
                           # it always was so it scales with batch size
 MAX_ABSTENTION = 0.30
-MIN_SELF_AGREEMENT = 0.90
+MIN_SELF_AGREEMENT = 0.90      # four-way; governs the filtered precision figure
+MIN_DIRECTION_STABILITY = 0.90 # amendment 2; governs whether the floor may be published
 DECIDE_GOOD = 0.60        # Wilson lower bound
 DECIDE_POOR = 0.40
 
@@ -155,6 +156,42 @@ def report(key_doc, answers, prior_answers=None):
     lines.append(f"  abstentions : {r['both'] + r['unclear']} / {total} = "
                  f"{100*abstention:.1f}%  (bar: <= {100*MAX_ABSTENTION:.0f}%)")
 
+    # Self-agreement first, because amendment 2 makes it decide what the BOUND may print.
+    # It used to run last, after everything it governs had already been printed.
+    four_way = direction = None
+    reversals = boundary = tot = same = 0
+    if prior_answers:
+        decided_set = ("suggestion", "text")
+        pairs_decided = 0
+        for source_id, bucket in s["repeats"].items():
+            before = prior_answers.get(source_id)
+            if before is None:
+                continue
+            tot += 1
+            if before == bucket:
+                same += 1
+                if before in decided_set:
+                    pairs_decided += 1
+            elif before in decided_set and bucket in decided_set:
+                reversals += 1
+                pairs_decided += 1
+            else:
+                boundary += 1
+        if tot:
+            four_way = same / tot
+            lines.append("")
+            lines.append(f"  four-way agreement  : {same} / {tot} = {100*four_way:.1f}%  "
+                         f"(bar: >= {100*MIN_SELF_AGREEMENT:.0f}%)  -- governs the filtered figure")
+            if pairs_decided:
+                direction = 1 - reversals / pairs_decided
+                lines.append(f"  direction stability : {pairs_decided - reversals} / "
+                             f"{pairs_decided} = {100*direction:.1f}%  "
+                             f"(bar: >= {100*MIN_DIRECTION_STABILITY:.0f}%)  -- governs the floor")
+            else:
+                lines.append("  direction stability : no pair was decided both times; "
+                             "NOT MEASURED")
+            lines.append(f"    reversals {reversals}, abstain-boundary moves {boundary}")
+
     # The bound, reported on EVERY batch including a NOT DECIDABLE one. It is not precision
     # under a favourable assumption: for any counts, a/n <= a/(a+b) <= (a+c+d)/n, so the
     # bracket always contains the filtered figure and is a strictly weaker claim than it.
@@ -165,9 +202,14 @@ def report(key_doc, answers, prior_answers=None):
         ceil_lo, ceil_hi = wilson(ceil_k, total)
         lines.append("")
         lines.append(f"  BOUND over all {total} items, whatever the abstentions are:")
-        lines.append(f"    floor   {r['suggestion']:>3} / {total} = "
-                     f"{100*r['suggestion']/total:5.1f}%   95% [{100*floor_lo:.1f}, "
-                     f"{100*floor_hi:.1f}]   (every abstention a loss)")
+        if direction is not None and direction < MIN_DIRECTION_STABILITY:
+            lines.append("    floor   WITHHELD -- direction stability is below its bar, and "
+                         "the floor moves")
+            lines.append("            only on a direction reversal. See amendment 2.")
+        else:
+            lines.append(f"    floor   {r['suggestion']:>3} / {total} = "
+                         f"{100*r['suggestion']/total:5.1f}%   95% [{100*floor_lo:.1f}, "
+                         f"{100*floor_hi:.1f}]   (every abstention a loss)")
         lines.append(f"    ceiling {ceil_k:>3} / {total} = {100*ceil_k/total:5.1f}%   "
                      f"95% [{100*ceil_lo:.1f}, {100*ceil_hi:.1f}]   (every abstention a win)")
         if ceil_hi < DECIDE_GOOD:
@@ -183,46 +225,39 @@ def report(key_doc, answers, prior_answers=None):
         lines.append("=" * 72)
         return "NOT-DECIDABLE", "\n".join(lines)
 
+    if total == 0:
+        lines.append("")
+        lines.append("  This batch carries no fresh firings. It is a check on the INSTRUMENT")
+        lines.append("  -- the labeller -- and not on the detector, so there is no precision")
+        lines.append("  to report from it. The bars above are its whole output.")
+        ok = (four_way is not None and four_way >= MIN_SELF_AGREEMENT
+              and direction is not None and direction >= MIN_DIRECTION_STABILITY)
+        if direction is not None and direction >= MIN_DIRECTION_STABILITY:
+            lines.append("")
+            lines.append("  VERDICT: direction stability CLEARS its bar. The floors from the")
+            lines.append("           batches that carried real firings become publishable, and")
+            lines.append("           docs/LABELING_PROTOCOL.md amendment 2 already fixed what")
+            lines.append("           that means -- both lower bounds sit far below the 40%")
+            lines.append("           decision floor.")
+        elif direction is not None:
+            lines.append("")
+            lines.append("  VERDICT: direction stability FAILS. Nothing from any batch supports")
+            lines.append("           a precision claim; A1 is NOT MEASURED and the question")
+            lines.append("           needs a second annotator, not a fourth batch.")
+        lines.append("=" * 72)
+        return ("STABLE" if ok else "UNSTABLE"), "\n".join(lines)
+
     if decided == 0:
         lines.append("  VERDICT: NOT MEASURED -- no decided items.")
         lines.append("=" * 72)
         return "NOT-MEASURED", "\n".join(lines)
 
-    if prior_answers:
-        same = tot = reversals = boundary = 0
-        decided_set = ("suggestion", "text")
-        for source_id, bucket in s["repeats"].items():
-            before = prior_answers.get(source_id)
-            if before is None:
-                continue
-            tot += 1
-            if before == bucket:
-                same += 1
-            elif before in decided_set and bucket in decided_set:
-                reversals += 1
-            else:
-                boundary += 1
-        if tot:
-            agree = same / tot
-            lines.append("")
-            lines.append(f"  self-agreement: {same} / {tot} = {100*agree:.1f}%  "
-                         f"(bar: >= {100*MIN_SELF_AGREEMENT:.0f}%)")
-            # Which KIND of disagreement, because they do not cost the same thing. A
-            # direction reversal (suggestion <-> text) moves the precision floor. A move
-            # across the abstain boundary does not: the floor counts agreements over the
-            # full denominator, and an item that becomes "unclear" was not an agreement
-            # either way. Reported so the verdict below can be read for what it is.
-            lines.append(f"    of which direction reversals: {reversals}, "
-                         f"abstain-boundary moves: {boundary}")
-            if agree < MIN_SELF_AGREEMENT:
-                lines.append("")
-                lines.append("  VERDICT: NOISE -- disagreement with oneself is large relative")
-                lines.append("           to the effect. No precision figure is published from")
-                lines.append("           this run. The bound above stands: it is stated in the")
-                lines.append("           protocol as reported on every batch, and its FLOOR")
-                lines.append("           moves only on a direction reversal.")
-                lines.append("=" * 72)
-                return "NOISE", "\n".join(lines)
+    if four_way is not None and four_way < MIN_SELF_AGREEMENT:
+        lines.append("")
+        lines.append("  VERDICT: NOISE -- four-way agreement below its bar. No precision")
+        lines.append("           figure is published from this run. The bound above stands.")
+        lines.append("=" * 72)
+        return "NOISE", "\n".join(lines)
 
     lo, hi = wilson(r["suggestion"], decided)
     lines.append("")
@@ -320,6 +355,44 @@ def main():
         if failures:
             print("SELF-TEST FAILED:", "; ".join(failures))
             return 1
+        # AMENDMENT 2's paths need their own control. They are reached only by a batch of
+        # repeats with no fresh firings, which the four synthetic labellers above never
+        # produce, so without this the new code would ship unexercised.
+        repeat_key = os.path.join(ROOT, "labeling", "batch-003.key.json")
+        if os.path.isfile(repeat_key):
+            rk = json.load(open(repeat_key, encoding="utf-8"))
+            prior = {}
+            for name in ("batch-001", "batch-002"):
+                bp = os.path.join(ROOT, "labeling", "results", f"{name}.buckets.json")
+                if os.path.isfile(bp):
+                    prior.update(json.load(open(bp, encoding="utf-8"))["buckets"])
+            for mode, want in (("stable", "STABLE"), ("reverser", "UNSTABLE")):
+                rng2 = random.Random(11)
+                ans = {}
+                for row in rk["key"]:
+                    if row["stratum"] == "clean":
+                        c = row["text_option"]
+                    elif row["stratum"] == "injected":
+                        c = row["other_option"]
+                    else:
+                        was = prior.get(row["source_id"], "text")
+                        if mode == "reverser" and was in ("suggestion", "text") \
+                                and rng2.random() < 0.5:
+                            was = "text" if was == "suggestion" else "suggestion"
+                        c = {"suggestion": row["other_option"], "text": row["text_option"],
+                             "both": 3, "unclear": 4}[was]
+                    ans[row["id"]] = {"choice": c, "ms": 4000}
+                got, text = report(rk, ans, prior)
+                print(f"--- self-test: {mode} on a repeats-only batch (expect {want}) -> {got}")
+                for line in text.splitlines():
+                    if "stability" in line or "VERDICT" in line or "reversals" in line:
+                        print("   ", line.strip())
+                if got != want:
+                    failures.append(f"{mode}: expected {want}, got {got}")
+        else:
+            print("--- self-test: no batch-003 key on disk; amendment 2's paths NOT EXERCISED")
+            failures.append("amendment 2 paths were not exercised")
+
         # "disagrees" returning OK is not a pass on its own -- what matters is the BAND it
         # lands in. A scorer that can only ever print the favourable verdict is not a scorer.
         _, text = report(key_doc, synthetic(key_doc, "disagrees"))

@@ -506,3 +506,27 @@ this question needs a second annotator rather than a third batch.
 
 **Either way, the detector is not changed on the strength of batch 003 alone.** It is a check
 on the instrument, not on the product.
+
+### Batch 003 as cut
+
+`seed 20260824`, 50 screens, drawn exactly as amendment 2 specifies:
+
+| | |
+|---|---|
+| repeats from batch 001 | 12 |
+| repeats from batch 002 | 28 |
+| of which decided the first time | **30** (26 `in-text`, 4 `suggested`) |
+| of which abstained the first time | **10** (8 `unclear`, 2 `both-fine`) |
+| clean controls | 5 |
+| injected controls | 5 |
+| control bar | 9 of 10 |
+
+Verified before release: no item overlaps batch 002's repeats, no item appears twice inside
+the batch, and the two words were re-shuffled independently — the order changed on 15 of 40,
+which is what an independent coin flip looks like.
+
+The scorer's `--self-test` now exercises amendment 2's two new paths against this key: a
+labeller who repeats themselves must come back **STABLE**, and one who reverses half their
+decided items must come back **UNSTABLE**. Both were demonstrated before the batch was sent.
+Code reached only by a batch shape that had never existed would otherwise have shipped
+unexercised.
