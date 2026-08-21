@@ -116,6 +116,15 @@ class KeyboardView(context: Context) : View(context) {
 
     private val scratch = RectF()
 
+    /**
+     * The label size every key shares, and the per-key size after fitting.
+     *
+     * Two arrays rather than a lookup, because this is read once per key per frame on the
+     * draw path. `labelSizes[i]` belongs to `rects[i]` and is rebuilt with it.
+     */
+    private var fullLabelSize = 0f
+    private var labelSizes = FloatArray(0)
+
     fun setLayout(model: KeyboardLayout) {
         val changed = layoutModel?.id != model.id
         layoutModel = model
@@ -161,15 +170,26 @@ class KeyboardView(context: Context) : View(context) {
         // is somewhere it has moved away from.
         accessibilityHelper.setKeys(rects)
         val rowHeight = h.toFloat() / model.rows.size
-        labelPaint.textSize = rowHeight * LABEL_HEIGHT_FRACTION
-        labelPaintPressed.textSize = labelPaint.textSize
+        fullLabelSize = rowHeight * LABEL_HEIGHT_FRACTION
+        labelPaint.textSize = fullLabelSize
+        labelPaintPressed.textSize = fullLabelSize
+        // Multi-character labels -- `123`, `en`, `he` -- do not fit a key sized for one Hebrew
+        // letter. Measured once here, not per frame; text advance is linear in size, so one
+        // measurement at the shared size gives the exact ratio for every key.
+        labelSizes = FloatArray(rects.size) { i ->
+            val r = rects[i]
+            KeyGeometry.fitTextSize(
+                fullSize = fullLabelSize,
+                measuredAtFull = labelPaint.measureText(r.key.label),
+                available = r.width - 2f * GAP - LABEL_BREATHING_ROOM,
+            )
+        }
     }
 
     override fun onDraw(canvas: Canvas) {
         if (rects.isEmpty()) recomputeGeometry(width, height)
-        val metrics = labelPaint.fontMetrics
-        val baselineOffset = (metrics.descent + metrics.ascent) / 2f
-        for (r in rects) {
+        for (i in rects.indices) {
+            val r = rects[i]
             scratch.set(r.left + GAP, r.top + GAP, r.right - GAP, r.bottom - GAP)
             val paint = when {
                 r.key == pressedKey -> keyFillPressed
@@ -178,9 +198,19 @@ class KeyboardView(context: Context) : View(context) {
             }
             canvas.drawRoundRect(scratch, CORNER, CORNER, paint)
             val text = if (r.key == pressedKey) labelPaintPressed else labelPaint
-            canvas.drawText(r.key.label, r.centerX, r.centerY - baselineOffset, text)
+            text.textSize = labelSizes.getOrElse(i) { fullLabelSize }
+            // Re-read per key: the baseline follows the size, and a label that was shrunk
+            // would otherwise sit off-centre by the difference.
+            val metrics = text.fontMetrics
+            canvas.drawText(r.key.label, r.centerX,
+                            r.centerY - (metrics.descent + metrics.ascent) / 2f, text)
         }
-        drawPreview(canvas, baselineOffset)
+        // The preview bubble only ever shows a character key, which is one grapheme and always
+        // fits, so it keeps the shared size.
+        labelPaint.textSize = fullLabelSize
+        labelPaintPressed.textSize = fullLabelSize
+        val previewMetrics = labelPaint.fontMetrics
+        drawPreview(canvas, (previewMetrics.descent + previewMetrics.ascent) / 2f)
     }
 
     /**
@@ -400,6 +430,12 @@ class KeyboardView(context: Context) : View(context) {
         const val MIN_HEIGHT_PX = 480
         const val LABEL_HEIGHT_FRACTION = 0.42f
         const val GAP = 4f
+
+        /**
+         * Space left inside a key beyond the drawn rounded rect, so a shrunk label does not
+         * touch its own border. Total, not per side.
+         */
+        const val LABEL_BREATHING_ROOM = 8f
         const val CORNER = 12f
     }
 }

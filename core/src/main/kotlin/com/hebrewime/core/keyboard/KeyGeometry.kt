@@ -98,6 +98,36 @@ object KeyGeometry {
     }
 
     /**
+     * The text size at which [label] fits inside [available] pixels, given that it measured
+     * [measuredAtFull] pixels wide at [fullSize].
+     *
+     * ### Why this is arithmetic in `:core` and not two lines in `onDraw`
+     * The label size was set once, from the row height, for a single Hebrew letter. Every
+     * multi-character label on the keyboard -- `123`, `en`, `he` -- was then drawn at that
+     * size, and measured off the operator's screenshot it overflows the rounded rect it sits
+     * in: `en` by about 5 device pixels on an 82-pixel key, `123` by about 3 on a 127-pixel
+     * one. Both stay inside their own key's touch area, so nothing was mis-typed; what it
+     * costs is the border, and three same-coloured function keys whose labels touch read as
+     * one block. That is a cosmetic defect and is recorded as one.
+     *
+     * It was invisible in every JVM test because no JVM test draws text.
+     *
+     * Text advance is linear in text size, so the fit is exact rather than a search: this
+     * returns the size, and the View applies it. Keeping it here means the ratio is tested
+     * without inflating a view, which is the only reason the rest of this file is here too.
+     *
+     * Shrinks only, never grows: a one-letter label already fits and must keep the size the
+     * whole keyboard shares, or the letters would stop looking uniform -- which is the thing
+     * [layout]'s global unit exists to protect.
+     */
+    fun fitTextSize(fullSize: Float, measuredAtFull: Float, available: Float): Float {
+        if (fullSize <= 0f || measuredAtFull <= 0f) return fullSize
+        if (available <= 0f) return fullSize
+        if (measuredAtFull <= available) return fullSize
+        return fullSize * (available / measuredAtFull)
+    }
+
+    /**
      * The key at (x, y), or the nearest one if the touch landed in a gap or just off the edge.
      *
      * Nearest-key fallback rather than null: a touch a pixel outside the keyboard is a touch

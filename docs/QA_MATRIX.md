@@ -85,10 +85,10 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | GATE-NET-1 | No network capability — shipping deps | 113 resolved coordinates | Planted okhttp + Firebase coordinates |
 | GATE-NET-2 | **Built debug APK** — permissions + DEX | 1 permission, 16 descriptors over 16 DEX files (28,652,352 bytes) | **A real assembled `netcontrol` APK** |
 | GATE-NET-3 | **Built RELEASE APK** — permissions + DEX | 1 permission, **2 descriptors** over 1 DEX file (1,968,128 bytes) | The same real APK against the release baseline |
-| GATE-API-1 | No IME API that compiles cleanly and fails at runtime (§1.1/1.3/1.4/1.6) | 96 files, 6 rules | Planted session-override, return-value branch, hardcoded backspace, blocking fetch |
-| GATE-API-1 | `getInitial*` accessors only inside the privacy boundary (§1.2) | 96 files | Planted read outside the boundary |
-| GATE-API-1 | Nothing typed reaches logcat or stdout | 96 files, production sources | Planted `Log.d` and `println` |
-| GATE-CRYPTO-1 | No ECB, hardcoded IV/key, seeded `SecureRandom`, broken primitive | 96 files, 4 rules | Planted `AES/ECB`, fixed IV, hardcoded key, MD5, seeded random |
+| GATE-API-1 | No IME API that compiles cleanly and fails at runtime (§1.1/1.3/1.4/1.6) | 97 files, 6 rules | Planted session-override, return-value branch, hardcoded backspace, blocking fetch |
+| GATE-API-1 | `getInitial*` accessors only inside the privacy boundary (§1.2) | 97 files | Planted read outside the boundary |
+| GATE-API-1 | Nothing typed reaches logcat or stdout | 97 files, production sources | Planted `Log.d` and `println` |
+| GATE-CRYPTO-1 | No ECB, hardcoded IV/key, seeded `SecureRandom`, broken primitive | 97 files, 4 rules | Planted `AES/ECB`, fixed IV, hardcoded key, MD5, seeded random |
 | GATE-LEX-1 | Shipped lexicon matches its manifest | 1 artifact, 355,587 forms | One byte flipped |
 | GATE-LEX-2 | Upstream source integrity | 2 sources | One byte flipped before hashing |
 | GATE-LEX-3 | The lexicon **inside the APK** hashes to the manifest's value | 1 asset, 4,607,433 bytes | One byte appended |
@@ -96,10 +96,10 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | GATE-MANIFEST-1 | IME service declares `exported`, `BIND_INPUT_METHOD`, the action, the meta-data | 4 requirements | `exported` flipped to false |
 | GATE-R8-1 | R8 has not stripped what the system instantiates by name | 4 requirements on the minified build | Service declaration invalidated |
 | GATE-LEARN-1 | The learned model persists counts over integer ids and nothing that can hold text | 2 learning source files | An encoder that accepts a `String` |
-| GATE-LEARN-2 | Learning happens in exactly one place, guarded by `session.mayLearn` | 100 Kotlin source files | A second, unguarded call site |
+| GATE-LEARN-2 | Learning happens in exactly one place, guarded by `session.mayLearn` | 101 Kotlin source files | A second, unguarded call site |
 | GATE-BIGRAM-1 | The bigram table **inside the APK** is byte-identical to the one every prediction number was measured on, and its header agrees with the manifest | 1 asset, 2,697,304 bytes, 51,900 groups | One byte appended |
-| GATE-DOC-1 | The readiness verdict's device-blocked list matches this matrix, **and** the gate denominators published in this table match what the gates actually counted on this tree — **including this row's own id count**, which went stale the day the check for it was written | 21 ids + 5 denominators + this row | A device-blocked id dropped; a denominator off by one |
-| GATE-DOC-3 | This matrix does not contradict **itself**: no id sits in the device-blocked table while another row marks it OBSERVED | the same 21 ids against every OBSERVED row | A row left in the blocked table after being marked OBSERVED |
+| GATE-DOC-1 | The readiness verdict's device-blocked list matches this matrix, **and** the gate denominators published in this table match what the gates actually counted on this tree — **including this row's own id count**, which went stale the day the check for it was written | 22 ids + 5 denominators + this row | A device-blocked id dropped; a denominator off by one |
+| GATE-DOC-3 | This matrix does not contradict **itself**: no id sits in the device-blocked table while another row marks it OBSERVED | the same 22 ids against every OBSERVED row | A row left in the blocked table after being marked OBSERVED |
 | GATE-SIZE-1 | The release artifact stays inside a budget written down **after** measuring it | 3 budget entries | Assets measured 50% larger |
 | GATE-XML-1 | Every XML resource parses | 15 files | A comment containing `--` |
 | GATE-TRACE-1 | The benchmark measures sections the app actually emits | 2 section names | Requested sections renamed |
@@ -291,6 +291,41 @@ end needed a device. The hole was found by the observation, not by the matrix �
 matrix's coverage of the micro-interaction work is itself unmeasured, and `MI-PREVIEW`,
 `MI-REPEAT`, `MI-LONGPRESS`, `MI-CONFIRM` may not be the whole list either.
 
+**Key proportions: measured from the screenshot, and the report was wrong.** The operator
+reported *"the top row keys are narrower than the middle row"*. Pixel measurement of their own
+screenshot says otherwise, and says it precisely:
+
+| Row | Keys | Measured fill width | Row span |
+|---|---|---|---|
+| Top `קראטוןםפ` | 8 | **67.6 px** (67–68) | 152 → 739 |
+| Middle `שדגכעיחלךף` | 10 | **67.6 px** (67–68) | 78 → 814 |
+| Bottom letters | 9 | **67.3 px** (67–68) | 115 → 776 |
+
+The widths are equal to within a pixel of JPEG noise, and the key edges of the top row fall on
+**exactly** the same x values as the middle row's — one shared grid, which is what
+`KeyGeometry.layout`'s global unit is for. The predicted edges match the measured ones to the
+pixel: unit = 891/12 = 74.25, top-row margin 2 units → first edge at 148.5 + GAP = **152.5**,
+measured **152**; middle-row margin 1 unit → 74.25 + GAP = **78.25**, measured **78**.
+
+What differs is the **row length**, not the key width: the top row has 8 keys and spans 587 px,
+the middle has 10 and spans 736 px, so the top row is inset 148 px at each end against the
+middle row's 74 px. That inset is what reads as "narrower". The fix at `ae2c5da` is doing
+exactly what it was written to do; the perception it produces is a **design question**, not a
+defect, and it is the operator's to decide. Recorded here so the next report of it does not
+start over.
+
+*(Side result: the same arithmetic dates the screenshot's scale. 74.25 − 67.6 = 6.65 px must be
+`2 × GAP` = 8 device px, so the image is at 0.825 scale and the device is 1080 px wide. Every
+device-pixel figure in `LabelFitTest` is derived from that.)*
+
+**`MI-LABELFIT` — a real defect the same screenshot shows.** The multi-character labels are
+drawn at the size set for one Hebrew letter and overflow the rounded rect they sit in: `en` by
+about 5 device pixels on an 82-pixel key, `123` by about 3 on a 127-pixel one. Both stay inside
+their own key's touch area — measured, and asserted in `LabelFitTest` so the claim cannot
+silently widen — so nothing is mis-typed. What it costs is the border, and three same-coloured
+function keys whose labels touch read as one block. `KeyGeometry.fitTextSize` shrinks a label
+to fit and never grows one. **Not verified on a device**, so `MI-LABELFIT` is device-blocked.
+
 **A third real-word catch, and why it counts for less than the two before it.** The screenshot
 shows `תרעי` flagged and **`תראי (תרעי)`** offered in the correction colour — the same `א↔ע`
 substitution as `אם`/`עם` and `עת`/`את`, on a third word pair. It is **not** credited as a new
@@ -335,6 +370,7 @@ That is a thing to watch, not a thing to publish.
 | L1-DEBOUNCE | Whether a 3-second debounced encrypted write actually stays off the input path | A device. The interval is a judgement, not a measurement. |
 | R2-FONT | That the typeface `FONT-CHOICE` selected is the one actually drawing key labels on a panel | A device. `GATE-FONT-1` proves the right bytes are packaged; it cannot prove `ResourcesCompat.getFont` returned them at runtime rather than falling back |
 | L2-BENEFIT | That the benefit counter ever shows a non-zero number in settings | A device, learning enabled, and enough accepted completions to move it. `LEARN-BENEFIT` is exercised in JVM tests only |
+| MI-LABELFIT | That `123`, `en` and `he` sit inside their keys once shrunk, and stay legible at the reduced size | A device. The arithmetic is tested; how a shrunk label reads on a panel is not arithmetic |
 
 ### Requires operator action
 

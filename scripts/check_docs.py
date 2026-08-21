@@ -249,7 +249,7 @@ def check_denominators(root: str, inject: bool) -> Detector:
         body = text.split(BLOCKED_SECTION, 1)[1].split("### ", 1)[0]
         counted = len({i for i in ROW_ID_RE.findall(body) if i != "ID"})
         rows = [line for line in text.splitlines() if line.startswith("| GATE-DOC-1 |")]
-        m = re.search(r"\|\s*(\d+) ids \+ (\d+) denominators\s*\|", rows[0]) if rows else None
+        m = re.search(r"\|\s*(\d+) ids \+ (\d+) denominators", rows[0]) if rows else None
         if m:
             det.denominator += 1
             published_ids = int(m.group(1)) + (1 if inject else 0)
