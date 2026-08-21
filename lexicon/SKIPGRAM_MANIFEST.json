@@ -30,13 +30,13 @@
   },
   "model": {
     "distance": 2,
-    "min_count": 10,
+    "min_count": 12,
     "distinct_before_pruning": 10881006,
-    "kept": 150526,
-    "groups": 16923,
-    "raw_bytes": 854172,
-    "gzip_bytes": 494889,
-    "raw_sha256": "cee3872c949a9a7e067dac7f2210c535e6fcc98db6852d59924e68392daa7a53",
+    "kept": 117322,
+    "groups": 14332,
+    "raw_bytes": 672606,
+    "gzip_bytes": 386688,
+    "raw_sha256": "050210b46ed3d523f03cc2a1903fd06584239d1d10e8bd8e31e896a4f7f14376",
     "encoding": "identical to he_bigrams.bin, so BigramModel loads it unchanged"
   },
   "known_limitations": [

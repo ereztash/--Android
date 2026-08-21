@@ -298,13 +298,22 @@ class PredictiveEngine(
      * Not the most recent one: at that position the right-hand neighbour has not been typed
      * yet, and left context alone is worth 44.78% recall against 64.42% with both sides. One
      * check per word, made once, at the moment the evidence is complete.
+     *
+     * ### Why the fifth argument is always null
+     * The window is `[left2, left, target, right]` and stops there. `right2` is the word after
+     * the one the user has only just finished — it does not exist yet, and no amount of context
+     * reading can produce it. The distance-2 layer therefore runs **one-sided in production**,
+     * and its measurement is taken in that shape; measured with both distance-2 neighbours it
+     * gains another 0.45 points that the app can never collect. See
+     * `docs/CONFUSION_MEASUREMENTS.md`.
      */
     private fun realWordError(context: TypingContext): Prediction? {
         val detector = realWordErrors ?: return null
         val target = context.completed.getOrNull(1) ?: return null
         val right = context.completed.getOrNull(0)
         val left = context.completed.getOrNull(2)
-        val finding = detector.check(left, target, right) ?: return null
+        val left2 = context.completed.getOrNull(3)
+        val finding = detector.checkWide(left2, left, target, right, null) ?: return null
         return Prediction(
             word = finding.suggested,
             wordIndex = finding.suggestedIndex,

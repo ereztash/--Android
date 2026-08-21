@@ -83,21 +83,22 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | GATE-NET-1 | No network capability — manifests | 3 manifests | Planted `INTERNET` permission |
 | GATE-NET-1 | No network capability — sources | 65 Kotlin/Java files | Planted okhttp / `java.net` / WebView |
 | GATE-NET-1 | No network capability — shipping deps | 113 resolved coordinates | Planted okhttp + Firebase coordinates |
-| GATE-NET-2 | **Built debug APK** — permissions + DEX | 1 permission, 16 descriptors over 13 DEX files (28,527,620 bytes) | **A real assembled `netcontrol` APK** |
-| GATE-NET-3 | **Built RELEASE APK** — permissions + DEX | 1 permission, **2 descriptors** over 1 DEX file (1,922,156 bytes) | The same real APK against the release baseline |
-| GATE-API-1 | No IME API that compiles cleanly and fails at runtime (§1.1/1.3/1.4/1.6) | 65 files, 6 rules | Planted session-override, return-value branch, hardcoded backspace, blocking fetch |
-| GATE-API-1 | `getInitial*` accessors only inside the privacy boundary (§1.2) | 65 files | Planted read outside the boundary |
-| GATE-API-1 | Nothing typed reaches logcat or stdout | 65 files, production sources | Planted `Log.d` and `println` |
-| GATE-CRYPTO-1 | No ECB, hardcoded IV/key, seeded `SecureRandom`, broken primitive | 65 files, 4 rules | Planted `AES/ECB`, fixed IV, hardcoded key, MD5, seeded random |
+| GATE-NET-2 | **Built debug APK** — permissions + DEX | 1 permission, 16 descriptors over 16 DEX files (28,652,352 bytes) | **A real assembled `netcontrol` APK** |
+| GATE-NET-3 | **Built RELEASE APK** — permissions + DEX | 1 permission, **2 descriptors** over 1 DEX file (1,968,128 bytes) | The same real APK against the release baseline |
+| GATE-API-1 | No IME API that compiles cleanly and fails at runtime (§1.1/1.3/1.4/1.6) | 92 files, 6 rules | Planted session-override, return-value branch, hardcoded backspace, blocking fetch |
+| GATE-API-1 | `getInitial*` accessors only inside the privacy boundary (§1.2) | 92 files | Planted read outside the boundary |
+| GATE-API-1 | Nothing typed reaches logcat or stdout | 92 files, production sources | Planted `Log.d` and `println` |
+| GATE-CRYPTO-1 | No ECB, hardcoded IV/key, seeded `SecureRandom`, broken primitive | 92 files, 4 rules | Planted `AES/ECB`, fixed IV, hardcoded key, MD5, seeded random |
 | GATE-LEX-1 | Shipped lexicon matches its manifest | 1 artifact, 355,587 forms | One byte flipped |
 | GATE-LEX-2 | Upstream source integrity | 2 sources | One byte flipped before hashing |
 | GATE-LEX-3 | The lexicon **inside the APK** hashes to the manifest's value | 1 asset, 4,607,433 bytes | One byte appended |
-| GATE-ASSET-1 | The assets the app opens by name are the ones AGP packaged | 3 named assets, checked against the APK's own entry list | Expect a name AGP does not produce |
+| GATE-ASSET-1 | The assets the app opens by name are the ones AGP packaged | 5 named assets, checked against the APK's own entry list | Expect a name AGP does not produce |
 | GATE-MANIFEST-1 | IME service declares `exported`, `BIND_INPUT_METHOD`, the action, the meta-data | 4 requirements | `exported` flipped to false |
 | GATE-R8-1 | R8 has not stripped what the system instantiates by name | 4 requirements on the minified build | Service declaration invalidated |
 | GATE-LEARN-1 | The learned model persists counts over integer ids and nothing that can hold text | 2 learning source files | An encoder that accepts a `String` |
-| GATE-LEARN-2 | Learning happens in exactly one place, guarded by `session.mayLearn` | 79 Kotlin source files | A second, unguarded call site |
-| GATE-BIGRAM-1 | The bigram table **inside the APK** is byte-identical to the one every prediction number was measured on, and its header agrees with the manifest | 1 asset, 2,985,642 bytes, 54,133 groups | One byte appended |
+| GATE-LEARN-2 | Learning happens in exactly one place, guarded by `session.mayLearn` | 96 Kotlin source files | A second, unguarded call site |
+| GATE-BIGRAM-1 | The bigram table **inside the APK** is byte-identical to the one every prediction number was measured on, and its header agrees with the manifest | 1 asset, 2,697,304 bytes, 51,900 groups | One byte appended |
+| GATE-BIGRAM-2 | The **distance-2** table inside the APK is the one S1+P1 was measured on. A separate row because one detector now covers two artifacts, and a control shown red on the first says nothing about whether the loop reaches the second | 1 asset, 672,606 bytes, 14,332 groups | One byte appended to the *skip* table |
 | GATE-SIZE-1 | The release artifact stays inside a budget written down **after** measuring it | 3 budget entries | Assets measured 50% larger |
 | GATE-XML-1 | Every XML resource parses | 15 files | A comment containing `--` |
 | GATE-TRACE-1 | The benchmark measures sections the app actually emits | 2 section names | Requested sections renamed |
@@ -161,7 +162,8 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | M10-PRED-3 | Completion top-3, 3-letter prefix | **49.28%** (38.27%) | 20,000, same slice |
 | M10-NEXT | Next-word top-3 | **9.80%**, offered in 88.36% of positions | 20,000, same slice |
 | M10-MIX | Ordering policy: corrections-first vs completions-first | corrections-first **dominated** — worse on both corpora | 20,000 + 4,000 — baseline measured, then replaced |
-| M11-RECALL | Real-word error recall, shipped config | **62.31%** | 45,867 injected errors, test slice sha `9fc528ae…` |
+| M11-RECALL | Real-word error recall, shipped config | **63.73%** | 45,867 injected errors, test slice sha `9fc528ae…` |
+| S1P1-RECALL | The same, on conversational text | **78.45%** at 0.198% false alarms | 21,961 injected errors, 27,726 clean sites |
 | M11-FALSE | Real-word false-alarm rate on untouched text | **0.25%** | 69,494 positions, same slice — control: a permissive detector scores 15.08% |
 | M11-COST | One real-word check | 3.7 µs | 20,000 calls, **JVM on the build host — NOT a device number** |
 | L1-ADAPT | Adaptive next-word, shipped config, vs static on the identical split | **+0.67 top-1 (+392), +0.48 top-3 (+279)**; offer rate 88.68% → 88.78% | 58,343 positions, 120 pseudo-users, slice `d8177a78…` |
@@ -299,7 +301,7 @@ working.
 | M5-NOSUGGEST | Splitting the 12.08% no-suggestion cases into stripper false-accepts vs no-candidate | Per-case human adjudication |
 | M1-TYPO | Prefix-stripper typo-rejection rate (the spec's 88.4% at MIN_STEM 4) | A typo corpus and a correctly-constructed prefix-free non-word control |
 | M10-REGISTER | Prediction accuracy on **phone typing** rather than Wikipedia prose | No corpus of Hebrew phone typing exists here. The register is wrong and held-out discipline does not fix that. |
-| M11-BASERATE | How often real Hebrew typing produces an error **inside** the confusion inventory | Needs a corpus of genuine human errors. Without it, 62.31% recall answers only "given the error is one this detector can express", and no precision figure can be computed from a 0.25% false-alarm rate. |
+| M11-BASERATE | How often real Hebrew typing produces an error **inside** the confusion inventory | Needs a corpus of genuine human errors. Without it, 63.73% recall answers only "given the error is one this detector can express", and no precision figure can be computed from a 0.253% false-alarm rate. |
 | M11-KTIV-PAIR | Whether the `ו`/`י` pair is worth including | Available as `HebrewConfusions.KTIV_MALE` and **not measured**. It is the largest source of real-word pairs and mostly not a confusion at all. |
 | M12-PERSONAL-RANK | Whether ranking personal words above lexicon words is right | No corpus of personal dictionaries. Recorded as a design decision with no measurement behind it. |
 | L1-REALUSER | What adaptive learning is worth to **a person**, as opposed to a block of encyclopedia sentences | No corpus of one person's typing exists here. The pseudo-user protocol is a substitute and its central limitation — a Wikipedia article is not a person — is stated in `docs/LEARNING_MEASUREMENTS.md` rather than argued away. The **direction** of the bias is UNVERIFIED. |

@@ -78,7 +78,7 @@ The operator installed the app, typed on it, and reported three things. All thre
 |---|---|---|
 | The keys are laid out "as if in a mirror" | M9 | **Fixed.** `Layouts.hebrew.rtl = true` mirrored every row. Hebrew SI-1452 maps letters onto physical QWERTY positions, which run left to right. The test that should have caught it asserted the mirrored behaviour instead — the wrong assumption sat in both the implementation and its assertion, so both looked green. |
 | The app must be predictive and notice spelling errors | M10 | **Done and measured.** Completion top-3 rises from 2.15%/14.80%/36.58% to 5.73%/25.77%/49.28% at 1/2/3-letter prefixes; next-word top-3 9.80%, offered in 88.36% of positions. |
-| It must catch `אם` where `עם` was meant, from sentence context | M11 | **Done and measured.** 64.58% recall at a 0.26% false-alarm rate on a held-out slice the thresholds never saw. |
+| It must catch `אם` where `עם` was meant, from sentence context | M11, R1, S1+P1 | **Done and measured.** 63.73% recall at a 0.253% false-alarm rate on a held-out slice the thresholds never saw; 78.45% at 0.198% on conversational text. M11 measured 64.58% / 0.26% on Wikipedia-only tables, R1 traded 2.27 points of that for +12.73 on the register people actually type in, and S1+P1 returned 1.42. |
 
 M12 then closed two gaps that only surface once the features exist: the personal dictionary
 from M6 was never read by anything, so a word the user added stayed underlined; and an undo
@@ -157,10 +157,12 @@ under Policy status in Play Console. See `docs/OPERATOR_NOTICES.md` NOTICE 1.
   no amount of held-out discipline fixes that. The next-word figure is also measured with a
   known previous word and no punctuation; in the app, context stops at a sentence boundary, so
   the real aggregate offer rate is lower than 88.36% by an amount **not measured**.
-- **"64.58% real-word error recall"** answers only: *given that the error is one this detector
+- **"63.73% real-word error recall"** answers only: *given that the error is one this detector
   can express, does context find it?* The errors were injected from the detector's own
   inventory. How often real Hebrew typing produces an error inside that inventory is NOT
-  MEASURED, and without it no precision figure can be derived from the 0.26% false-alarm rate.
+  MEASURED, and without it no precision figure can be derived from the 0.253% false-alarm rate.
+  (This bullet read "64.58%" and "0.26%" until S1+P1 shipped; both were already stale against
+  the figure R1 left behind, which was 62.31% / 0.250%.)
 - **This keyboard never replaces anything by itself.** `shouldAutoReplace` exists and is
   measured; it is not called. Every change to the user's text is a tap. On the golden corpus
   the shipped configuration would auto-replace 24.25% of misspellings with **1.90% wrong** —

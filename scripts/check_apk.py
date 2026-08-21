@@ -48,6 +48,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BASELINE = os.path.join(ROOT, "tools", "apk_dex_baseline.json")
 LEXICON_MANIFEST = os.path.join(ROOT, "lexicon", "MANIFEST.json")
 BIGRAM_MANIFEST = os.path.join(ROOT, "lexicon", "BIGRAM_MANIFEST.json")
+SKIPGRAM_MANIFEST = os.path.join(ROOT, "lexicon", "SKIPGRAM_MANIFEST.json")
 
 NETWORK_PERMISSIONS = {
     "android.permission.INTERNET",
@@ -190,7 +191,7 @@ def check_lexicon_asset(apk: str, inject: str | None) -> Detector:
     # runtime crash on first suggestion rather than a build error.
     expected_names = {
         "assets/he_lexicon.txt", "assets/he_freq.bin", "assets/he_bigrams.bin",
-        "assets/he_abbreviations.txt",
+        "assets/he_abbreviations.txt", "assets/he_skipgrams.bin",
     }
     if inject == "asset_name":
         # PLANTED DEFECT: pretend the code expects a name AGP does not produce, which is what
@@ -236,70 +237,84 @@ def check_lexicon_asset(apk: str, inject: str | None) -> Detector:
     return det
 
 
+# The two count tables, each with the manifest that describes the exact bytes every number in
+# the docs was measured on. Both are loaded through the same reader and both degrade to
+# BigramModel.EMPTY when absent, so both fail the same silent way.
+COUNT_TABLES = [
+    ("he_bigrams", BIGRAM_MANIFEST, "lexicon/BIGRAM_MANIFEST.json", "bigram_content",
+     "CorrectionController opens assets/he_bigrams.bin by that exact name and degrades to "
+     "BigramModel.EMPTY when it is absent, so the app would run and quietly score prefix-1 "
+     "top-3 2.15% instead of 5.73% with nothing at runtime reporting a problem"),
+    ("he_skipgrams", SKIPGRAM_MANIFEST, "lexicon/SKIPGRAM_MANIFEST.json", "skipgram_content",
+     "CorrectionController opens assets/he_skipgrams.bin by that exact name and degrades to "
+     "BigramModel.EMPTY when it is absent, which silently returns the real-word-error "
+     "detector to the adjacent-only behaviour it had before S1+P1 -- 0.16 points of recall "
+     "with nothing at runtime reporting a problem"),
+]
+
+
 def check_bigram_asset(apk: str, inject: str | None) -> Detector:
-    """The bigram table inside the APK must be the one every prediction number was measured on.
+    """The count tables inside the APK must be the ones every number was measured on.
 
     Same argument as `check_lexicon_asset`, one step further along. The accuracy figures in
-    `docs/PREDICTION_MEASUREMENTS.md` -- and the floors `PredictionAccuracyTest` enforces --
-    are properties of a specific 532,168-entry table built from a specific dump. Ship a
-    different one and every number becomes a claim about a file that is not in the app.
+    `docs/PREDICTION_MEASUREMENTS.md` and `docs/CONFUSION_MEASUREMENTS.md` -- and the floors
+    the accuracy tests enforce -- are properties of specific tables built from a specific dump.
+    Ship a different one and every number becomes a claim about a file that is not in the app.
 
     The failure this actually guards against is silent: `BigramModel.EMPTY` exists so that a
-    missing table degrades prediction to unigram ranking instead of crashing. That is the right
-    runtime behaviour and the wrong thing to discover in production -- prefix-1 top-3 would
-    fall from 5.73% to 2.15% with nothing anywhere reporting a problem. So the absence is
-    caught here, on the artifact, rather than by a user noticing the keyboard got worse.
+    missing table degrades instead of crashing. That is the right runtime behaviour and the
+    wrong thing to discover in production, so the absence is caught here, on the artifact,
+    rather than by a user noticing the keyboard got worse.
     """
-    det = Detector(name="apk_bigrams", unit="packaged bigram assets", denominator=0)
-    if not os.path.isfile(BIGRAM_MANIFEST):
-        det.notes.append("lexicon/BIGRAM_MANIFEST.json missing; NOT-MEASURED")
-        return det
-    manifest = json.load(open(BIGRAM_MANIFEST, encoding="utf-8"))["model"]
-
+    det = Detector(name="apk_bigrams", unit="packaged count tables", denominator=0)
     with zipfile.ZipFile(apk) as z:
-        names = [n for n in z.namelist()
-                 if n.startswith("assets/") and "he_bigrams" in n]
-        if not names:
-            det.findings.append(Finding(
-                "apk_bigrams", os.path.basename(apk), 0,
-                "no bigram table in the APK; CorrectionController opens assets/he_bigrams.bin "
-                "by that exact name and degrades to BigramModel.EMPTY when it is absent, so "
-                "the app would run and quietly score prefix-1 top-3 2.15% instead of 5.73% "
-                "with nothing at runtime reporting a problem",
-                "apk.missing_bigram_asset"))
-            det.denominator = 1
-            return det
+        namelist = z.namelist()
+        for stem, manifest_path, manifest_label, inject_key, absence in COUNT_TABLES:
+            if not os.path.isfile(manifest_path):
+                det.notes.append(f"{manifest_label} missing; {stem} NOT-MEASURED")
+                continue
+            manifest = json.load(open(manifest_path, encoding="utf-8"))["model"]
+            names = [n for n in namelist
+                     if n.startswith("assets/") and stem in n]
+            if not names:
+                det.findings.append(Finding(
+                    "apk_bigrams", os.path.basename(apk), 0,
+                    f"no {stem} table in the APK; {absence}",
+                    "apk.missing_bigram_asset"))
+                det.denominator += 1
+                continue
 
-        det.denominator = len(names)
-        for name in names:
-            data = z.read(name)
-            if data[:2] == b"\x1f\x8b":
-                data = gzip.decompress(data)
-            if inject == "bigram_content":
-                data = data + b"\x00"
-            digest = hashlib.sha256(data).hexdigest()
-            det.notes.append(f"{name}: {len(data)} bytes uncompressed, sha256 {digest}")
-            if digest != manifest["raw_sha256"]:
-                det.findings.append(Finding(
-                    "apk_bigrams", os.path.basename(apk), 0,
-                    f"{name} hashes to {digest}, but lexicon/BIGRAM_MANIFEST.json says "
-                    f"{manifest['raw_sha256']}", "apk.bigram_mismatch"))
-            if len(data) != manifest["raw_bytes"]:
-                det.findings.append(Finding(
-                    "apk_bigrams", os.path.basename(apk), 0,
-                    f"{name} is {len(data)} bytes, manifest says {manifest['raw_bytes']}",
-                    "apk.bigram_size"))
-            # Parse the header the way BigramModel.load does, so a table that is present and
-            # correctly hashed but structurally wrong is still caught.
-            if len(data) >= 4:
-                groups = int.from_bytes(data[0:4], "little")
-                det.notes.append(f"{name}: header declares {groups} groups, "
-                                 f"manifest says {manifest['groups']}")
-                if groups != manifest["groups"]:
+            det.denominator += len(names)
+            for name in names:
+                data = z.read(name)
+                if data[:2] == b"\x1f\x8b":
+                    data = gzip.decompress(data)
+                if inject == inject_key:
+                    data = data + b"\x00"
+                digest = hashlib.sha256(data).hexdigest()
+                det.notes.append(
+                    f"{name}: {len(data)} bytes uncompressed, sha256 {digest}")
+                if digest != manifest["raw_sha256"]:
                     det.findings.append(Finding(
                         "apk_bigrams", os.path.basename(apk), 0,
-                        f"{name} header declares {groups} groups, manifest says "
-                        f"{manifest['groups']}", "apk.bigram_groups"))
+                        f"{name} hashes to {digest}, but {manifest_label} says "
+                        f"{manifest['raw_sha256']}", "apk.bigram_mismatch"))
+                if len(data) != manifest["raw_bytes"]:
+                    det.findings.append(Finding(
+                        "apk_bigrams", os.path.basename(apk), 0,
+                        f"{name} is {len(data)} bytes, manifest says "
+                        f"{manifest['raw_bytes']}", "apk.bigram_size"))
+                # Parse the header the way BigramModel.load does, so a table that is present
+                # and correctly hashed but structurally wrong is still caught.
+                if len(data) >= 4:
+                    groups = int.from_bytes(data[0:4], "little")
+                    det.notes.append(f"{name}: header declares {groups} groups, "
+                                     f"manifest says {manifest['groups']}")
+                    if groups != manifest["groups"]:
+                        det.findings.append(Finding(
+                            "apk_bigrams", os.path.basename(apk), 0,
+                            f"{name} header declares {groups} groups, manifest says "
+                            f"{manifest['groups']}", "apk.bigram_groups"))
     return det
 
 
@@ -368,7 +383,7 @@ def main() -> int:
     ap.add_argument("--strict", action="store_true")
     ap.add_argument("--inject-defect",
                     choices=["permission", "dex", "service", "lexicon", "asset_name",
-                             "bigram_content"],
+                             "bigram_content", "skipgram_content"],
                     help="PLANT A DEFECT. Positive control; every value must go red.")
     args = ap.parse_args()
 
@@ -385,7 +400,7 @@ def main() -> int:
                              ("apk_dex", "DEX class descriptors"),
                              ("apk_ime_service", "IME service requirements"),
                              ("apk_lexicon", "packaged lexicon assets"),
-                             ("apk_bigrams", "packaged bigram assets"))
+                             ("apk_bigrams", "packaged count tables"))
             ],
             not_covered=NOT_COVERED,
         )

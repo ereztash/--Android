@@ -35,7 +35,7 @@ tasks.withType<Test>().configureEach {
     systemProperty("frequency.file", rootProject.file("lexicon/assets/he_freq.bin.gz").absolutePath)
     systemProperty("golden.dir", rootProject.file("lexicon/golden").absolutePath)
     systemProperty("bigram.file", rootProject.file("lexicon/assets/he_bigrams.bin.gz").absolutePath)
-    systemProperty("skipgram.file", rootProject.file("lexicon/experimental/he_skipgrams.bin.gz").absolutePath)
+    systemProperty("skipgram.file", rootProject.file("lexicon/assets/he_skipgrams.bin.gz").absolutePath)
     systemProperty("abbreviation.file", rootProject.file("lexicon/assets/he_abbreviations.txt.gz").absolutePath)
     // The pre-blend table, kept OUT of lexicon/assets so it is never packaged. It exists only
     // so the register change can be measured as a before/after in one run rather than asserted.

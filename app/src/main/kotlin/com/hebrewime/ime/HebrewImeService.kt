@@ -367,10 +367,10 @@ class HebrewImeService : InputMethodService() {
             candidateStrip?.setCandidates(emptyList())
             return
         }
-        // Three completed words: the one being checked for a real-word error, and one on each
-        // side of it. `completedWords` stops at a sentence boundary and returns nothing at all
-        // when the preceding context is unknown, so a short list here means "less is known",
-        // never "assume the rest".
+        // Four completed words: the one being checked for a real-word error, one on each side
+        // of it, and the distance-2 word to its left. `completedWords` stops at a sentence
+        // boundary and returns nothing at all when the preceding context is unknown, so a
+        // short list here means "less is known", never "assume the rest".
         val context = TypingContext(
             current = contextBuffer.currentWord,
             completed = contextBuffer.completedWords(CONTEXT_WORDS),
@@ -509,12 +509,15 @@ class HebrewImeService : InputMethodService() {
         /**
          * How many completed words to hand the engine.
          *
-         * Three, because real-word error detection checks the middle of a window: the word
-         * before the one being checked, the word itself, and the word after it. Asking for
-         * more would cost a scan for context nothing uses — the bigram model's entire memory
-         * is two words.
+         * Four. Three of them are the adjacent window real-word error detection checks — the
+         * word before the one being checked, the word itself, and the word after it — and the
+         * fourth is the distance-2 left neighbour the skip table reads.
+         *
+         * There is no fifth: the distance-2 word on the RIGHT is the one after the word the
+         * user has only just finished, and it does not exist. That asymmetry is why the layer
+         * is measured one-sided rather than at the both-sided figure its first sweep reported.
          */
-        const val CONTEXT_WORDS = 3
+        const val CONTEXT_WORDS = 4
 
         /**
          * An input type that matches no known class, so [SensitiveFieldPolicy] fails closed.

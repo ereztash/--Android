@@ -104,7 +104,15 @@ class RealWordErrorDetector(
          * would add 0.42 points of false alarms on top of a shipped rate of 0.25%, roughly
          * tripling it, if used at the adjacent margin.
          *
-         * Swept on `confusion_dev`; see `docs/CONFUSION_MEASUREMENTS.md`.
+         * **0 disables the layer**, the same way 0 disables [priorMargin]. It has to, because
+         * without a threshold the comparison `candidateSkip - typedSkip < 0` is false for a pair
+         * of zeroes and every variant of every blind word becomes a finding — 13.58% false
+         * alarms where the shipped rate is 0.283%. Passing an empty table does not disable it
+         * either, for the same reason. Three separate sweeps published a wrong row before this
+         * was made an explicit branch.
+         *
+         * Swept jointly with [priorMargin] on `confusion_dev`; see
+         * `docs/CONFUSION_MEASUREMENTS.md`.
          */
         val skipMargin: Int = DEFAULT_SKIP_MARGIN,
 
@@ -166,36 +174,6 @@ class RealWordErrorDetector(
 
         val typedEvidence = evidence(typedIndex, previousIndex, nextIndex)
 
-        // ### The blind-position fallback
-        //
-        // Where neither the typed word nor any variant has adjacent evidence, the context has
-        // nothing to say and this detector has always abstained. D5 measured that 81.2% of such
-        // positions are resolvable by the unigram prior. This acts on that, and ONLY there --
-        // the branch is unreachable whenever any candidate carries corpus evidence, so the
-        // detector still never contradicts evidence it has.
-        val f = frequency
-        if (config.priorMargin > 0 && f != null && typedEvidence == 0 &&
-            variants.all { evidence(it, previousIndex, nextIndex) == 0 }
-        ) {
-            val typedFrequency = f.logFrequencyOf(typedIndex)
-            var best: Finding? = null
-            for (candidate in variants) {
-                val advantage = f.logFrequencyOf(candidate) - typedFrequency
-                if (advantage < config.priorMargin) continue
-                if (best != null && f.logFrequencyOf(candidate) <= best.suggestedEvidence) continue
-                best = Finding(
-                    typed = typed,
-                    typedIndex = typedIndex,
-                    suggested = lexicon.wordAt(candidate),
-                    suggestedIndex = candidate,
-                    typedEvidence = typedFrequency,
-                    suggestedEvidence = f.logFrequencyOf(candidate),
-                    contextWords = contextWords,
-                )
-            }
-            return best
-        }
-
         if (config.requireNoSupportForTyped && typedEvidence > 0) return null
 
         var best: Finding? = null
@@ -255,27 +233,64 @@ class RealWordErrorDetector(
 
         val p2 = indexOf(previous2)
         val n2 = indexOf(next2)
-        if (p2 < 0 && n2 < 0) return null
 
-        val typedSkip = skipEvidence(typedIndex, p2, n2)
-        if (config.requireNoSupportForTyped && typedSkip > 0) return null
+        // 0 means OFF, exactly as it does for `priorMargin`.
+        //
+        // It did not, and the asymmetry produced a wrong number three times: with no margin the
+        // loop's `candidateSkip - typedSkip < 0` is false for a pair of zeroes, so EVERY variant
+        // of every blind word became a finding — 13.58% false alarms read as "the prior alone".
+        // Handing the layer an empty table does not disable it either, for the same reason. The
+        // fix is here rather than in each caller, because a footgun that has fired three times
+        // will fire a fourth.
+        //
+        // ### Order: adjacent, then distance-2, then the prior. Never the other way round.
+        //
+        // Distance-2 counts are still evidence ABOUT THIS SENTENCE. The unigram prior is not —
+        // it is what the language does on average, with the sentence ignored. Letting a
+        // context-free signal pre-empt a contextual one would invert the ordering the whole
+        // class is built on, and an earlier version of this did exactly that by putting the
+        // prior fallback in `check`, which runs first.
+        if (config.skipMargin > 0 && (p2 >= 0 || n2 >= 0)) {
+            val typedSkip = skipEvidence(typedIndex, p2, n2)
+            if (!(config.requireNoSupportForTyped && typedSkip > 0)) {
+                var best: Finding? = null
+                for (candidate in variants) {
+                    val candidateSkip = skipEvidence(candidate, p2, n2)
+                    if (candidateSkip - typedSkip < config.skipMargin) continue
+                    if (best != null && candidateSkip <= best.suggestedEvidence) continue
+                    best = Finding(
+                        typed = typed,
+                        typedIndex = typedIndex,
+                        suggested = lexicon.wordAt(candidate),
+                        suggestedIndex = candidate,
+                        typedEvidence = typedSkip,
+                        suggestedEvidence = candidateSkip,
+                        contextWords = (if (p2 >= 0) 1 else 0) + (if (n2 >= 0) 1 else 0),
+                    )
+                }
+                if (best != null) return best
+            }
+        }
 
-        var best: Finding? = null
+        // Last resort: no adjacent evidence, no distance-2 evidence. See Config.priorMargin.
+        val f = frequency
+        if (config.priorMargin <= 0 || f == null) return null
+        val typedFrequency = f.logFrequencyOf(typedIndex)
+        var byPrior: Finding? = null
         for (candidate in variants) {
-            val candidateSkip = skipEvidence(candidate, p2, n2)
-            if (candidateSkip - typedSkip < config.skipMargin) continue
-            if (best != null && candidateSkip <= best.suggestedEvidence) continue
-            best = Finding(
+            if (f.logFrequencyOf(candidate) - typedFrequency < config.priorMargin) continue
+            if (byPrior != null && f.logFrequencyOf(candidate) <= byPrior.suggestedEvidence) continue
+            byPrior = Finding(
                 typed = typed,
                 typedIndex = typedIndex,
                 suggested = lexicon.wordAt(candidate),
                 suggestedIndex = candidate,
-                typedEvidence = typedSkip,
-                suggestedEvidence = candidateSkip,
-                contextWords = (if (p2 >= 0) 1 else 0) + (if (n2 >= 0) 1 else 0),
+                typedEvidence = typedFrequency,
+                suggestedEvidence = f.logFrequencyOf(candidate),
+                contextWords = 0,
             )
         }
-        return best
+        return byPrior
     }
 
     private fun skipEvidence(wordIndex: Int, previous2: Int, next2: Int): Int {
@@ -300,18 +315,29 @@ class RealWordErrorDetector(
 
     companion object {
         /**
-         * BASELINE, not a chosen value. `build_skipgrams.py` prunes at a count of 10 and
-         * `round(log2(10 + 1) * 8)` is 28, so no stored pair carries less — 28 is the table's
-         * own floor and states the rule "the corpus has seen this pair at all". It moves only
-         * after the sweep on `confusion_dev`.
+         * The shipped distance-2 margin, chosen on `confusion_dev` jointly with
+         * [DEFAULT_PRIOR_MARGIN] and reported on `confusion_test` and the conversational slice.
+         *
+         * Not the table's floor. `build_skipgrams.py` prunes at a count of 12, so
+         * `round(log2(12 + 1) * 8)` = 30 is the lowest a stored pair can carry, and 30 would
+         * state the rule "the corpus has seen this pair at all". 80 is far above it: distance-2
+         * evidence is weaker than adjacent evidence and buying recall with it costs false alarms
+         * quickly. 80 is the lowest margin in the joint sweep at which the false-alarm rate is
+         * **unchanged** from the adjacent-only baseline to four decimal places.
          */
-        const val DEFAULT_SKIP_MARGIN: Int = 28
+        const val DEFAULT_SKIP_MARGIN: Int = 80
 
         /**
-         * BASELINE, not a chosen value. 0 disables the blind-position prior fallback, which is
-         * exactly what shipped before P1 ran. It moves only if the sweep on `confusion_dev`
-         * finds an operating point that clears P1's stopping rule.
+         * The shipped blind-position prior margin, chosen on `confusion_dev` jointly with
+         * [DEFAULT_SKIP_MARGIN].
+         *
+         * **Not the margin with the best recall.** 96 gains half a point more and costs four
+         * false alarms in 69,909 clean sites; 104 is the lowest margin at which the joint
+         * operating point's false-alarm rate is identical to the adjacent-only baseline. The
+         * asymmetry in this class's header decides that trade, not the recall column.
+         *
+         * 0 disables the fallback, which is what shipped before S1+P1.
          */
-        const val DEFAULT_PRIOR_MARGIN: Int = 0
+        const val DEFAULT_PRIOR_MARGIN: Int = 104
     }
 }

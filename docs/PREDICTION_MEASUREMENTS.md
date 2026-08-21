@@ -29,13 +29,28 @@ The cost, measured on the artifact:
 
 | | bytes |
 |---|---|
-| release APK, now | 5,161,766 |
+| release APK, when M10 measured it | 5,161,766 |
 | of which the bigram table | 1,849,636 (36% of the APK, 61% of all assets) |
-| budget headroom left for assets | 576,837 |
+| budget headroom left for assets, then | 576,837 |
 
-`GATE-SIZE-1` now holds that trade in place: assets may grow another 576,837 bytes before the
-budget has to be re-argued. The pre-M10 APK size was not re-measured, so no "grew by" figure is
-quoted — the bigram table's 1,849,636 bytes is what is actually known.
+`GATE-SIZE-1` now holds that trade in place: assets may grow before the budget has to be
+re-argued. The pre-M10 APK size was not re-measured, so no "grew by" figure is quoted — the
+bigram table's 1,849,636 bytes is what is actually known.
+
+**Two things have spent that headroom since**, and the current figures are what `GATE-SIZE-1`
+reports today rather than what M10 recorded:
+
+| | bytes |
+|---|---|
+| release APK, now | 5,457,116 of 6,500,000 |
+| assets in the artifact | 3,250,074 of 3,600,000 |
+| of which the bigram table (R1's 25% blend) | 1,682,421 |
+| of which the distance-2 table (S1) | 387,300 |
+| budget headroom left for assets | 349,926 |
+
+The distance-2 table took 52% of the headroom that existed before it, for +0.11 points of
+real-word-error recall. That trade is argued — and argued against — in
+[`CONFUSION_MEASUREMENTS.md`](CONFUSION_MEASUREMENTS.md).
 
 ---
 

@@ -49,8 +49,11 @@ def main() -> int:
     ap.add_argument("--chunk-bytes", type=int, default=DEFAULT_CHUNK_BYTES)
     ap.add_argument("--min-count", type=int, default=None,
                     help="prune below this count. Omit to REPORT the distribution only.")
-    ap.add_argument("--out", default=os.path.join(ROOT, "lexicon", "experimental", "he_skipgrams.bin.gz"),
-                    help="NOT lexicon/assets/: anything in that directory is packaged into the APK, and this layer failed its stopping rule")
+    ap.add_argument("--out", default=os.path.join(OUT_DIR, "he_skipgrams.bin.gz"),
+                    help="the shipped table. Anything written elsewhere gets its manifest "
+                         "written beside it instead of at lexicon/SKIPGRAM_MANIFEST.json, so "
+                         "an experiment cannot leave the shipped manifest describing a table "
+                         "that is not in the APK.")
     args = ap.parse_args()
 
     with gzip.open(LEXICON, "rb") as fh:
@@ -146,8 +149,17 @@ def main() -> int:
             "with it; the detector weighs them separately.",
         ],
     }
-    with open(os.path.join(ROOT, "lexicon", "SKIPGRAM_MANIFEST.json"), "w",
-              encoding="utf-8") as fh:
+    # Beside the artifact it describes, for the reason build_bigrams.py learned the hard way:
+    # a fixed path leaves the manifest describing whichever table was built last, and a gate
+    # that verifies an artifact against that manifest cannot notice.
+    default_out = os.path.join(ROOT, "lexicon", "assets", "he_skipgrams.bin.gz")
+    manifest_path = (
+        os.path.join(ROOT, "lexicon", "SKIPGRAM_MANIFEST.json")
+        if os.path.abspath(args.out) == os.path.abspath(default_out)
+        else (args.out[:-len(".bin.gz")] if args.out.endswith(".bin.gz")
+              else os.path.splitext(args.out)[0]) + "_MANIFEST.json"
+    )
+    with open(manifest_path, "w", encoding="utf-8") as fh:
         json.dump(manifest, fh, indent=2, ensure_ascii=False)
         fh.write("\n")
 

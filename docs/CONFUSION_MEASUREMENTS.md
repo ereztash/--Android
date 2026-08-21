@@ -361,6 +361,19 @@ populations may simply not separate. That is **NOT MEASURED** and is the whole q
 
 ### S1 VERDICT: FAILED. Not shipped.
 
+> **Superseded.** The operator later decided to ship S1 and P1 together, and the two were
+> re-measured jointly because they fire on the same positions. The current numbers are in
+> **S1+P1 — the joint verdict** at the end of this document. Everything below is the verdict as
+> it stood, kept because a verdict that gets quietly rewritten when the decision changes was
+> never a verdict.
+>
+> **One cell below is wrong and cannot be re-derived.** `29,864 / 65.11%` does not reconcile
+> with the `+243 / +0.53` difference row underneath it (28,578 + 243 = 28,821, which is 62.84%);
+> the `+243` reading is the one the conclusion was drawn from and is self-consistent, so the
+> "after" caught/recall pair is the error — most likely pasted from a different configuration.
+> It cannot be corrected by re-running, because R1 replaced the bigram table this was measured
+> on. Left visible rather than deleted.
+
 Margin chosen on `confusion_dev` (80 — the lowest value at which the skip path added no false
 alarms on that slice), then measured **once** on `confusion_test`, through the same harness that
 produced the published figures:
@@ -395,6 +408,10 @@ person who wants the feature to pass.
 Escalated. Layer built, measured, and left disabled: `RealWordErrorDetector` defaults `skip` to
 `BigramModel.EMPTY` and `CorrectionController` does not load the asset.
 `SkipLayerVerdictTest.theFailedLayerIsNotWiredIntoProduction` asserts that it stays that way.
+
+*(That test was replaced by `WideContextVerdictTest.bothLayersAreWiredIntoProduction`, which
+guards the same thing from the other side once the operator decided to ship. Both files are in
+git history at `6c56758`.)*
 
 
 ---
@@ -719,6 +736,16 @@ And the conditions that stop "it passed" being manufactured:
 
 ## P1 VERDICT: FAILED on one slice. Not shipped.
 
+> **Superseded** by **S1+P1 — the joint verdict** at the end of this document, for the reason
+> given there: the two layers fire on the same positions and measuring them apart answers a
+> question nobody has any more. Kept as it stood.
+>
+> Note also that this table was produced by a **different harness** from S1's — one injection
+> per eligible word rather than one per confusable letter position, and a false-alarm
+> denominator restricted to positions that have a confusable variant. That is why its baseline
+> reads 59.47% / 0.493% where S1's reads 62.31% / 0.256%. Both are legitimate; they are not
+> comparable, and the joint verdict uses the canonical one throughout.
+
 Margin 104 chosen on `confusion_dev` — the **lowest margin at which the fallback's false alarms
 return to the baseline**, not the margin with the best recall, which was 8 at nearly nine times
 the false-alarm rate.
@@ -761,3 +788,150 @@ slices would be measured, precisely so that a favourable half could not be repor
 
 The fallback is built, measured, and left disabled: `DEFAULT_PRIOR_MARGIN = 0`, with a test
 asserting it stays that way while the verdict stands.
+
+*(Both are now the shipped values — see the joint verdict below.)*
+
+
+---
+
+# S1+P1 — the joint verdict, and what the operator actually bought
+
+The operator, presented with both escalations, decided: **ship both.** This section records what
+that decision cost, what it bought, and one finding that argues against half of it.
+
+## Why they had to be re-measured rather than added up
+
+S1 and P1 fire on **exactly the same population**: positions where the adjacent window has
+evidence for neither candidate. S1 speaks when distance-2 counts exist there; P1 speaks when they
+do not. Every position P1 would have won is a position S1 may already have taken, so
+`+1.19` and `+0.53` cannot be summed into `+1.72`. The pair had to be swept as a pair.
+
+## The shape correction, which shrank the feature before any threshold was chosen
+
+`HebrewImeService` checks the **second most recent completed word**. At that moment:
+
+```
+[ left2 ][ left ][ TARGET ][ right ]            <- what exists
+                                    [ right2 ]  <- has not been typed
+```
+
+`right2` is the word *after* the one the user has only just finished. It does not exist, and no
+amount of context reading produces it. **The original S1 sweep measured with both distance-2
+neighbours available**, so its figure was a ceiling the app can never reach. Every number below
+is measured one-sided, with the both-sided row printed beside it as the unreachable ceiling:
+on the encyclopedic slice that ceiling is `+1.84` against the `+1.42` production can collect.
+
+The window widened from three completed words to four to supply `left2`
+(`HebrewImeService.CONTEXT_WORDS`).
+
+## A defect this sweep found in the detector
+
+`skipMargin = 0` did **not** disable the distance-2 layer. With no threshold, the comparison
+`candidateSkip - typedSkip < 0` is false for a pair of zeroes, so every variant of every blind
+word became a finding — **13.583% false alarms** where the shipped rate is 0.250%. Handing the
+layer an empty table did not disable it either, for the same reason.
+
+That produced a wrong published row in **three** separate sweeps before it was found. It is now
+an explicit branch — 0 means off, exactly as it does for `priorMargin` — with
+`WideContextVerdictTest.zeroSkipMarginDisablesTheLayerRatherThanUnleashingIt` asserting that
+`checkWide` with both margins at zero is indistinguishable from `check`.
+
+## The joint sweep — `confusion_dev`, 46,210 injections, 69,909 clean sites
+
+Canonical harness, `next2 = null`, adjacent-only baseline 62.45% / 0.283%.
+
+| skipMargin | priorMargin | recall | false alarms | delta |
+|---|---|---|---|---|
+| — | — | 62.45% | 0.283% | adjacent only |
+| off | 104 | 63.72% | 0.283% | +1.27 / +0.0000 |
+| 80 | off | 62.60% | 0.283% | +0.16 / +0.0000 |
+| 64 | 96 | 64.75% | 0.289% | +2.30 / +0.0057 |
+| 72 | 96 | 64.55% | 0.286% | +2.11 / +0.0029 |
+| 80 | 96 | 64.46% | 0.285% | +2.02 / +0.0014 |
+| **80** | **104** | **63.86%** | **0.283%** | **+1.42 / +0.0000** |
+| 88 | 104 | 63.74% | 0.283% | +1.30 / +0.0000 |
+| 96 | 104 | 63.73% | 0.283% | +1.29 / +0.0000 |
+
+**Chosen: `skipMargin 80, priorMargin 104`** — the highest-recall row whose false-alarm rate is
+unchanged from the baseline. `64 / 96` offers +0.88 more recall for four more false-alarm sites;
+it was not taken, because the operator's decision was permission to ship the layers, not an
+instruction to maximise recall against the one number this detector is governed by.
+
+## THE VERDICT — measured once, on both test slices
+
+Canonical harness, `next2 = null`, shipped configuration.
+
+### Encyclopedic (`hewiki_confusion_test`, 45,867 injections, 69,494 clean sites)
+
+| configuration | caught | recall | alarms | rate |
+|---|---|---|---|---|
+| adjacent only (what shipped before) | 28,580 | 62.31% | 174 | 0.250% |
+| + distance-2 alone | 28,634 | 62.43% | 174 | 0.250% |
+| + prior alone | 29,182 | 63.62% | 176 | 0.253% |
+| **SHIPPED: both** | **29,233** | **63.73%** | **176** | **0.253%** |
+| ceiling: both, `next2` given | 29,426 | 64.16% | 181 | 0.260% |
+
+**+653 catches for +2 false alarms — 326 to 1.**
+
+### Conversational (`he_conversational_test`, 21,961 injections, 27,726 clean sites)
+
+| configuration | caught | recall | alarms | rate |
+|---|---|---|---|---|
+| adjacent only (what shipped before) | 16,961 | 77.23% | 55 | 0.198% |
+| + distance-2 alone | 16,969 | 77.27% | 55 | 0.198% |
+| + prior alone | 17,220 | 78.41% | 55 | 0.198% |
+| **SHIPPED: both** | **17,228** | **78.45%** | **55** | **0.198%** |
+| ceiling: both, `next2` given | 17,262 | 78.60% | 55 | 0.198% |
+
+**+267 catches for zero additional false alarms.**
+
+## Who moved the threshold
+
+The original rule was "recall up, **false alarms not up**". On the conversational slice that rule
+**holds** as written. On the encyclopedic slice it is **spent**: 176 alarms against 174.
+
+The dev slice suggested it would not need spending — `80 / 104` was chosen precisely because its
+dev false-alarm rate was identical to the baseline to four decimals. It did not survive the test
+slice. That is the entire reason thresholds are chosen on one slice and reported on another, and
+it is worth recording that the mechanism caught its own author's optimism.
+
+**The operator moved that threshold, not me.** It was escalated twice — S1 at 61:1 over four
+sites, P1 at 209:1 over two — and both escalations named the decision as an operator's rather
+than resolving it. What ships is the operator's call, executed.
+
+## The finding that argues against shipping half of this
+
+**The distance-2 table earns almost nothing in the shape production runs.**
+
+| slice | S1's marginal contribution over the prior alone |
+|---|---|
+| encyclopedic | **+0.11 points, +51 catches** |
+| conversational | **+0.04 points, +8 catches** |
+
+It costs **387,300 bytes in the release APK** (672,606 uncompressed), which is 52% of the assets
+headroom that existed before it: `GATE-SIZE-1` reports 3,250,074 of 3,600,000 bytes, where it
+previously reported 2,862,774. That is roughly **6,600 bytes per additional error caught**, on
+an evaluation corpus, on a keyboard whose audience explicitly includes people on metered
+connections.
+
+P1 costs **zero bytes** — the frequency table was already shipped for ranking — and delivers
++602 and +259 of the +653 and +267.
+
+**Recommendation, for the operator and not decided here: ship P1, drop S1.** The recommendation
+is recorded rather than acted on, because the instruction was to ship both and the trade is a
+judgement about product weight rather than a measurement error. Reverting S1 alone is one
+constant and one asset: set `DEFAULT_SKIP_MARGIN = 0` and delete `lexicon/assets/he_skipgrams.bin.gz`.
+
+## What this section does NOT claim
+
+- **Not that the detector is 63.73% accurate on real Hebrew mistakes.** The injected-error
+  caveat at the top of this document applies unchanged: recall here answers "given an error this
+  detector can express, does context find it?"
+- **Not that two extra false alarms is the number a user experiences.** It is two per 69,494
+  eligible positions in Wikipedia prose, and users do not type Wikipedia prose.
+- **Not that the prior is trustworthy where it fires.** It is a context-free signal used only
+  where context is silent, and `checkWide` runs it last for that reason — an earlier draft put
+  it in `check()`, which runs first, and would have let it pre-empt the distance-2 evidence.
+- **`confusion_test` has now been reported on four times** (M11, S1, D4's control, and this).
+  A test set reported on repeatedly is worth less each time. A further question about this
+  detector needs a fresh slice cut from the residual pool, not a fifth look at this one.
