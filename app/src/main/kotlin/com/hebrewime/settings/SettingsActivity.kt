@@ -80,6 +80,7 @@ private fun SettingsScreen(
     var confirmingWipe by remember { mutableStateOf(false) }
     var learningEnabled by remember { mutableStateOf(LearningPreferences.isEnabled(context)) }
     var learnedPairs by remember { mutableStateOf(0) }
+    var benefit by remember { mutableStateOf(LearningPreferences.Benefit(0, 0)) }
     var confirmingForget by remember { mutableStateOf(false) }
     var diagnostics by remember { mutableStateOf(ImeDiagnostics.read(context)) }
 
@@ -89,6 +90,7 @@ private fun SettingsScreen(
         // Only read the learned model when learning is on. Loading it while the feature is off
         // would mean touching the Keystore for data the user has not asked the app to use.
         if (learningEnabled) learnedPairs = learning.load().pairCount
+        benefit = LearningPreferences.benefit(context)
         diagnostics = ImeDiagnostics.read(context)
     }
 
@@ -247,6 +249,7 @@ private fun SettingsScreen(
                         // the forget button is for, and conflating the two would mean someone
                         // pausing the feature silently lost everything.
                         if (on) scope.launch { learnedPairs = learning.load().pairCount }
+                        benefit = LearningPreferences.benefit(context)
                     },
                 )
             }
@@ -261,6 +264,26 @@ private fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
+            }
+            // What the learning DID, above what it stored. A pair count rises whether or
+            // not anything got better; this rises only when a suggestion reached the screen
+            // that would not have without it. The note under it names the measured size of the
+            // effect, so the screen cannot imply more than the corpus measurement supports.
+            if (learningEnabled) {
+                Text(
+                    if (benefit.fromUserModel == 0) {
+                        stringResource(R.string.learning_benefit_none)
+                    } else {
+                        stringResource(
+                            R.string.learning_benefit, benefit.fromUserModel, benefit.accepted,
+                        )
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    stringResource(R.string.learning_benefit_note),
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
             Text(
                 when {
@@ -295,6 +318,9 @@ private fun SettingsScreen(
                         // Deletes the ciphertext AND the learning key -- a different alias from
                         // the personal dictionary's, so this leaves the dictionary intact.
                         learning.wipe()
+                        // A count of what was forgotten is still a record of it.
+                        LearningPreferences.clearBenefit(context)
+                        benefit = LearningPreferences.Benefit(0, 0)
                         learnedPairs = 0
                     }
                 }) { Text(stringResource(R.string.learning_forget_button)) }

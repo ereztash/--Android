@@ -43,6 +43,14 @@
     <string name="learning_status_off">Not learning</string>
     <string name="learning_status_empty">On — nothing learned yet</string>
     <string name="learning_status">On — %1$d word pairs learned</string>
+    <string name="learning_benefit_none">Nothing it learned has changed a suggestion
+        yet.</string>
+    <string name="learning_benefit">%1$d of the %2$d completions you accepted were on screen
+        only because of what it learned.</string>
+    <string name="learning_benefit_note">That is a count of suggestions it changed, not of
+        pairs it stored. Measured on a held-out corpus, the learning is worth about one extra
+        correct completion for every 149 words — this shows what it did for you, not a
+        score.</string>
     <string name="learning_forget_button">Forget what you learned</string>
     <string name="learning_forget_confirm">This deletes everything the keyboard has learned
         about how you write, and the key that unlocks it, so the stored bytes can never be read

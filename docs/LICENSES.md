@@ -74,3 +74,19 @@ therefore published under CC BY-SA 4.0 in this repository (`lexicon/` and
 lexicon. Check specifically whether the licence covers the *data* and not merely the code, and
 whether any field-of-use restriction applies. Record the answer in this file with the URL,
 byte count and sha256 before a single word from it enters the build.
+
+## Noto Sans Hebrew — the keyboard's typeface
+
+`app/src/main/res/font/keyboard_label.ttf` is a subset of **Noto Sans Hebrew**, instanced at
+weight 500 and reduced to the Hebrew block, Latin, digits and punctuation.
+
+- **Copyright** the Noto Project Authors.
+- **Licence** SIL Open Font License 1.1 — <https://scripts.sil.org/OFL>.
+- **Source** `https://raw.githubusercontent.com/google/fonts/main/ofl/notosanshebrew/`, upstream
+  sha256 recorded in `lexicon/FONT_MANIFEST.json`.
+- The OFL permits subsetting and embedding. The subset is not distributed under the Reserved
+  Font Name, and it is not sold on its own.
+
+It was chosen by measurement rather than by taste; see `docs/PREDICTION_MEASUREMENTS.md` F1.
+Three faces that were measured and not chosen — Assistant, Heebo, Rubik — are also OFL 1.1 and
+are not shipped.

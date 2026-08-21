@@ -151,6 +151,15 @@ def _gates(strict: bool) -> list[dict]:
             "requires": [debug_apk],
         },
         {
+            "id": "GATE-FONT-1",
+            "what": "the typeface INSIDE the apk is the one the letter-pair measurement ranked",
+            "real": [PY, apk, "--apk", debug_apk, "--json"] + s,
+            "control": [PY, apk, "--apk", debug_apk, "--inject-defect", "font",
+                        "--json"],
+            "control_desc": "one byte appended to the packaged typeface",
+            "requires": [debug_apk],
+        },
+        {
             "id": "GATE-NET-3",
             "what": "the RELEASE artifact -- the one that ships -- has no network capability",
             "real": [PY, apk, "--apk", release_apk, "--baseline", release_baseline,

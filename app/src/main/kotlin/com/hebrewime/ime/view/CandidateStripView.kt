@@ -61,13 +61,36 @@ class CandidateStripView(context: Context) : View(context) {
     private val pressed = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = context.getColor(R.color.key_background_pressed)
     }
+    /**
+     * The typeface for every glyph this keyboard draws.
+     *
+     * Nothing here set one before: key labels, the preview bubble and the candidate strip all
+     * rendered in whatever the platform resolved for Hebrew. That is the smallest and most
+     * glanced text in the product, and it was the one visual decision nobody had made.
+     *
+     * Chosen by measurement — `scripts/build_keyboard_font.py` renders all 351 pairs of the 27
+     * Hebrew letters at the label's real pixel size and ranks candidates by how many pairs
+     * overlap enough to be confusable. `lexicon/FONT_MANIFEST.json` carries the result.
+     *
+     * Null if the resource cannot be loaded, which leaves the platform default: a keyboard that
+     * will not draw is worse than one drawn in the wrong face.
+     */
+    private val labelTypeface: android.graphics.Typeface? =
+        try {
+            androidx.core.content.res.ResourcesCompat.getFont(context, R.font.keyboard_label)
+        } catch (missing: Throwable) {
+            null
+        }
+
     private val label = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = context.getColor(R.color.key_label)
         textAlign = Paint.Align.CENTER
+        typeface = labelTypeface ?: typeface
     }
     private val correctionLabel = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = context.getColor(R.color.candidate_correction)
         textAlign = Paint.Align.CENTER
+        typeface = labelTypeface ?: typeface
     }
     private val divider = Paint().apply {
         color = context.getColor(R.color.keyboard_background)

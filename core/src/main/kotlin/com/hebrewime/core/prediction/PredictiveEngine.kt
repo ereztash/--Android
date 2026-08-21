@@ -64,6 +64,20 @@ data class Prediction(
      * user to accept a change they cannot see.
      */
     val replaces: String? = null,
+    /**
+     * True when what the user taught this installation is why this suggestion is on screen —
+     * not merely that it contributed to the score.
+     *
+     * The distinction is the whole point. Almost every completion picks up *some* personal
+     * evidence once a user has typed for a while, so a flag meaning "the user model touched
+     * this" would be true of nearly everything and would measure nothing. This one is set only
+     * when the suggestion would **not have been shown at all** with the user model removed,
+     * which is a counterfactual and is what a person means when they ask what the learning did
+     * for them.
+     *
+     * Always false when adaptive learning is off, which is the default.
+     */
+    val fromUserModel: Boolean = false,
 )
 
 /**
@@ -506,7 +520,7 @@ class PredictiveEngine(
             config.completionCandidates,
         ) { index -> frequency.logFrequencyOf(index) }
 
-        val fromLexicon = candidates
+        val scored = candidates
             // Offering back exactly what was typed is not a suggestion.
             .filter { lexicon.wordAt(it) != prefix }
             .map { index ->
@@ -521,16 +535,54 @@ class PredictiveEngine(
                 val personal =
                     if (config.userWeight == 0.0) 0.0
                     else userContribution(userModel.unigramLogCountOf(index))
-                Prediction(
-                    lexicon.wordAt(index),
-                    index,
-                    SuggestionKind.COMPLETION,
-                    unigram + config.bigramWeight * bigram + learned + personal,
+                Scored(
+                    Prediction(
+                        lexicon.wordAt(index),
+                        index,
+                        SuggestionKind.COMPLETION,
+                        unigram + config.bigramWeight * bigram + learned + personal,
+                    ),
+                    userTerm = learned + personal,
                 )
             }
-            .sortedByDescending { it.score }
 
-        return (mine + fromLexicon).distinctBy { it.word }.take(config.limit)
+        // Both rankings are derived from ONE unsorted list, so each is a stable sort over the
+        // same base order. That matters where scores tie: an earlier version sorted the
+        // counterfactual from the already-with-user-sorted list, which let the user model
+        // decide its own tie-breaks and made a word it had lifted appear to have been there
+        // all along. The counterfactual must not consult the model, not even to break a tie.
+        val ranked = (mine.map { Scored(it, 0.0) } + scored)
+            .sortedByDescending { it.prediction.score }
+            .distinctBy { it.prediction.word }
+            .take(config.limit)
+
+        // Which of these are on screen BECAUSE of the user model? Answered by removing it and
+        // re-ranking, not by asking whether it contributed -- once someone has typed for a
+        // while it contributes to nearly everything, and a flag that is nearly always true
+        // measures nothing.
+        //
+        // Skipped entirely unless learning is on and has something in it, so the default
+        // configuration pays nothing for a counterfactual nobody will read.
+        // BOTH tables, not just pairs. Personal frequency lives in the unigram table, and a
+        // model holding only that would have skipped the counterfactual entirely and credited
+        // nothing -- which is what the positive control caught.
+        if (config.userWeight == 0.0 ||
+            (userModel.pairCount == 0 && userModel.unigramCount == 0)
+        ) {
+            return ranked.map { it.prediction }
+        }
+        val withoutUser = (mine.map { Scored(it, 0.0) } + scored)
+            .sortedByDescending { it.prediction.score - it.userTerm }
+            .distinctBy { it.prediction.word }
+            .take(config.limit)
+            .mapTo(HashSet()) { it.prediction.word }
+        return ranked.map {
+            if (it.userTerm > 0.0 && it.prediction.word !in withoutUser) {
+                it.prediction.copy(fromUserModel = true)
+            } else {
+                it.prediction
+            }
+        }
     }
 
     /**
@@ -540,6 +592,9 @@ class PredictiveEngine(
      * into a settings screen — so a scan is cheaper than any index over it would be, and it
      * costs nothing when the dictionary is empty, which is the common case.
      */
+    /** A prediction plus the part of its score that came from the user model. */
+    private class Scored(val prediction: Prediction, val userTerm: Double)
+
     private fun personalCompletions(prefix: String): List<Prediction> {
         if (personal.size == 0) return emptyList()
         return personal.all()

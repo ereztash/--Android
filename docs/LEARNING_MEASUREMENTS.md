@@ -309,3 +309,60 @@ refuses to create.
 
 **That is the number this direction was for.** It does not reopen the decision; it prices it,
 and the price is approximately zero.
+
+---
+
+# What the learning DID, counted on the device
+
+The settings screen used to report **"N word pairs learned"**. That number rises whether or not
+anything got better — it counts what was stored, not what was delivered. It is the same shape as
+the abbreviation table that `D5` found had no precision control at all.
+
+It now reports what the learning **did**: how many accepted completions were on screen *only
+because* of it.
+
+## Causal, not "influenced"
+
+`Prediction.fromUserModel` is a **counterfactual**, not a contribution test. It is set when the
+suggestion would not have been in the returned list at all with the user model removed —
+computed by re-ranking the same candidates with the user terms subtracted.
+
+The distinction is the whole point. Once someone has typed for a while the model contributes
+*some* evidence to nearly every completion, so a flag meaning "the model touched this" would be
+true of almost everything, and the screen would report activity dressed as benefit.
+
+Two defects the positive control caught while this was being built, both of which would have
+made the number quietly wrong rather than obviously broken:
+
+1. **The counterfactual was skipped for a model holding only personal-frequency evidence.** The
+   guard tested `pairCount == 0`, and personal frequency lives in the unigram table. A user who
+   had taught the keyboard words but no pairs would have been credited nothing, forever.
+2. **The user model was breaking its own tie-breaks.** The counterfactual was sorted from the
+   already-with-model-sorted list, so where two candidates tied on score, a word the model had
+   lifted kept its position and appeared to have been there all along. Both rankings now derive
+   from one unsorted list, and the counterfactual never consults the model — not even to break a
+   tie.
+
+`UserModelAttributionTest` pins all three directions: an empty model credits nothing, a word the
+model lifted onto the strip is credited, and a word that was already being offered is **not**.
+
+## What is stored
+
+Two integers in `SharedPreferences`: completions accepted, and completions accepted that were
+attributable. Not which words, not when, not in which app. `GATE-LEARN-1` refuses a `String`
+anywhere in the learning path and these are counts. Both are cleared by *Forget what you
+learned* — a count of what was forgotten is still a record of it.
+
+## The screen says what the measurement supports
+
+Under the number, in the UI and not only here: *"Measured on a held-out corpus, the learning is
+worth about one extra correct completion for every 149 words — this shows what it did for you,
+not a score."*
+
+That sentence exists because a bare rising counter implies a benefit curve, and the measured
+effect is **+0.67 top-1 points**. A screen that implied more would be a claim wider than its
+measurement, in the place a user actually reads rather than in a document they never will.
+
+**Deliberately not a game.** No streak, no badge, no progress bar. This keyboard's promise is
+that it does not watch you; a score that goes up as it records more of your writing inverts that
+promise however local the data stays.

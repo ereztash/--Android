@@ -424,6 +424,12 @@ class HebrewImeService : InputMethodService() {
         }
 
         if (original.isEmpty()) return
+        // Counted here rather than at the top of this method, because the branches above return
+        // without committing anything and an "accepted" count that includes them would be
+        // counting taps rather than acceptances.
+        com.hebrewime.learning.LearningPreferences.recordAcceptedCompletion(
+            this, prediction.fromUserModel,
+        )
         ic.beginBatchEdit()
         try {
             ic.deleteSurroundingTextInCodePoints(original.codePointCount(), 0)

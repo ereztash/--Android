@@ -420,3 +420,66 @@ python3 scripts/build_bigrams.py --subtitle-weight 0.25 --min-count 2 --per-grou
 The variant binaries are ~5 MB and are **not committed**; their manifests are, carrying the
 hashes and sizes above. `AllocationExperimentTest` skips any variant that is not on disk and
 says which.
+
+---
+
+# F1 — the typeface, chosen by measurement
+
+## What was there before
+
+**Nothing in `app/src/main` set a `Typeface`.** Key labels, the preview bubble and the candidate
+strip all rendered in whatever the platform resolved for Hebrew, at the same `0.42` size
+fraction in all three places. It was the one visual decision nobody had made, on the smallest
+and most-glanced text in the product.
+
+## What was measured
+
+All 351 unordered pairs of the 27 Hebrew letters, rendered at the label's **real pixel size** —
+`KeyboardView` uses 0.32 of screen height over four rows at a 0.42 label fraction, which is
+**54–105 px** on phones from 720p to 1440p — and compared by maximum intersection-over-union
+under a ±2 px shift. The shift matters: two glyphs can be near-identical and merely offset.
+
+**The risky pairs are discovered, not asserted.** No list of "letters that look alike" appears
+anywhere in `scripts/build_keyboard_font.py`.
+
+| face | mean IoU @81px | at-risk pairs (IoU ≥ 0.70) @54 / 81 / 105 px |
+|---|---|---|
+| **Noto Sans Hebrew** | 0.2995 | **12 / 10 / 11** |
+| Assistant | **0.2694** | 13 / 12 / 9 |
+| Heebo | 0.3104 | 15 / 14 / 13 |
+| Rubik | 0.3559 | 23 / 22 / 18 |
+
+Ranked by at-risk pairs then mean, which is the order the script sorted by before any number
+existed: **Noto Sans Hebrew**. Assistant is better on mean at every size and within one pair on
+the primary criterion — the two are close and Rubik is decisively last. Shipped subsetted to
+Hebrew, Latin, digits and punctuation at weight 500: **16,480 bytes, 10,713 in the APK.**
+
+## The finding worth more than the choice
+
+The at-risk pairs at the shipped size are:
+
+> **ה/ח · ח/ת · ט/ס · ג/נ · ח/ם · ם/ס · ב/כ · ד/ר · ט/ם · מ/ס**
+
+The confusion set the corrector actually searches is:
+
+> **א/ע · ח/כ · כ/ק · ת/ט · ב/ו · ס/ש**
+
+**The two sets share no pair at all.** The letters that *sound* alike and the letters that *look*
+alike are disjoint in Hebrew. Every correction feature this project has built addresses the
+first set; the second was unaddressed until the font was chosen, and it is the one that governs
+whether a finger lands on the right key.
+
+That is a hypothesis about typing errors, not a measurement of them. It predicts that visually
+confusable pairs should be over-represented in real typos — which is testable against a corpus
+of authentic errors, and is a second reason to want the one this project still does not have.
+
+## What this does NOT establish
+
+- **Not what Android rendered before.** There is no Android in the build container and the
+  platform's Hebrew fallback could not be rendered, so the baseline row does not exist. The
+  claim is that the shipped face ranks best among four candidates, not that it beats what
+  users saw yesterday.
+- **Not legibility.** Ink overlap is a proxy for confusability, not a reading test with human
+  subjects.
+- **Not on a device.** `GATE-FONT-1` proves the measured bytes are in the APK. Whether the
+  result is visible to a person is `M4-DEVICE`, still NOT RUN.

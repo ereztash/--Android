@@ -85,10 +85,10 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | GATE-NET-1 | No network capability — shipping deps | 113 resolved coordinates | Planted okhttp + Firebase coordinates |
 | GATE-NET-2 | **Built debug APK** — permissions + DEX | 1 permission, 16 descriptors over 16 DEX files (28,652,352 bytes) | **A real assembled `netcontrol` APK** |
 | GATE-NET-3 | **Built RELEASE APK** — permissions + DEX | 1 permission, **2 descriptors** over 1 DEX file (1,968,128 bytes) | The same real APK against the release baseline |
-| GATE-API-1 | No IME API that compiles cleanly and fails at runtime (§1.1/1.3/1.4/1.6) | 95 files, 6 rules | Planted session-override, return-value branch, hardcoded backspace, blocking fetch |
-| GATE-API-1 | `getInitial*` accessors only inside the privacy boundary (§1.2) | 95 files | Planted read outside the boundary |
-| GATE-API-1 | Nothing typed reaches logcat or stdout | 95 files, production sources | Planted `Log.d` and `println` |
-| GATE-CRYPTO-1 | No ECB, hardcoded IV/key, seeded `SecureRandom`, broken primitive | 95 files, 4 rules | Planted `AES/ECB`, fixed IV, hardcoded key, MD5, seeded random |
+| GATE-API-1 | No IME API that compiles cleanly and fails at runtime (§1.1/1.3/1.4/1.6) | 96 files, 6 rules | Planted session-override, return-value branch, hardcoded backspace, blocking fetch |
+| GATE-API-1 | `getInitial*` accessors only inside the privacy boundary (§1.2) | 96 files | Planted read outside the boundary |
+| GATE-API-1 | Nothing typed reaches logcat or stdout | 96 files, production sources | Planted `Log.d` and `println` |
+| GATE-CRYPTO-1 | No ECB, hardcoded IV/key, seeded `SecureRandom`, broken primitive | 96 files, 4 rules | Planted `AES/ECB`, fixed IV, hardcoded key, MD5, seeded random |
 | GATE-LEX-1 | Shipped lexicon matches its manifest | 1 artifact, 355,587 forms | One byte flipped |
 | GATE-LEX-2 | Upstream source integrity | 2 sources | One byte flipped before hashing |
 | GATE-LEX-3 | The lexicon **inside the APK** hashes to the manifest's value | 1 asset, 4,607,433 bytes | One byte appended |
@@ -96,7 +96,7 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | GATE-MANIFEST-1 | IME service declares `exported`, `BIND_INPUT_METHOD`, the action, the meta-data | 4 requirements | `exported` flipped to false |
 | GATE-R8-1 | R8 has not stripped what the system instantiates by name | 4 requirements on the minified build | Service declaration invalidated |
 | GATE-LEARN-1 | The learned model persists counts over integer ids and nothing that can hold text | 2 learning source files | An encoder that accepts a `String` |
-| GATE-LEARN-2 | Learning happens in exactly one place, guarded by `session.mayLearn` | 99 Kotlin source files | A second, unguarded call site |
+| GATE-LEARN-2 | Learning happens in exactly one place, guarded by `session.mayLearn` | 100 Kotlin source files | A second, unguarded call site |
 | GATE-BIGRAM-1 | The bigram table **inside the APK** is byte-identical to the one every prediction number was measured on, and its header agrees with the manifest | 1 asset, 2,697,304 bytes, 51,900 groups | One byte appended |
 | GATE-DOC-1 | The readiness verdict's device-blocked list matches this matrix, **and** the gate denominators published in this table match what the gates actually counted on this tree | 20 ids + 5 denominators | A device-blocked id dropped; a denominator off by one |
 | GATE-SIZE-1 | The release artifact stays inside a budget written down **after** measuring it | 3 budget entries | Assets measured 50% larger |
@@ -164,6 +164,9 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | M10-MIX | Ordering policy: corrections-first vs completions-first | corrections-first **dominated** — worse on both corpora | 20,000 + 4,000 — baseline measured, then replaced |
 | M11-RECALL | Real-word error recall, shipped config | **63.73%** | 45,867 injected errors, test slice sha `9fc528ae…` |
 | A1-PRECISION | Real-word error precision against **human** judgement, blind, on held-out conversational text | batch 001 **[10.0%, 43.8%]** NOT DECIDABLE; batch 002 **[13.3%, 38.3%]** NOISE. Neither reaches the 60% ship band at any confidence | 80 + 240 firings judged, 20 + 60 controls, 18/20 and 57/60 passed |
+| GATE-FONT-1 | The typeface **inside the APK** is the one the letter-pair measurement ranked, matched by CONTENT because R8 renames the resource | 1 typeface, 16,480 bytes | One byte appended to the packaged font |
+| FONT-CHOICE | Which Hebrew face makes letter pairs hardest to confuse at the label's real pixel size | **Noto Sans Hebrew**: 10 at-risk pairs of 351 at 81px, against 12 / 14 / 22 for Assistant / Heebo / Rubik. The at-risk set — ה/ח, ח/ת, ט/ס, ג/נ, ב/כ, ד/ר — shares **no pair** with the phonetic confusion set the corrector uses | 27 letters, 351 pairs, 3 sizes |
+| LEARN-BENEFIT | What adaptive learning DID, not what it stored: accepted completions that would not have been on screen without it | Counted on device, shown in settings. Causal, not "influenced" — a counterfactual re-rank with the model removed | 2 integers, no text |
 | B1-ALLOCATION | Does reallocating the bigram table's bytes move prediction? Per-group cap + lower min-count, four variants at or under budget | **No.** Doubling groups (51,900→101,765) and tripling pairs buys **+0.61** next-word top-3 and costs 2.3–5.8 completion points. All four fail the rule fixed beforehand; nothing adopted. Offer rate rises +5.68 points, and `cap64/mc5` saves **609,592 APK bytes** at zero next-word cost | 20,000 per cell, eval slice |
 | S1-WITHDRAWN | The distance-2 layer, shipped for one commit on the operator's decision, is out again | Earned **+0.11 recall points** over the prior alone and spoke **twice in 1.8M words**; cost 387,300 APK bytes. APK 5,457,116 → **5,069,695**; assets headroom 349,926 → **737,856** | measured on the release artifact |
 | A1-FLAGSHIP | Precision on `אם`/`עם` — the pair the feature was built for and named after | **1 agreement in 9**; two-letter words overall **2 in 68**. Not a coverage failure: `אם` has 1,044 stored continuations and `עם` 4,473, among the best-covered entries in the table | 68 two-letter firings of 320 |

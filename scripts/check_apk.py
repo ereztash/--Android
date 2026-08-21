@@ -48,6 +48,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BASELINE = os.path.join(ROOT, "tools", "apk_dex_baseline.json")
 LEXICON_MANIFEST = os.path.join(ROOT, "lexicon", "MANIFEST.json")
 BIGRAM_MANIFEST = os.path.join(ROOT, "lexicon", "BIGRAM_MANIFEST.json")
+FONT_MANIFEST = os.path.join(ROOT, "lexicon", "FONT_MANIFEST.json")
 
 NETWORK_PERMISSIONS = {
     "android.permission.INTERNET",
@@ -312,6 +313,54 @@ def check_bigram_asset(apk: str, inject: str | None) -> Detector:
     return det
 
 
+def check_font(apk: str, inject: str | None) -> Detector:
+    """The measured typeface is in the artifact, and it is the one that was measured.
+
+    Matched by CONTENT, not by name. R8 renames resources in a release build -- the file that
+    ships as `res/font/keyboard_label.ttf` in debug arrives as `res/eA.ttf` -- so a name check
+    would pass on debug and be meaningless on the artifact that reaches users.
+
+    The failure this guards is silent by construction: `ResourcesCompat.getFont` returns null
+    when the resource is missing, the views fall back to the platform default on purpose so the
+    keyboard still draws, and nothing at runtime says the measurement no longer describes what
+    is on screen.
+    """
+    det = Detector(name="apk_font", unit="packaged typefaces", denominator=0)
+    if not os.path.isfile(FONT_MANIFEST):
+        det.notes.append("lexicon/FONT_MANIFEST.json missing; NOT-MEASURED")
+        return det
+    manifest = json.load(open(FONT_MANIFEST, encoding="utf-8"))
+    expected = manifest["output"]["sha256"]
+
+    with zipfile.ZipFile(apk) as z:
+        fonts = [n for n in z.namelist() if n.lower().endswith((".ttf", ".otf"))]
+        if not fonts:
+            det.findings.append(Finding(
+                "apk_font", os.path.basename(apk), 0,
+                "no typeface in the APK. The views degrade to the platform default without "
+                "saying so, which is the shipped state this measurement replaced.",
+                "apk.missing_font"))
+            det.denominator = 1
+            return det
+        det.denominator = len(fonts)
+        digests = []
+        for name in fonts:
+            data = z.read(name)
+            if inject == "font":
+                data = data + b"\x00"
+            digest = hashlib.sha256(data).hexdigest()
+            digests.append(digest)
+            det.notes.append(f"{name}: {len(data)} bytes, sha256 {digest}")
+        if expected not in digests:
+            det.findings.append(Finding(
+                "apk_font", os.path.basename(apk), 0,
+                f"no packaged typeface hashes to {expected}, which is what "
+                f"lexicon/FONT_MANIFEST.json says was measured. The letter-pair figures in "
+                f"docs/ describe a file that is not in the app.",
+                "apk.font_mismatch"))
+    return det
+
+
 IME_REQUIREMENTS = [
     ("exported", r'android:exported\(0x01010010\)=true', "android:exported must be true, "
      "or the app will not install on Android 12+"),
@@ -377,7 +426,7 @@ def main() -> int:
     ap.add_argument("--strict", action="store_true")
     ap.add_argument("--inject-defect",
                     choices=["permission", "dex", "service", "lexicon", "asset_name",
-                             "bigram_content"],
+                             "bigram_content", "font"],
                     help="PLANT A DEFECT. Positive control; every value must go red.")
     args = ap.parse_args()
 
@@ -394,7 +443,8 @@ def main() -> int:
                              ("apk_dex", "DEX class descriptors"),
                              ("apk_ime_service", "IME service requirements"),
                              ("apk_lexicon", "packaged lexicon assets"),
-                             ("apk_bigrams", "packaged count tables"))
+                             ("apk_bigrams", "packaged count tables"),
+                             ("apk_font", "packaged typefaces"))
             ],
             not_covered=NOT_COVERED,
         )
@@ -437,6 +487,7 @@ def main() -> int:
                 {"lexicon": "content", "asset_name": "asset_name"}.get(args.inject_defect),
             ),
             check_bigram_asset(args.apk, args.inject_defect),
+            check_font(args.apk, args.inject_defect),
         ],
         not_covered=NOT_COVERED,
     )

@@ -1,0 +1,85 @@
+{
+  "purpose": "the typeface for key labels, the preview bubble and the candidate strip",
+  "chosen": "Noto Sans Hebrew",
+  "why": "ranked first by at-risk Hebrew letter pairs at the label's real pixel size; see docs/PREDICTION_MEASUREMENTS.md",
+  "source": {
+    "url": "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanshebrew/NotoSansHebrew%5Bwdth,wght%5D.ttf",
+    "license": "SIL OFL 1.1",
+    "upstream_sha256": "7ef36a2c3593758cdb622e1bdef4f84523e92fbc3ccc667438dd80ff54c2de88"
+  },
+  "instanced_weight": 500,
+  "measurement": {
+    "sizes_px": [
+      54,
+      81,
+      105
+    ],
+    "ranked_at_px": 81,
+    "risk_threshold_iou": 0.7,
+    "letters": 27,
+    "pairs": 351,
+    "mean_iou": 0.2995,
+    "at_risk_pairs": [
+      [
+        "ה",
+        "ח",
+        0.866
+      ],
+      [
+        "ח",
+        "ת",
+        0.834
+      ],
+      [
+        "ט",
+        "ס",
+        0.812
+      ],
+      [
+        "ג",
+        "נ",
+        0.796
+      ],
+      [
+        "ח",
+        "ם",
+        0.787
+      ],
+      [
+        "ם",
+        "ס",
+        0.78
+      ],
+      [
+        "ב",
+        "כ",
+        0.757
+      ],
+      [
+        "ד",
+        "ר",
+        0.744
+      ],
+      [
+        "ט",
+        "ם",
+        0.708
+      ],
+      [
+        "מ",
+        "ס",
+        0.704
+      ]
+    ]
+  },
+  "output": {
+    "path": "app/src/main/res/font/keyboard_label.ttf",
+    "bytes": 16480,
+    "sha256": "c065e6f6d9b668699a3a16570082e856f597fb8e9206a651885b5e0b2654225d"
+  },
+  "known_limitations": [
+    "Ink overlap is a proxy for confusability, not a reading test with human subjects.",
+    "The baseline this replaces was never measured: there is no Android here and the platform's Hebrew fallback could not be rendered.",
+    "Isolated glyphs only. A key label is isolated; running text is not."
+  ]
+}
