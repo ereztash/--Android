@@ -207,6 +207,16 @@ def _gates(strict: bool) -> list[dict]:
                             "-- the exact drift that made the same sentence stale twice",
         },
         {
+            # A second control on the same script, because check_docs.py now carries two
+            # detectors and a control shown red on one says nothing about the other.
+            "id": "GATE-DOC-2",
+            "what": "the denominators QA_MATRIX.md publishes are the ones the gates counted",
+            "real": [PY, docs, "--root", ROOT, "--json"] + s,
+            "control": [PY, docs, "--root", ROOT, "--inject-defect", "denominator", "--json"],
+            "control_desc": "one published denominator off by one -- what a hand-copied "
+                            "count looks like the day after a source file is added",
+        },
+        {
             "id": "GATE-SIZE-1",
             "what": "the release artifact stays inside the size budget written down for it",
             "real": [PY, size, "--apk", release_apk, "--json"] + s,

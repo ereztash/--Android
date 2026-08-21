@@ -144,3 +144,65 @@ were recorded as failures and left to the operator. This is the same commitment.
 No keystroke log. No collection from a device. No change to what the app stores. The
 labelling runs on a public corpus, on a build host, outside the product.
 `GATE-LEARN-1` and `GATE-NET-1` are unaffected, and nothing in `app/src/main` changes.
+
+---
+
+# Addendum, written after the harvest and before any label
+
+**This is an observation, not a rule change.** Nothing above moved. It is here because the
+pool the batch was drawn from turned out to say something the eval slices could not, and
+because it bounds what batch 1 can possibly answer.
+
+## What the detector actually does on 1.8 million words of clean conversational text
+
+`./gradlew :core:harvestLabelCandidates`, over the whole held-out subtitle slice:
+
+| | |
+|---|---|
+| words | 1,815,379 |
+| eligible sites | 716,292 |
+| **firings** | **2,166** — 1.19 per 1,000 words |
+| via the adjacent window | 2,156 (99.54%) |
+| via the **prior** fallback (P1) | **8** (0.37%) |
+| via the **distance-2** table (S1) | **2** (0.09%) |
+
+The distance-2 table — 387,300 bytes in the release APK — **speaks twice in 1.8 million
+words** of unmodified conversational text. The prior fallback speaks eight times.
+
+## This does not contradict the S1+P1 verdict. It explains it.
+
+The recall figures for both layers (+267 catches on the conversational test slice) were
+measured on **injected** errors, and injection is what manufactures the positions these
+layers serve. Replacing a word with a homophone makes the typed word unattested in its
+context, which is exactly the condition `requireNoSupportForTyped` looks for. On text nobody
+corrupted, the adjacent window almost always has something to say, and the two new layers
+never get a turn.
+
+Both facts hold together, and both were already measured:
+
+- On injected errors the layers add **+653 / +267 catches** — they fire where injection
+  created blindness.
+- On clean text they add **+2 / +0 false alarms** — they almost never fire at all.
+
+So they are close to free. They are also close to silent. That is the same coin.
+
+**It sharpens the recommendation already recorded in `docs/CONFUSION_MEASUREMENTS.md`**:
+387,300 bytes for a layer that speaks twice per 1.8 million words is a worse trade than the
++0.11 recall points made it look, and it is the operator's call rather than one to be taken
+here.
+
+## What batch 1 can and cannot answer
+
+Sampling is uniform, as the protocol fixes it, and 99.54% of the pool is the adjacent path.
+The chance that 80 uniform draws contain even one non-adjacent item is **31%**.
+
+- **Batch 1 measures the precision of the adjacent detector** — the layer that has been
+  shipping since M11, and the one responsible for essentially every flag a user will ever
+  see. That is the right first question and it is worth the 75 minutes.
+- **Batch 1 says nothing about S1 or P1.** Reporting it as though it did would be a claim
+  wider than the measurement.
+
+Measuring the added layers would need a **stratified** batch and therefore its own
+pre-registered rule, because stratifying changes what the control bar and the decision band
+mean. It would also need a much larger corpus: the entire held-out slice contains **ten**
+such positions, which is not a denominator anything can be concluded from.

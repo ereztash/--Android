@@ -26,8 +26,10 @@ See NOT_COVERED. It compares two documents, and it cannot tell whether either is
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
+import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -118,8 +120,99 @@ NOT_COVERED = [
     "the failure this repository exists to refuse.",
     "A QA row wrongly marked OBSERVED would make this gate agree with a false document. It "
     "checks consistency, never truth.",
-    "Covers the device claim only. Every other assertion in RELEASE_READINESS.md is unchecked.",
+    "Covers the device claim and the gate denominators only. Every other assertion in "
+    "RELEASE_READINESS.md and QA_MATRIX.md is unchecked.",
+    "The denominator check compares a published number against a live gate run. It says "
+    "nothing about whether the gate examines the right files -- only that the matrix reports "
+    "the count the gate actually produced.",
 ]
+
+
+# QA_MATRIX.md publishes each gate's denominator in prose. Those numbers move every time a
+# source file is added, and they have gone stale twice within a day of being corrected --
+# once by the very commit that corrected the others. A number a human has to re-copy is a
+# number that will be wrong, so this reads them back from the gates themselves.
+#
+# Each entry: the matrix row's leading cell, the substring that identifies the right row when
+# one id has several rows, the script to run, the detector to read, and the regex that pulls
+# the published count out of the row.
+DENOMINATOR_ROWS = [
+    ("GATE-API-1", "6 rules", "check_forbidden_api.py", "forbidden_api",
+     re.compile(r"\|\s*(\d+) files, 6 rules\s*\|")),
+    ("GATE-API-1", "getInitial", "check_forbidden_api.py", "forbidden_api",
+     re.compile(r"\|\s*(\d+) files\s*\|")),
+    ("GATE-API-1", "logcat", "check_forbidden_api.py", "forbidden_api",
+     re.compile(r"\|\s*(\d+) files, production sources\s*\|")),
+    ("GATE-CRYPTO-1", None, "check_forbidden_api.py", "forbidden_api",
+     re.compile(r"\|\s*(\d+) files, 4 rules\s*\|")),
+    ("GATE-LEARN-2", None, "check_learning.py", "learn_guard",
+     re.compile(r"\|\s*(\d+) Kotlin source files\s*\|")),
+]
+
+
+def live_denominators(root: str) -> dict:
+    """Run each gate once and read its detectors' denominators."""
+    out = {}
+    for script in {row[2] for row in DENOMINATOR_ROWS}:
+        path = os.path.join(root, "scripts", script)
+        if not os.path.isfile(path):
+            continue
+        cmd = [sys.executable, path, "--json"]
+        if script == "check_learning.py":
+            cmd += ["--root", root]
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            doc = json.loads(proc.stdout)
+        except json.JSONDecodeError:
+            continue
+        for det in doc.get("detectors", []):
+            out[(script, det["name"])] = det["denominator"]
+    return out
+
+
+def check_denominators(root: str, inject: bool) -> Detector:
+    det = Detector(name="doc_denominators", unit="published gate denominators",
+                   denominator=0)
+    matrix = os.path.join(root, "docs", "QA_MATRIX.md")
+    if not os.path.isfile(matrix):
+        det.notes.append("QA_MATRIX.md missing; NOT-MEASURED")
+        return det
+    text = open(matrix, encoding="utf-8").read()
+    live = live_denominators(root)
+    if not live:
+        det.notes.append("no gate produced a denominator; NOT-MEASURED")
+        return det
+
+    for gate, marker, script, detector, row_re in DENOMINATOR_ROWS:
+        rows = [line for line in text.splitlines()
+                if line.startswith(f"| {gate} |")
+                and (marker is None or marker in line)]
+        matched = [(line, row_re.search(line)) for line in rows]
+        matched = [(line, m) for line, m in matched if m]
+        if not matched:
+            det.notes.append(f"{gate} ({marker or 'only row'}): no published denominator "
+                             f"found in the matrix")
+            continue
+        expected = live.get((script, detector))
+        if expected is None:
+            det.notes.append(f"{gate}: {script}/{detector} produced no denominator")
+            continue
+        det.denominator += 1
+        line, m = matched[0]
+        published = int(m.group(1))
+        if inject:
+            # PLANTED DEFECT: what a stale hand-copied number looks like.
+            published += 1
+        det.notes.append(f"{gate} ({marker or 'only row'}): matrix says {published}, "
+                         f"{script} counted {expected}")
+        if published != expected:
+            det.findings.append(Finding(
+                "doc_denominators", "docs/QA_MATRIX.md", 0,
+                f"{gate} publishes a denominator of {published}; {script}'s {detector} "
+                f"detector counted {expected} on this tree. A denominator copied by hand "
+                f"goes stale the next time a file is added, and this one has -- twice.",
+                "doc.stale_denominator"))
+    return det
 
 
 def main() -> int:
@@ -128,14 +221,18 @@ def main() -> int:
     ap.add_argument("--root", default=ROOT)
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--strict", action="store_true")
-    ap.add_argument("--inject-defect", choices=["stale"],
+    ap.add_argument("--inject-defect", choices=["stale", "denominator"],
                     help="PLANT A DEFECT. Positive control; must go red.")
     args = ap.parse_args()
 
     result = GateResult(
         gate="GATE-DOC-1",
-        description="the readiness verdict's device-blocked list matches the QA matrix",
-        detectors=[check(args.root, args.inject_defect == "stale")],
+        description="the readiness verdict's device-blocked list matches the QA matrix, and "
+                    "the matrix's gate denominators match what the gates actually count",
+        detectors=[
+            check(args.root, args.inject_defect == "stale"),
+            check_denominators(args.root, args.inject_defect == "denominator"),
+        ],
         not_covered=NOT_COVERED,
     )
     return report(result, args.json, args.strict)

@@ -29,3 +29,8 @@ __pycache__/
 # The full held-out evaluation corpus is 28 MB. Only the deterministic slice the tests
 # read is committed; cut it with scripts/slice_eval_corpus.py after rebuilding the corpus.
 lexicon/eval/hewiki_eval_sentences.txt.gz
+
+# Derived labelling intermediate: 1.7 MB of harvested candidates, reproducible with
+# `./gradlew :core:harvestLabelCandidates`. The BATCH and its answer key are committed;
+# the pool they were drawn from is not.
+labeling/candidates.jsonl

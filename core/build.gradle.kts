@@ -19,6 +19,28 @@ dependencies {
     testImplementation(libs.kotlin.test)
 }
 
+// A1 tool 1 of 4. Runs the SHIPPED detector over the held-out conversational slice and dumps
+// every position it speaks at, plus the two control pools, for scripts/build_label_batch.py.
+//
+// A JavaExec on the test runtime classpath rather than a test: it writes a file into the
+// working tree, which is not what a test does, and it must be run deliberately rather than
+// swept up by `./gradlew test`.
+tasks.register<JavaExec>("harvestLabelCandidates") {
+    group = "verification"
+    description = "Harvest real-word-error candidates for human labelling (docs/LABELING_PROTOCOL.md)"
+    mainClass.set("com.hebrewime.core.labeling.HarvestCandidates")
+    classpath = sourceSets["test"].runtimeClasspath
+    args(rootProject.file("labeling/candidates.jsonl").absolutePath)
+    for ((key, file) in listOf(
+        "lexicon.file" to "lexicon/assets/he_lexicon.txt.gz",
+        "frequency.file" to "lexicon/assets/he_freq.bin.gz",
+        "bigram.file" to "lexicon/assets/he_bigrams.bin.gz",
+        "skipgram.file" to "lexicon/assets/he_skipgrams.bin.gz",
+        "subtitle.heldout.file" to "lexicon/cache/subtitle-corpus-heldout.txt.gz",
+    )) systemProperty(key, rootProject.file(file).absolutePath)
+    maxHeapSize = "3g"
+}
+
 tasks.withType<Test>().configureEach {
     useJUnit()
     testLogging {

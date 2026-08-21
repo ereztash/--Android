@@ -908,6 +908,18 @@ than resolving it. What ships is the operator's call, executed.
 | encyclopedic | **+0.11 points, +51 catches** |
 | conversational | **+0.04 points, +8 catches** |
 
+**And on clean text it barely speaks at all.** Harvesting the whole held-out conversational
+slice for `docs/LABELING_PROTOCOL.md` — 1,815,379 words — the shipped detector fires 2,166
+times: **2,156 via the adjacent window, 8 via the prior, and 2 via distance-2.** The
+distance-2 table speaks twice in 1.8 million words.
+
+That does not contradict the +267 catches above; it explains them. Injecting a homophone
+makes the typed word unattested in its context, which is exactly the blindness these layers
+serve, so the injected-error harness manufactures the positions they need. On text nobody
+corrupted, the adjacent window nearly always has evidence and they never get a turn. Both
+measurements are true at once: the layers are nearly free in false alarms **because** they
+are nearly silent.
+
 It costs **387,300 bytes in the release APK** (672,606 uncompressed), which is 52% of the assets
 headroom that existed before it: `GATE-SIZE-1` reports 3,250,074 of 3,600,000 bytes, where it
 previously reported 2,862,774. That is roughly **6,600 bytes per additional error caught**, on
