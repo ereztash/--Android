@@ -36,9 +36,9 @@ claim that GATE-NET-1, GATE-NET-2 and GATE-NET-3 exist to keep true on every pus
 | Contacts | No | No | No contacts permission is declared |
 | Messages | No | No | Message text is processed in memory to offer a correction and is never stored or sent |
 | Photos / videos / audio / files | No | No | Not accessed |
-| App activity / diagnostics | No | No | No analytics, no crash reporting, no telemetry of any kind |
+| App activity / diagnostics | No | No | No analytics, no crash reporting, no telemetry. Two **local** diagnostic stores exist — see below — and neither leaves the device |
 
-### Two things the app stores
+### What the app stores
 
 Until adaptive learning existed this section said "the one thing". The build spec also said the
 keyboard would never learn passively from keystrokes. **The operator has explicitly approved
@@ -51,6 +51,33 @@ so under the rule quoted above neither requires disclosure. That answer stays ho
 the app genuinely has no way to send anything, and **it becomes false the instant any SDK with
 telemetry enters the build** — which is what GATE-NET-1, GATE-NET-2 and GATE-NET-3 exist to
 prevent on every push.
+
+### A third store, added 2026-08-22, that is not user data
+
+This section said "two things" and it is now three. The third is **not user data** and is not
+declarable under Play's definition, but leaving it unmentioned would make this document quietly
+narrower than the app, which is the failure mode named above pointing the other way.
+
+`DeviceEvidence` records **numbers about how the keyboard behaved on this phone**, so that the
+checks in `docs/QA_MATRIX.md` which are arithmetic — inset clearance, contrast ratios, keystroke
+latency percentiles, whether a label overflowed — can be answered by the device instead of
+waiting for someone to be holding it. It is readable in Settings and copyable as text, which is
+its entire purpose: a report the user can send back.
+
+What makes it safe to have written at all:
+
+- **It cannot hold text.** `GATE-LEARN-3` fails the build if any diagnostic store persists a
+  string it did not choose from a fixed set. The three exceptions are named in the gate: an
+  enum name, a throwable's class name, and a list of asset filenames.
+- **Raw keystroke timings never reach disk.** A sequence of per-key intervals is a rhythm, and
+  rhythm identifies people. Only percentiles and a count are written; the samples live in a
+  256-entry in-memory ring that dies with the process.
+- **It records no field identity.** Not the app being typed into, not the hint, not the field
+  name. `M4-DEVICE` is answered with counts of restricted fields seen and served — never which
+  ones.
+- **The user can erase it**, from the same screen, in one tap.
+
+It is not transmitted, because the app has no way to transmit anything.
 
 ### 1. The personal dictionary
 

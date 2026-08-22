@@ -90,6 +90,7 @@ def _gates(strict: bool) -> list[dict]:
     learn = os.path.join(ROOT, "scripts", "check_learning.py")
     docs = os.path.join(ROOT, "scripts", "check_docs.py")
     apk = os.path.join(ROOT, "scripts", "check_apk.py")
+    store = os.path.join(ROOT, "scripts", "build_store_assets.py")
     debug_apk = os.path.join(ROOT, "app", "build", "outputs", "apk", "debug", "app-debug.apk")
     netc_apk = os.path.join(ROOT, "app", "build", "outputs", "apk", "netcontrol",
                             "app-netcontrol.apk")
@@ -257,6 +258,18 @@ def _gates(strict: bool) -> list[dict]:
             "control": [PY, learn, "--root", ROOT, "--inject-defect", "diagnostics", "--json"],
             "control_desc": "a diagnostic that writes down the word a timing was measured on "
                             "-- the one line that turns a counter store into a keystroke log",
+        },
+        {
+            # The store assets are RENDERED from app/src/main/res. A committed PNG that no
+            # longer matches what those resources produce is a third source of truth, and
+            # nobody would notice: a store asset is looked at once. Which is exactly how a
+            # Latin capital N shipped for months as this app's Hebrew keyboard icon.
+            "id": "GATE-STORE-1",
+            "what": "the committed Play assets are what the app's own resources render to",
+            "real": [PY, store, "--check"],
+            "control": [PY, store, "--check", "--inject-defect"],
+            "control_desc": "one pixel of the icon's background changed -- what a store asset "
+                            "left behind by a palette change looks like",
         },
         {
             "id": "GATE-DOC-1",
