@@ -143,55 +143,28 @@ class CorrectionController(
     fun warmUp() {
         if (engine != null || loadJob?.isActive == true) return
         loadJob = scope.launch {
-            Trace.beginSection(TRACE_LOAD)
             val degraded = LinkedHashSet<String>()
             ImeDiagnostics.recordLoading(context)
             try {
-                val lexicon = context.assets.open(LEXICON_ASSET).use { HebrewLexicon.load(it) }
-                // A VIEW, not a copy. Copying 355,587 words into an ArrayList costs ~34 MB of
-                // heap and is alive exactly while the trie's arrays are being allocated; see
-                // HebrewLexicon.asWordList.
-                val trie = LexiconTrie.build(lexicon.asWordList())
-                val frequency = context.assets.open(FREQUENCY_ASSET)
-                    .use { HebrewFrequency.load(it) }
-                // Prediction is worth having without bigrams; the keyboard is not worth losing
-                // over them. GATE-BIGRAM-1 is what makes this branch a diagnostic rather than
-                // a way for a packaging mistake to reach a user unnoticed.
-                val bigrams = try {
-                    context.assets.open(BIGRAM_ASSET).use { BigramModel.load(it) }
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (unreadable: Throwable) {
-                    degraded.add(BIGRAM_ASSET)
-                    BigramModel.EMPTY
-                }
-                // Same treatment as the bigram table: worth having, not worth losing the
-                // keyboard over. GATE-ASSET-1 is what keeps this a diagnostic rather than a
-                // way for a packaging mistake to reach a user unnoticed.
-                val abbreviations = try {
-                    context.assets.open(ABBREVIATION_ASSET)
-                        .use { HebrewAbbreviations.load(it) }
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (unreadable: Throwable) {
-                    degraded.add(ABBREVIATION_ASSET)
-                    HebrewAbbreviations.EMPTY
-                }
+                val assets = loadAssets(degraded)
+                // The two reads below SUSPEND, and they are deliberately outside the traced
+                // region above. See loadAssets.
                 personal = readPersonalDictionary()
                 learningEnabled = LearningPreferences.isEnabled(context)
                 userModel = if (learningEnabled) readUserModel() else UserNgramModel.empty()
-                artifacts = Artifacts(lexicon, trie, frequency, bigrams, abbreviations)
-                engine = build(artifacts!!, personal, userModel)
+                artifacts = assets
+                engine = build(assets, personal, userModel)
                 loaded = Loaded(
-                    lexiconWords = lexicon.size,
-                    trieNodes = trie.nodeCount,
-                    bigramGroups = bigrams.groupCount,
-                    bigramPairs = bigrams.bigramCount,
+                    lexiconWords = assets.lexicon.size,
+                    trieNodes = assets.trie.nodeCount,
+                    bigramGroups = assets.bigrams.groupCount,
+                    bigramPairs = assets.bigrams.bigramCount,
                     personalWords = personal.size,
                     learnedPairs = userModel.pairCount,
                 )
                 ImeDiagnostics.recordReady(
-                    context, lexicon.size, trie.nodeCount, bigrams.bigramCount, degraded,
+                    context, assets.lexicon.size, assets.trie.nodeCount,
+                    assets.bigrams.bigramCount, degraded,
                 )
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -209,8 +182,63 @@ class CorrectionController(
                 )
             } finally {
                 degradedAssets = degraded
-                Trace.endSection()
             }
+        }
+    }
+
+    /**
+     * The packaged assets, loaded and turned into the structures prediction needs.
+     *
+     * ### Why this is a separate, NON-suspend function
+     * `Trace.beginSection`/`endSection` are **per-thread**. This work used to run inline in the
+     * `launch` block with the trace opened around all of it, and two suspending calls --
+     * `readPersonalDictionary()` and `readUserModel()` -- sat inside the traced region. On
+     * `Dispatchers.Default` a coroutine that suspends can resume on a **different** worker, so
+     * `endSection()` could run on a thread that never called `beginSection()`: the original
+     * thread's section stays open forever and the resuming thread closes a section it does not
+     * own. That corrupts every measurement after it in the same trace, not just this one, and
+     * `GATE-TRACE-1` cannot see it -- it checks that the benchmark asks for section names the
+     * app emits, not that the sections are balanced.
+     *
+     * Making this a plain function is what enforces the rule: a non-suspend function cannot
+     * contain a suspension point, so the compiler now guarantees what a comment used to ask
+     * for. `GATE-TRACE-2` checks the same property across the file, because the next traced
+     * region will not have this comment attached to it.
+     *
+     * Found by Android lint's `UnclosedTrace` while clearing warnings for release.
+     */
+    private fun loadAssets(degraded: MutableSet<String>): Artifacts {
+        Trace.beginSection(TRACE_LOAD)
+        try {
+            val lexicon = context.assets.open(LEXICON_ASSET).use { HebrewLexicon.load(it) }
+            // A VIEW, not a copy. Copying 355,587 words into an ArrayList costs ~34 MB of
+            // heap and is alive exactly while the trie's arrays are being allocated; see
+            // HebrewLexicon.asWordList.
+            val trie = LexiconTrie.build(lexicon.asWordList())
+            val frequency = context.assets.open(FREQUENCY_ASSET)
+                .use { HebrewFrequency.load(it) }
+            // Prediction is worth having without bigrams; the keyboard is not worth losing
+            // over them. GATE-BIGRAM-1 is what makes this branch a diagnostic rather than
+            // a way for a packaging mistake to reach a user unnoticed.
+            val bigrams = try {
+                context.assets.open(BIGRAM_ASSET).use { BigramModel.load(it) }
+            } catch (unreadable: Throwable) {
+                degraded.add(BIGRAM_ASSET)
+                BigramModel.EMPTY
+            }
+            // Same treatment as the bigram table: worth having, not worth losing the
+            // keyboard over. GATE-ASSET-1 is what keeps this a diagnostic rather than a
+            // way for a packaging mistake to reach a user unnoticed.
+            val abbreviations = try {
+                context.assets.open(ABBREVIATION_ASSET)
+                    .use { HebrewAbbreviations.load(it) }
+            } catch (unreadable: Throwable) {
+                degraded.add(ABBREVIATION_ASSET)
+                HebrewAbbreviations.EMPTY
+            }
+            return Artifacts(lexicon, trie, frequency, bigrams, abbreviations)
+        } finally {
+            Trace.endSection()
         }
     }
 
@@ -255,6 +283,7 @@ class CorrectionController(
         }
         inFlight = scope.launch {
             Trace.beginSection(TRACE_SUGGEST)
+            @Suppress("UnclosedTrace")  // paired in the finally on the next lines
             val result = try {
                 ready.predict(context)
             } finally {

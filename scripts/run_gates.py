@@ -317,10 +317,21 @@ def _gates(strict: bool) -> list[dict]:
             "id": "GATE-TRACE-1",
             "what": "the benchmark measures trace sections the app actually emits",
             "real": [PY, trace, "--json"] + s,
-            "control": [PY, trace, "--inject-defect", "--json"],
+            "control": [PY, trace, "--inject-defect", "names", "--json"],
             "control_desc": "rename the benchmark's requested sections, which is what a "
                             "one-sided rename looks like and would otherwise report zero "
                             "measurements as success",
+        },
+        {
+            # A second control on the same script: GATE-TRACE-1's control renames sections and
+            # says nothing about whether they are balanced, which is how a suspending call sat
+            # inside a traced region for four milestones.
+            "id": "GATE-TRACE-2",
+            "what": "no traced region contains a call that suspends",
+            "real": [PY, trace, "--json"] + s,
+            "control": [PY, trace, "--inject-defect", "balance", "--json"],
+            "control_desc": "readUserModel() inside a Trace.beginSection region -- the exact "
+                            "shape Android lint found in CorrectionController.warmUp",
         },
         {
             "id": "GATE-DENOM-1",

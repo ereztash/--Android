@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.security.keystore.KeyInfo
+import android.security.keystore.KeyProperties
 import androidx.core.content.res.ResourcesCompat
 import com.hebrewime.R
 import com.hebrewime.core.selfcheck.CheckArithmetic
@@ -260,20 +261,22 @@ object DeviceSelfCheck {
     private fun securityLevelOf(key: SecretKey): String = try {
         val factory = SecretKeyFactory.getInstance(key.algorithm, "AndroidKeyStore")
         val info = factory.getKeySpec(key, KeyInfo::class.java) as KeyInfo
+        // The platform's own constants, not local copies of their current values. The first
+        // version hardcoded 0/1/2 "so the when() reads as a table"; lint's SwitchIntDef caught
+        // it. A security level is exactly the wrong thing to compare against a number this
+        // file believes the platform uses -- the failure mode is a report that calmly says
+        // TEE about a key living in software.
         when (info.securityLevel) {
-            KeyProperties_SECURITY_LEVEL_STRONGBOX -> "STRONGBOX"
-            KeyProperties_SECURITY_LEVEL_TRUSTED_ENVIRONMENT -> "TEE"
-            KeyProperties_SECURITY_LEVEL_SOFTWARE -> "SOFTWARE"
-            else -> "UNKNOWN(${info.securityLevel})"
+            KeyProperties.SECURITY_LEVEL_STRONGBOX -> "STRONGBOX"
+            KeyProperties.SECURITY_LEVEL_TRUSTED_ENVIRONMENT -> "TEE"
+            KeyProperties.SECURITY_LEVEL_SOFTWARE -> "SOFTWARE"
+            KeyProperties.SECURITY_LEVEL_UNKNOWN -> "UNKNOWN"
+            KeyProperties.SECURITY_LEVEL_UNKNOWN_SECURE -> "UNKNOWN-BUT-SECURE"
+            else -> "UNRECOGNISED(${info.securityLevel})"
         }
     } catch (unknown: Throwable) {
         "UNREADABLE(${unknown.javaClass.simpleName})"
     }
-
-    // KeyProperties constants, named locally so the when() above reads as a table.
-    private const val KeyProperties_SECURITY_LEVEL_SOFTWARE = 0
-    private const val KeyProperties_SECURITY_LEVEL_TRUSTED_ENVIRONMENT = 1
-    private const val KeyProperties_SECURITY_LEVEL_STRONGBOX = 2
 
     // ------------------------------------------------------------------ M7-CONTRAST
 

@@ -105,6 +105,7 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | GATE-SIZE-1 | The release artifact stays inside a budget written down **after** measuring it | 3 budget entries | Assets measured 50% larger |
 | GATE-XML-1 | Every XML resource parses | 15 files | A comment containing `--` |
 | GATE-TRACE-1 | The benchmark measures sections the app actually emits | 2 section names | Requested sections renamed |
+| GATE-TRACE-2 | No traced region contains a call that suspends. `Trace` sections are per-thread, and a coroutine resuming on another worker closes a section it never opened | 2 traced regions, 6 suspending names | `readUserModel()` inside a `beginSection` region |
 | GATE-DENOM-1 | A check that examined nothing never reports PASS | meta-gate | The network gate over an empty directory |
 | GATE-META-1 | A neutered control is caught as `NOT-A-GATE` | 3 gates | A control file emptied by hand |
 
