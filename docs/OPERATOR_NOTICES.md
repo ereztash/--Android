@@ -143,6 +143,43 @@ can be acted on.
 
 **Status: NOT PROVIDED — will block M8 only.**
 
+### The pipeline has now been PROVEN, with a throwaway key
+
+Until 2026-08-22 this section said the signing pipeline was "complete and tested". It was
+complete. It had never been run. A throwaway 4096-bit RSA key was generated, a
+`keystore.properties` written, and a release APK and AAB built and verified with `apksigner`
+and `jarsigner`. The key and the properties file were destroyed immediately afterwards and
+neither ever entered the repository — `git check-ignore` was run against the properties file
+before the build, not after.
+
+Three things came out of it, and only the first was expected:
+
+1. **It works.** The APK verifies; the AAB verifies. What you supply will build.
+
+2. **Three release gates silently stopped measuring.** AGP writes `app-release-unsigned.apk`
+   only while the build is unsigned. The moment `keystore.properties` exists it writes
+   `app-release.apk` instead — so on the only build configuration that ever ships,
+   `GATE-NET-3` (no network capability in the release artifact), `GATE-R8-1` (R8 did not strip
+   what the system instantiates by name) and `GATE-SIZE-1` all reported NOT-MEASURED **while
+   the suite still printed `overall: OK`.** The network check on the shipping artifact would
+   have gone dark at exactly the moment it became load-bearing.
+
+   Fixed twice over: `run_gates.py` now resolves the release APK under either name and refuses
+   to guess if it finds one under a third; and NOT-MEASURED is now a **failure** unless the
+   gate is named in `MAY_BE_ABSENT` with a written reason. Only the two lexicon gates are, and
+   only because the 37 MB of upstream sources are gitignored.
+
+3. **The signature schemes were AGP's defaults, not a decision.** The first signed APK came
+   back `v2: true, v3: false`. v3 is what makes **key rotation** possible; without it an APK
+   distributed outside Play is bound to that key forever, and a lost or compromised key leaves
+   every installed user with no upgrade path — on this app that means losing a personal
+   dictionary encrypted under a Keystore key that dies with the package. `app/build.gradle.kts`
+   now states all four schemes explicitly: v1 off (pointless at minSdk 31), v2 and v3 on, v4
+   off. Both blocks verified present.
+
+**What is still yours to supply:** the real upload key, or the decision to let Play generate
+one under Play App Signing. Nothing above changes that.
+
 ---
 
 ## NOTICE 5 — Host toolchain deviation

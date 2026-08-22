@@ -42,6 +42,27 @@ android {
                 storePassword = keystoreProperties.getProperty("storePassword")
                 keyAlias = keystoreProperties.getProperty("keyAlias")
                 keyPassword = keystoreProperties.getProperty("keyPassword")
+
+                // Signature schemes, stated rather than left to AGP's defaults.
+                //
+                // v1 (JAR signing) is off: it only matters below API 24 and minSdk here is 31,
+                // and a v1 signature on a modern APK is dead weight in every entry's manifest.
+                //
+                // v2 is the floor. v3 is what makes KEY ROTATION possible: without it, an APK
+                // distributed outside Play is bound to this key forever, and if the key is
+                // ever compromised or lost there is no upgrade path for anyone who installed
+                // it -- they have to uninstall and lose their personal dictionary, which on
+                // this app is encrypted under a Keystore key that dies with the package.
+                //
+                // Verified by generating a throwaway key and running apksigner: before this
+                // block the release APK came back "v2: true, v3: false", which is AGP's
+                // default and not a decision anyone had made.
+                enableV1Signing = false
+                enableV2Signing = true
+                enableV3Signing = true
+                // v4 produces a side-car file for incremental `adb install`. It is not part of
+                // a Play upload and nothing here consumes it.
+                enableV4Signing = false
             }
         }
     }

@@ -23,6 +23,62 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PY = sys.executable
 
 
+# Gates whose inputs are legitimately absent in some environments, with the reason.
+#
+# Everything NOT in this set that comes back NOT-MEASURED is a **failure**, strict or not. The
+# previous rule -- NOT-MEASURED is only fatal under --strict -- let three release gates go dark
+# and still printed `overall: OK`, on the one build configuration that ever ships. An expected
+# absence is a short, named list; an unexpected one is a gate that stopped working.
+MAY_BE_ABSENT = {
+    "GATE-LEX-1": "the 37 MB of upstream lexicon sources are gitignored and absent on a fresh "
+                  "clone; with nothing to rebuild the reproducibility control cannot go red",
+    "GATE-LEX-2": "same upstream sources",
+}
+
+
+RELEASE_DIR = os.path.join(ROOT, "app", "build", "outputs", "apk", "release")
+
+
+def resolve_release_apk() -> str:
+    """The release APK, whatever the signing configuration named it.
+
+    ### Why this is a function and not a constant
+    It was a constant, spelling `app-release-unsigned.apk`. AGP writes that name only while the
+    build is UNSIGNED. The moment `keystore.properties` exists -- that is, at release time, on
+    the only build that ever ships -- AGP writes `app-release.apk` instead, the constant points
+    at a file that no longer exists, and GATE-NET-3, GATE-R8-1 and GATE-SIZE-1 all report
+    NOT-MEASURED while the suite still prints `overall: OK`.
+
+    So the network check on the shipping artifact, the R8 check on the shipping artifact and
+    the size budget on the shipping artifact would all have stopped running at exactly the
+    moment they became load-bearing, and nothing would have said so louder than a line most
+    readers skim.
+
+    Found by generating a throwaway key and building a signed release, which is the only way
+    this could have surfaced before the operator hit it.
+
+    An APK present in the directory under an unexpected name is a hard error rather than a
+    fallback: a gate that quietly measures a different artifact than it names is worse than one
+    that stops.
+    """
+    signed = os.path.join(RELEASE_DIR, "app-release.apk")
+    unsigned = os.path.join(RELEASE_DIR, "app-release-unsigned.apk")
+    if os.path.isfile(signed):
+        return signed
+    if os.path.isfile(unsigned):
+        return unsigned
+    if os.path.isdir(RELEASE_DIR):
+        strays = sorted(f for f in os.listdir(RELEASE_DIR) if f.endswith(".apk"))
+        if strays:
+            raise SystemExit(
+                f"release APKs present under unrecognised names: {strays}. Refusing to guess "
+                f"which one ships. Update resolve_release_apk() rather than letting the "
+                f"release gates measure an artifact they did not name."
+            )
+    # Nothing built yet. The "requires" mechanism reports this honestly as NOT-MEASURED.
+    return unsigned
+
+
 def _gates(strict: bool) -> list[dict]:
     s = ["--strict"] if strict else []
     net = os.path.join(ROOT, "scripts", "check_no_network.py")
@@ -37,8 +93,7 @@ def _gates(strict: bool) -> list[dict]:
     debug_apk = os.path.join(ROOT, "app", "build", "outputs", "apk", "debug", "app-debug.apk")
     netc_apk = os.path.join(ROOT, "app", "build", "outputs", "apk", "netcontrol",
                             "app-netcontrol.apk")
-    release_apk = os.path.join(ROOT, "app", "build", "outputs", "apk", "release",
-                               "app-release-unsigned.apk")
+    release_apk = resolve_release_apk()
     release_baseline = os.path.join(ROOT, "tools", "apk_dex_baseline_release.json")
     # The 37 MB of upstream lexicon sources. Gitignored, so absent on a fresh clone and on
     # every CI runner unless a step fetches them first. Both the reproducibility detector and
@@ -301,14 +356,18 @@ def main() -> int:
             #    failed to go red.
             absent = [p for p in g.get("requires", []) if not os.path.isfile(p)]
             if absent:
+                expected = g["id"] in MAY_BE_ABSENT
                 rows.append((g["id"], "NOT-MEASURED",
                              f"input absent: {os.path.basename(absent[0])}", "n/a"))
+                why = (f"Expected in this environment: {MAY_BE_ABSENT[g['id']]}."
+                       if expected else
+                       "This gate is NOT on the list of gates allowed to go dark, so a missing "
+                       "input is a gate that stopped working, not an environment.")
                 print(f"\n!!! {g['id']}: NOT-MEASURED. Its control needs "
                       f"{', '.join(os.path.relpath(p, ROOT) for p in absent)}, which is not "
-                      f"present. A control that cannot run has proven nothing -- this gate is "
-                      f"unproven in THIS environment, and is reported as such rather than as "
-                      f"a pass or as a broken gate.", file=sys.stderr)
-                if args.strict:
+                      f"present. A control that cannot run has proven nothing.\n    {why}",
+                      file=sys.stderr)
+                if args.strict or not expected:
                     ok = False
                 continue
 
@@ -351,6 +410,9 @@ def main() -> int:
     print("=" * 100)
     print("PASS-PARTIAL means at least one detector had denominator 0 and was reported "
           "NOT-MEASURED.\nIt is not a pass. Run with --strict to make it a failure.")
+    print("NOT-MEASURED fails the run unless the gate is listed in MAY_BE_ABSENT with a "
+          "reason.\nA gate going dark unannounced is how three release gates stopped "
+          "measuring the\nshipping artifact the moment a signing key existed.")
     print(f"\noverall: {'OK' if ok else 'FAILED'}")
     return 0 if ok else 1
 
