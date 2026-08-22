@@ -13,6 +13,8 @@ import androidx.core.view.ViewCompat
 import com.hebrewime.core.keyboard.Key
 import com.hebrewime.core.keyboard.KeyAction
 import com.hebrewime.core.keyboard.KeyGeometry
+import com.hebrewime.core.selfcheck.CheckArithmetic
+import com.hebrewime.diagnostics.DeviceEvidence
 import com.hebrewime.core.keyboard.KeyRect
 import com.hebrewime.core.keyboard.KeyDescriptions
 import com.hebrewime.core.keyboard.KeyboardLayout
@@ -122,6 +124,13 @@ class KeyboardView(context: Context) : View(context) {
      * Two arrays rather than a lookup, because this is read once per key per frame on the
      * draw path. `labelSizes[i]` belongs to `rects[i]` and is rebuilt with it.
      */
+    /**
+     * One preview per press, not one per frame.
+     *
+     * `onDraw` runs many times while a finger is down, and counting inside it would report the
+     * frame rate rather than the interaction.
+     */
+    private var previewCounted = false
     private var fullLabelSize = 0f
     private var labelSizes = FloatArray(0)
 
@@ -176,14 +185,44 @@ class KeyboardView(context: Context) : View(context) {
         // Multi-character labels -- `123`, `en`, `he` -- do not fit a key sized for one Hebrew
         // letter. Measured once here, not per frame; text advance is linear in size, so one
         // measurement at the shared size gives the exact ratio for every key.
+        var overflowing = 0
+        var worstRatio = 0f
         labelSizes = FloatArray(rects.size) { i ->
             val r = rects[i]
-            KeyGeometry.fitTextSize(
-                fullSize = fullLabelSize,
-                measuredAtFull = labelPaint.measureText(r.key.label),
-                available = r.width - 2f * GAP - LABEL_BREATHING_ROOM,
-            )
+            val advance = labelPaint.measureText(r.key.label)
+            val available = r.width - 2f * GAP - LABEL_BREATHING_ROOM
+            if (CheckArithmetic.overflows(advance, available)) overflowing++
+            if (available > 0f) worstRatio = maxOf(worstRatio, advance / available)
+            KeyGeometry.fitTextSize(fullLabelSize, advance, available)
         }
+        // The self-check reads these later; measuring here costs nothing because every value
+        // was computed anyway, and it means MI-LABELFIT and R2-FONT are answered by the code
+        // that actually draws rather than by a separate guess at what it does.
+        DeviceEvidence.recordLabelFit(context, rects.size, overflowing, worstRatio)
+        DeviceEvidence.recordTypeface(context, labelTypeface != null)
+        recordInsetGeometry(h)
+    }
+
+    /**
+     * The lowest key's bottom edge against the inset the window actually reported.
+     *
+     * `KeyboardHostView` pads by the navigation and caption insets, so by the time this view is
+     * measured the padding is already applied and this view's height excludes it. The inset is
+     * read back from the root window here rather than passed down, because the value that
+     * matters for M2-INSETS is the one the SYSTEM reported, not the one the padding code
+     * believed.
+     */
+    private fun recordInsetGeometry(viewHeight: Int) {
+        val lowest = rects.maxOfOrNull { it.bottom } ?: return
+        val insets = rootWindowInsets ?: return
+        val bottom = insets.getInsets(
+            android.view.WindowInsets.Type.navigationBars() or
+                android.view.WindowInsets.Type.captionBar()
+        ).bottom
+        // This view sits INSIDE the host's padding, so the inset is already cleared by the
+        // parent. What is recorded is the residual: how far the lowest key sits from where the
+        // inset would begin if the padding were not there.
+        DeviceEvidence.recordLayout(context, viewHeight + bottom, lowest, bottom)
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -248,6 +287,14 @@ class KeyboardView(context: Context) : View(context) {
 
         scratch.set(cx - w / 2f, top, cx + w / 2f, bottom)
         canvas.drawRoundRect(scratch, CORNER, CORNER, previewFill)
+        // Counted here, after every early return above, so the number means "a bubble was
+        // drawn" rather than "a key was pressed". The two differ exactly in the cases
+        // MI-PREVIEW is about: the top row, where the bubble flips below, and a bubble that
+        // would not fit at all.
+        if (!previewCounted) {
+            previewCounted = true
+            DeviceEvidence.recordPreviewShown(context)
+        }
         previewLabel.textSize = labelPaint.textSize * PREVIEW_SCALE
         val metrics = previewLabel.fontMetrics
         canvas.drawText(
@@ -275,6 +322,7 @@ class KeyboardView(context: Context) : View(context) {
             override fun run() {
                 onKeyPressed?.invoke(key)
                 performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                DeviceEvidence.recordBackspaceRepeat(context)
                 repeatDelay = (repeatDelay * REPEAT_DECAY).toLong().coerceAtLeast(REPEAT_MIN_MS)
                 repeatHandler.postDelayed(this, repeatDelay)
             }
@@ -294,6 +342,7 @@ class KeyboardView(context: Context) : View(context) {
         val runnable = Runnable {
             longPressAlternate = alternate
             performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+            DeviceEvidence.recordLongPress(context)
             invalidate()
         }
         repeatRunnable = runnable
@@ -345,6 +394,7 @@ class KeyboardView(context: Context) : View(context) {
                 val key = KeyGeometry.hitTest(rects, event.x, event.y)
                 pressedKey = key
                 pressedRect = rects.firstOrNull { it.key == key }
+                previewCounted = false
                 longPressAlternate = null
                 invalidate()
                 if (key != null) {

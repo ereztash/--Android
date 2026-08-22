@@ -85,10 +85,10 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | GATE-NET-1 | No network capability — shipping deps | 113 resolved coordinates | Planted okhttp + Firebase coordinates |
 | GATE-NET-2 | **Built debug APK** — permissions + DEX | 1 permission, 16 descriptors over 16 DEX files (28,652,352 bytes) | **A real assembled `netcontrol` APK** |
 | GATE-NET-3 | **Built RELEASE APK** — permissions + DEX | 1 permission, **2 descriptors** over 1 DEX file (1,968,128 bytes) | The same real APK against the release baseline |
-| GATE-API-1 | No IME API that compiles cleanly and fails at runtime (§1.1/1.3/1.4/1.6) | 97 files, 6 rules | Planted session-override, return-value branch, hardcoded backspace, blocking fetch |
-| GATE-API-1 | `getInitial*` accessors only inside the privacy boundary (§1.2) | 97 files | Planted read outside the boundary |
-| GATE-API-1 | Nothing typed reaches logcat or stdout | 97 files, production sources | Planted `Log.d` and `println` |
-| GATE-CRYPTO-1 | No ECB, hardcoded IV/key, seeded `SecureRandom`, broken primitive | 97 files, 4 rules | Planted `AES/ECB`, fixed IV, hardcoded key, MD5, seeded random |
+| GATE-API-1 | No IME API that compiles cleanly and fails at runtime (§1.1/1.3/1.4/1.6) | 102 files, 6 rules | Planted session-override, return-value branch, hardcoded backspace, blocking fetch |
+| GATE-API-1 | `getInitial*` accessors only inside the privacy boundary (§1.2) | 102 files | Planted read outside the boundary |
+| GATE-API-1 | Nothing typed reaches logcat or stdout | 102 files, production sources | Planted `Log.d` and `println` |
+| GATE-CRYPTO-1 | No ECB, hardcoded IV/key, seeded `SecureRandom`, broken primitive | 102 files, 4 rules | Planted `AES/ECB`, fixed IV, hardcoded key, MD5, seeded random |
 | GATE-LEX-1 | Shipped lexicon matches its manifest | 1 artifact, 355,587 forms | One byte flipped |
 | GATE-LEX-2 | Upstream source integrity | 2 sources | One byte flipped before hashing |
 | GATE-LEX-3 | The lexicon **inside the APK** hashes to the manifest's value | 1 asset, 4,607,433 bytes | One byte appended |
@@ -96,7 +96,8 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | GATE-MANIFEST-1 | IME service declares `exported`, `BIND_INPUT_METHOD`, the action, the meta-data | 4 requirements | `exported` flipped to false |
 | GATE-R8-1 | R8 has not stripped what the system instantiates by name | 4 requirements on the minified build | Service declaration invalidated |
 | GATE-LEARN-1 | The learned model persists counts over integer ids and nothing that can hold text | 2 learning source files | An encoder that accepts a `String` |
-| GATE-LEARN-2 | Learning happens in exactly one place, guarded by `session.mayLearn` | 101 Kotlin source files | A second, unguarded call site |
+| GATE-LEARN-2 | Learning happens in exactly one place, guarded by `session.mayLearn` | 106 Kotlin source files | A second, unguarded call site |
+| GATE-LEARN-3 | No diagnostic store persists a string it did not choose from a fixed set. `DeviceEvidence` writes to disk from the keystroke path; that promise needs a gate, not a comment | 2 diagnostic stores, 3 string keys allowed by name | A diagnostic that writes down the word a timing was measured on |
 | GATE-BIGRAM-1 | The bigram table **inside the APK** is byte-identical to the one every prediction number was measured on, and its header agrees with the manifest | 1 asset, 2,697,304 bytes, 51,900 groups | One byte appended |
 | GATE-DOC-1 | The readiness verdict's device-blocked list matches this matrix, **and** the gate denominators published in this table match what the gates actually counted on this tree — **including this row's own id count**, which went stale the day the check for it was written | 22 ids + 5 denominators + this row | A device-blocked id dropped; a denominator off by one |
 | GATE-DOC-3 | This matrix does not contradict **itself**: no id sits in the device-blocked table while another row marks it OBSERVED | the same 22 ids against every OBSERVED row | A row left in the blocked table after being marked OBSERVED |
@@ -344,6 +345,63 @@ row, because of the shape it fired in:
 
 So the mechanism produced a plausible correction in the least-measured configuration it has.
 That is a thing to watch, not a thing to publish.
+
+### The device can answer some of these itself
+
+**Settings → Device self-check.** Most of the table below never said "a human must judge this".
+It said "a device", and then waited months — because it needed a device *and* a person looking
+at it at the right moment. A large share of it is not judgement at all: whether the bottom key
+row clears the gesture inset is a subtraction; whether a Keystore key is hardware-backed is a
+field on `KeyInfo`; whether a label overflows its key is the comparison the drawing code
+already makes on every layout.
+
+So the gate harness is ported to the phone. `DeviceSelfCheck` runs each check twice — once
+against the device, once with a defect planted — and any check that stays green under
+injection is reported **PROVES NOTHING** and counts as evidence for nothing. That is
+`run_gates.py`'s rule, and it is there for the same reason: on a phone there is no build server
+to notice a check that always says yes.
+
+| Check | What the device measures | The defect its control plants |
+|---|---|---|
+| M2-INSETS | lowest key bottom vs the inset the window reported | keys drawn to the window's bottom edge |
+| M8-NETPERM | the permissions the package manager sees | `INTERNET` present |
+| M4-DEVICE | restricted fields seen / served / initial-text reads | one served restricted field |
+| M6-KEYSTORE | `KeyInfo.securityLevel` for both aliases | the key reported as living in software |
+| M7-CONTRAST | WCAG ratio of the colours **this device resolved** | the label drawn in the key's own colour |
+| M7-LAT | p50/p95/max of the real keystroke path | a p95 one microsecond over budget |
+| R2-FONT | whether `R.font.keyboard_label` resolved | the font failing to resolve |
+| MI-LABELFIT | labels overflowing at the size actually drawn | one label over its key |
+| M12-RELOAD | that the reload path ran | the reload never happening |
+| MI-COUNTERS | preview / backspace-repeat / long-press executions | none of the three paths run |
+
+**What this does NOT do, stated before anything is credited to it:**
+
+- **It does not remove a single row below.** Every id above is still device-blocked and stays
+  device-blocked until a real device runs it and the report comes back. What changed is that
+  the answer is now a number the phone produces, not a person's recollection of a screen.
+- **It cannot see the panel.** `M7-CONTRAST` is arithmetic on resolved colour values; a display
+  with a night filter or low brightness can be illegible at a ratio that passes.
+- **It cannot judge.** Whether the keyboard feels fast, whether a suggestion was useful,
+  whether a shrunk label is still readable — none of that is arithmetic. `MI-PREVIEW`,
+  `MI-REPEAT`, `MI-LONGPRESS`, `MI-CONFIRM`, `R1-FEEL`, `L2-PERSONAL`, `M6-UI`, `L1-SWITCH`
+  and `M7-TALKBACK` stay human, and `MI-COUNTERS` answers only the half a counter can: whether
+  the path has ever run.
+- **`M8-NETPERM` is not `M8-NETCAPTURE`.** It reports the permission as the package manager
+  sees it, which proves the OS would refuse a socket. It does not prove no attempt was made,
+  and the packet capture stays open.
+- **One device, one posture.** `M2-INSETS` measured on a gesture-navigation phone in portrait
+  says nothing about three-button navigation or landscape.
+- **`M7-LAT` measures the keyboard's own work** — plan, batch edit, learn, refresh — and not
+  the frame the system draws afterwards. A person's perceived latency is this plus a vsync.
+  It is also not the benchmark harness's `TraceSection` figure and must not be quoted as one.
+
+**On the privacy of measuring this at all.** `DeviceEvidence` writes to `SharedPreferences`
+from the keystroke path — a file on disk, written while the user types, in a process that can
+see everything they type. That is the exact shape of the thing this project promises never to
+build, so the promise gets a gate rather than a comment: **`GATE-LEARN-3`** fails the build if
+any diagnostic store persists a string it did not choose from a fixed set. Raw keystroke
+timings never leave memory either; a sequence of per-key intervals is a rhythm, and rhythm
+identifies people, so only percentiles and a count are written down.
 
 ### Requires a physical Android device — still not exercised
 

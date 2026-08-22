@@ -196,6 +196,14 @@ def _gates(strict: bool) -> list[dict]:
                             "reasonable, and it learns from password fields",
         },
         {
+            "id": "GATE-LEARN-3",
+            "what": "no diagnostic store persists a string it did not choose from a fixed set",
+            "real": [PY, learn, "--root", ROOT, "--json"] + s,
+            "control": [PY, learn, "--root", ROOT, "--inject-defect", "diagnostics", "--json"],
+            "control_desc": "a diagnostic that writes down the word a timing was measured on "
+                            "-- the one line that turns a counter store into a keystroke log",
+        },
+        {
             "id": "GATE-DOC-1",
             "what": "the readiness verdict's device-blocked list matches the QA matrix",
             "real": [PY, docs, "--root", ROOT, "--json"] + s,

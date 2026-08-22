@@ -86,6 +86,75 @@ def check_schema(root: str, inject: bool) -> Detector:
     return det
 
 
+# The diagnostic stores. These persist NUMBERS about how the keyboard behaved. A putString
+# here is the same failure as a String in the learning codec, wearing a different hat: a
+# diagnostic that writes text to disk is a keystroke log with a helpful name.
+#
+# One string key is allowed by name and only by name: ImeDiagnostics records the CLASS NAME of
+# a throwable so a load failure can be told from a restricted field. That is a fixed set of
+# Java identifiers chosen by the exception, never anything derived from input. Everything else
+# that writes a string is a finding.
+DIAGNOSTIC_STORES = [
+    "app/src/main/kotlin/com/hebrewime/diagnostics/DeviceEvidence.kt",
+    "app/src/main/kotlin/com/hebrewime/diagnostics/ImeDiagnostics.kt",
+]
+# Matches the KEY argument whatever form it takes. An earlier version matched only a
+# bare identifier, so `putString("last_word", w)` -- a literal key, the most likely
+# way anyone would actually add one -- walked straight through. The control caught
+# it: the planted defect used a literal and the gate stayed green, which is the whole
+# reason a control runs before the gate it belongs to.
+PUT_STRING = re.compile(r"\bputString\s*\(\s*([^,()]+?)\s*,")
+ALLOWED_STRING_KEYS = {
+    "KEY_STATE",    # an EngineState enum name
+    "KEY_DETAIL",   # a throwable's class name, never its message
+    "KEY_DEGRADED", # a comma-joined list of ASSET names, fixed at build time
+}
+
+
+def check_diagnostics(root: str, inject: bool) -> Detector:
+    """No diagnostic store may persist a string it did not choose itself.
+
+    ### Why this gate exists
+    `DeviceEvidence` was added so the phone could answer the checks in `docs/QA_MATRIX.md`
+    that are arithmetic rather than judgement. It writes to `SharedPreferences` from the
+    keystroke path. That is a file on disk, written on every key, in a process that can see
+    everything typed -- which is the exact shape of the thing this project promises not to
+    build. The promise needs a gate, not a comment.
+    """
+    det = Detector(name="diagnostic_store", unit="diagnostic stores", denominator=0)
+    present = [p for p in DIAGNOSTIC_STORES if os.path.isfile(os.path.join(root, p))]
+    if not present:
+        det.notes.append("no diagnostic stores found; NOT-MEASURED")
+        return det
+    det.denominator = len(present)
+
+    for rel in present:
+        path = os.path.join(root, rel)
+        text = open(path, encoding="utf-8").read()
+        if inject and rel.endswith("DeviceEvidence.kt"):
+            # PLANTED DEFECT: the single line that would turn this into a keystroke log --
+            # persisting the word the timing was measured on alongside the timing.
+            text += '\n    fun recordWord(c: Context, w: String) = ' \
+                    'edit(c) { putString("last_word", w) }\n'
+        stripped = re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)
+        stripped = re.sub(r"//.*", "", stripped)
+        for m in PUT_STRING.finditer(stripped):
+            key = m.group(1)
+            if key in ALLOWED_STRING_KEYS:
+                continue
+            line = stripped[:m.start()].count("\n") + 1
+            det.findings.append(Finding(
+                "diagnostic_store", rel, line,
+                f"putString({key}) persists a string this store did not choose from a fixed "
+                f"set. A diagnostic writes numbers; a diagnostic that writes text is a "
+                f"keystroke log.",
+                "diag.text_persisted"))
+    det.notes.append(
+        f"checked {len(present)} stores; {len(ALLOWED_STRING_KEYS)} string keys allowed by "
+        f"name (enum name, throwable class name, asset list)")
+    return det
+
+
 def check_guard(root: str, inject: bool) -> Detector:
     det = Detector(name="learn_guard", unit="Kotlin source files", denominator=0)
     files = source_files(root)
@@ -163,7 +232,7 @@ def main() -> int:
     ap.add_argument("--root", default=ROOT)
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--strict", action="store_true")
-    ap.add_argument("--inject-defect", choices=["schema", "guard"],
+    ap.add_argument("--inject-defect", choices=["schema", "guard", "diagnostics"],
                     help="PLANT A DEFECT. Positive control; every value must go red.")
     args = ap.parse_args()
 
@@ -174,6 +243,7 @@ def main() -> int:
         detectors=[
             check_schema(args.root, args.inject_defect == "schema"),
             check_guard(args.root, args.inject_defect == "guard"),
+            check_diagnostics(args.root, args.inject_defect == "diagnostics"),
         ],
         not_covered=NOT_COVERED,
     )

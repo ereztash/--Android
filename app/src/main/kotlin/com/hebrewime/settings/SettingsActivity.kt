@@ -35,6 +35,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.hebrewime.R
 import com.hebrewime.core.dictionary.PersonalDictionary
+import com.hebrewime.core.selfcheck.SelfCheck
+import com.hebrewime.core.selfcheck.SelfCheckReport
+import com.hebrewime.diagnostics.DeviceEvidence
+import com.hebrewime.diagnostics.DeviceSelfCheck
 import com.hebrewime.diagnostics.ImeDiagnostics
 import com.hebrewime.dictionary.PersonalDictionaryRepository
 import androidx.lifecycle.lifecycleScope
@@ -83,6 +87,7 @@ private fun SettingsScreen(
     var benefit by remember { mutableStateOf(LearningPreferences.Benefit(0, 0)) }
     var confirmingForget by remember { mutableStateOf(false) }
     var diagnostics by remember { mutableStateOf(ImeDiagnostics.read(context)) }
+    var selfCheck by remember { mutableStateOf<SelfCheckReport?>(null) }
 
     LaunchedEffect(Unit) {
         dictionary = repository.load()
@@ -298,6 +303,16 @@ private fun SettingsScreen(
             }
 
             HorizontalDivider()
+            SelfCheckCard(
+                report = selfCheck,
+                onRun = { selfCheck = DeviceSelfCheck.run(context) },
+                onReset = {
+                    DeviceEvidence.reset(context)
+                    selfCheck = null
+                },
+            )
+
+            HorizontalDivider()
             Text(
                 stringResource(R.string.attribution_title),
                 style = MaterialTheme.typography.titleMedium,
@@ -369,3 +384,98 @@ private val ATTRIBUTION = """
     published under CC BY-SA 4.0. The build script that produces it is part of this project's
     source repository.
 """.trimIndent()
+
+
+/**
+ * The device self-check, with its own controls shown red.
+ *
+ * ### Why this is in the product and not in a debug build
+ * The rows it answers are the ones `docs/QA_MATRIX.md` marks "requires a physical Android
+ * device". They stayed unanswered for months because they required a device *and* a person
+ * looking at it at the right moment. The only phone this project has access to is the
+ * operator's, in their hand, in an app they installed -- so the report has to be reachable
+ * from inside the app, and it has to come out as text they can paste back.
+ *
+ * It ships in release for the same reason `ImeDiagnostics` does: the failures it explains are
+ * the ones that happen on someone else's phone, and a diagnostic compiled out of the release
+ * build is a diagnostic that is never there when it is needed.
+ */
+@Composable
+private fun SelfCheckCard(
+    report: SelfCheckReport?,
+    onRun: () -> Unit,
+    onReset: () -> Unit,
+) {
+    val context = LocalContext.current
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            stringResource(R.string.selfcheck_title),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Text(
+            stringResource(R.string.selfcheck_body),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = onRun) { Text(stringResource(R.string.selfcheck_run)) }
+            if (report != null) {
+                TextButton(onClick = {
+                    val clipboard =
+                        context.getSystemService(android.content.ClipboardManager::class.java)
+                    clipboard?.setPrimaryClip(
+                        android.content.ClipData.newPlainText(
+                            "hebrew-ime self-check", report.render()
+                        )
+                    )
+                    android.widget.Toast.makeText(
+                        context, R.string.selfcheck_copied, android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }) { Text(stringResource(R.string.selfcheck_copy)) }
+            }
+        }
+        if (report == null) {
+            Text(
+                stringResource(R.string.selfcheck_hint),
+                style = MaterialTheme.typography.bodySmall,
+            )
+        } else {
+            Text(
+                stringResource(
+                    R.string.selfcheck_summary,
+                    report.passed, report.failed, report.notMeasured, report.notGates,
+                ),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            for (check in report.checks) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        "${statusMark(check.status)}  ${check.id}",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(check.measured, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+            Text(
+                stringResource(R.string.selfcheck_hint),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            TextButton(onClick = onReset) {
+                Text(stringResource(R.string.selfcheck_reset))
+            }
+        }
+    }
+}
+
+/**
+ * A word, not a colour.
+ *
+ * The four states are not a scale, and a colour ramp would imply they are. NOT MEASURED is not
+ * "nearly passing", and PROVES NOTHING is not "nearly failing" -- it is a pass with nothing
+ * behind it, which is a different kind of bad from a failure.
+ */
+private fun statusMark(status: SelfCheck.Status): String = when (status) {
+    SelfCheck.Status.PASS -> "PASS"
+    SelfCheck.Status.FAIL -> "FAIL"
+    SelfCheck.Status.NOT_MEASURED -> "NOT MEASURED"
+    SelfCheck.Status.NOT_A_GATE -> "PROVES NOTHING"
+}

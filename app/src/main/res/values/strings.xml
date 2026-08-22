@@ -71,4 +71,19 @@
     <string name="dictionary_wipe_confirm">This deletes every word you have added and destroys
         the encryption key, so the stored data can never be read again — including by this
         app. It cannot be undone.</string>
+
+    <!-- Device self-check. This is a developer-facing report the user can send back, so the
+         wording says what it is rather than pretending to be a feature. -->
+    <string name="selfcheck_title">Device self-check</string>
+    <string name="selfcheck_body">Runs the checks this phone can answer about itself, and runs
+        each one a second time with a fault planted to prove it can fail. A check that passes
+        with a fault planted is reported as proving nothing.</string>
+    <string name="selfcheck_run">Run the self-check</string>
+    <string name="selfcheck_copy">Copy the report</string>
+    <string name="selfcheck_reset">Clear what was measured</string>
+    <string name="selfcheck_copied">Report copied</string>
+    <string name="selfcheck_summary">%1$d passed, %2$d failed, %3$d not measured, %4$d proved
+        nothing</string>
+    <string name="selfcheck_hint">Some checks need you to do something first: type into a
+        password field, add a word in this screen, hold backspace, long-press the quote key.</string>
 </resources>

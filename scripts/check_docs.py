@@ -267,6 +267,56 @@ def check_denominators(root: str, inject: bool) -> Detector:
     return det
 
 
+def rewrite_denominators(root: str) -> int:
+    """Write the live denominators into QA_MATRIX.md's prose.
+
+    Not a way to make the gate pass -- the gate still compares and still fails on a real
+    disagreement. This exists because the number in the matrix is DERIVED prose whose only job
+    is to be readable, and a derived number a human re-copies is a number that goes stale. It
+    did twice in one afternoon, in the same session that added the check for it.
+
+    CI never runs this. It is a developer convenience, invoked deliberately.
+    """
+    matrix = os.path.join(root, "docs", "QA_MATRIX.md")
+    text = open(matrix, encoding="utf-8").read()
+    live = live_denominators(root)
+    changed = 0
+    lines = text.splitlines(keepends=True)
+    for i, line in enumerate(lines):
+        for gate, marker, script, detector, row_re in DENOMINATOR_ROWS:
+            if not line.startswith(f"| {gate} |"):
+                continue
+            if marker is not None and marker not in line:
+                continue
+            m = row_re.search(line)
+            expected = live.get((script, detector))
+            if not m or expected is None or int(m.group(1)) == expected:
+                continue
+            start, end = m.span(1)
+            lines[i] = line[:start] + str(expected) + line[end:]
+            line = lines[i]
+            changed += 1
+    text = "".join(lines)
+
+    # GATE-DOC-1's own id count, derived from the table rather than from a gate run.
+    if BLOCKED_SECTION in text:
+        body = text.split(BLOCKED_SECTION, 1)[1].split("### ", 1)[0]
+        counted = len({i for i in ROW_ID_RE.findall(body) if i != "ID"})
+        new_text, n = re.subn(r"(\| GATE-DOC-1 \|.*?\|\s*)\d+( ids \+ )",
+                              lambda mm: f"{mm.group(1)}{counted}{mm.group(2)}", text)
+        if n and new_text != text:
+            text = new_text
+            changed += 1
+        new_text, n = re.subn(r"(the same )\d+( ids against every OBSERVED row)",
+                              lambda mm: f"{mm.group(1)}{counted}{mm.group(2)}", text)
+        if n and new_text != text:
+            text = new_text
+            changed += 1
+
+    open(matrix, "w", encoding="utf-8").write(text)
+    return changed
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -276,7 +326,15 @@ def main() -> int:
     ap.add_argument("--inject-defect",
                     choices=["stale", "denominator", "selfcontradiction"],
                     help="PLANT A DEFECT. Positive control; must go red.")
+    ap.add_argument("--fix-denominators", action="store_true",
+                    help="rewrite the matrix's derived numbers from a live gate run. Never "
+                         "run in CI; the gate itself still compares and still fails.")
     args = ap.parse_args()
+
+    if args.fix_denominators:
+        n = rewrite_denominators(args.root)
+        print(f"rewrote {n} derived number(s) in docs/QA_MATRIX.md")
+        return 0
 
     result = GateResult(
         gate="GATE-DOC-1",

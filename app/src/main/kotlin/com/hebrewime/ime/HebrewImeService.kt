@@ -17,6 +17,7 @@ import com.hebrewime.core.prediction.TypingContext
 import com.hebrewime.core.privacy.FieldDescriptor
 import com.hebrewime.core.privacy.SensitiveFieldPolicy
 import com.hebrewime.core.privacy.SessionStart
+import com.hebrewime.diagnostics.DeviceEvidence
 import com.hebrewime.ime.correction.CorrectionController
 import com.hebrewime.ime.view.CandidateStripView
 import com.hebrewime.ime.view.KeyboardHostView
@@ -173,7 +174,14 @@ class HebrewImeService : InputMethodService() {
             maxLength = null,
         )
 
+        // Whether the policy ever REACHED for the plaintext, recorded rather than assumed.
+        // M4-DEVICE asks exactly this and the only honest answer is one the running keyboard
+        // gives: the provider below is lazy, and on a restricted field it must never be
+        // invoked. A boolean is the whole record -- the text itself is never touched here and
+        // never written anywhere.
+        var initialTextRead = false
         session = SensitiveFieldPolicy.beginSession(descriptor, info.initialSelStart) {
+            initialTextRead = true
             info.getInitialTextBeforeCursor(MAX_INITIAL_CONTEXT, 0)
         }
 
@@ -181,6 +189,13 @@ class HebrewImeService : InputMethodService() {
             // Drop the framework's own retained copy, rather than leaving it alive for as long
             // as this EditorInfo is.
             info.setInitialSurroundingText("")
+            DeviceEvidence.recordRestrictedField(
+                this,
+                // maySuggest true on a restricted field would be the policy contradicting
+                // itself; it is recorded as a served field so the self-check reports it.
+                served = session.maySuggest,
+                initialTextTaken = initialTextRead,
+            )
         }
 
         contextBuffer.reset(session.initialTextBeforeCursor, session.cursorPosition)
@@ -192,6 +207,7 @@ class HebrewImeService : InputMethodService() {
             // the IME process happened to die.
             correction.refreshPersonalDictionary()
             correction.refreshLearningState()
+            DeviceEvidence.recordDictionaryReload(this)
         }
     }
 
@@ -234,6 +250,21 @@ class HebrewImeService : InputMethodService() {
     }
 
     private fun handleKey(key: Key) {
+        // The whole keystroke, finger to committed text: planning, the batch edit across the
+        // Binder, the learning hook and the suggestion refresh. This is the only latency a
+        // person experiences, and until now nothing measured it on a phone -- the benchmark
+        // harness cannot, because it cannot make itself the active IME without
+        // WRITE_SECURE_SETTINGS. `System.nanoTime` rather than the wall clock: this is an
+        // interval, and the wall clock can step.
+        val startedAt = System.nanoTime()
+        try {
+            handleKeyTimed(key)
+        } finally {
+            DeviceEvidence.recordKeystroke(this, (System.nanoTime() - startedAt) / 1_000L)
+        }
+    }
+
+    private fun handleKeyTimed(key: Key) {
         val commands = KeyPressPlanner.plan(key, contextBuffer, shifted)
         val ic = currentInputConnection ?: return
         // Captured before the edit so a word boundary can be detected afterwards: a word that
