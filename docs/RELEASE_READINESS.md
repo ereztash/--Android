@@ -98,6 +98,10 @@ path for automatic replacement was unreachable, because nothing ever performed o
 
 ## What would have to happen next, in order
 
+> **The current, ordered list with owners and time estimates is
+> [`docs/PATH_TO_PRODUCTION.md`](PATH_TO_PRODUCTION.md).** What follows is the reasoning behind
+> the order; that file is the list.
+
 ### 1. Put it on a phone (nobody else can start until this happens)
 
 Install the debug APK, enable the IME in Settings, select it, and type. That single session
