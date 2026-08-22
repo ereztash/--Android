@@ -396,6 +396,23 @@ to notice a check that always says yes.
   the frame the system draws afterwards. A person's perceived latency is this plus a vsync.
   It is also not the benchmark harness's `TraceSection` figure and must not be quoted as one.
 
+**Two defects the self-check introduced, found by reviewing it rather than by running it.**
+
+1. **It minted Keystore keys to measure them.** `M6-KEYSTORE` called `getOrCreate`, which
+   creates the key when it is absent — so merely opening the self-check would have created a
+   learning key for a user who never turned learning on, and a dictionary key for one who never
+   added a word. The settings screen already refuses to load the learned model while the
+   feature is off for exactly this reason. It now uses `exists` and reports **NOT-MEASURED**
+   when a key has never been created, which is both the honest answer and the useful one.
+
+2. **The instrument added latency it did not measure.** `recordKeystroke` flushed inline: a
+   256-element sort and four preference writes on the keystroke path every sixteenth key —
+   *after* the timestamp for that keystroke had already been taken. So the cost landed on the
+   user and never appeared in `M7-LAT`. Both the flush and the micro-interaction counters
+   (`recordPreviewShown` is called from `onDraw`) now run on a single low-priority daemon
+   thread. The ring update stays on the caller's thread: four field writes under a lock held
+   for nanoseconds, and handing that off would cost an allocation per key.
+
 **On the privacy of measuring this at all.** `DeviceEvidence` writes to `SharedPreferences`
 from the keystroke path — a file on disk, written while the user types, in a process that can
 see everything they type. That is the exact shape of the thing this project promises never to

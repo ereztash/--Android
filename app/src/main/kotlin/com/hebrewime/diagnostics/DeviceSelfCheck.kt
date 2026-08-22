@@ -206,11 +206,31 @@ object DeviceSelfCheck {
                 KeystoreKeyProvider.KEY_ALIAS,
                 KeystoreKeyProvider.LEARNING_KEY_ALIAS,
             )
-            val levels = aliases.map { alias ->
-                val key = KeystoreKeyProvider.getOrCreate(alias)
-                alias to securityLevelOf(key)
+            // `exists`, never `getOrCreate`. The first version of this check called
+            // getOrCreate, which MINTS the key when it is absent -- so merely opening the
+            // self-check would have created a learning key for a user who never turned
+            // learning on, and a dictionary key for one who never added a word. Settings
+            // already refuses to load the learned model while the feature is off, for exactly
+            // this reason: touching the Keystore for data the user has not asked the app to
+            // use is not a diagnostic, it is a side effect.
+            //
+            // A key that does not exist yet is NOT-MEASURED. That is the honest answer and it
+            // is also the useful one: it says "turn the feature on, then ask again".
+            val existing = aliases.filter { KeystoreKeyProvider.exists(it) }
+            if (existing.isEmpty()) {
+                return SelfCheck(
+                    id, q, Status.NOT_MEASURED,
+                    "neither key exists yet - add a word to your dictionary, or turn learning " +
+                        "on, and run this again. Creating one here to measure it would be a " +
+                        "side effect, not a measurement",
+                    nc,
+                )
             }
-            val distinct = levels.map { it.first }.distinct().size == levels.size
+            val levels = existing.map { alias ->
+                alias to securityLevelOf(KeystoreKeyProvider.getOrCreate(alias))
+            }
+            val distinct = levels.map { it.first }.distinct().size == levels.size &&
+                levels.size == aliases.size
             // PLANTED DEFECT: report the key as living in software.
             val described = if (inject) levels.map { it.first to "SOFTWARE (injected)" }
             else levels
@@ -218,7 +238,11 @@ object DeviceSelfCheck {
             SelfCheck(
                 id, q,
                 if (hardware && distinct) Status.PASS else Status.FAIL,
-                described.joinToString("; ") { "${it.first}: ${it.second}" },
+                described.joinToString("; ") { "${it.first}: ${it.second}" } +
+                    if (existing.size < aliases.size)
+                        "  (${aliases.size - existing.size} alias not created yet, so " +
+                            "independence is not yet demonstrable)"
+                    else "",
                 nc,
             )
         } catch (unavailable: Throwable) {

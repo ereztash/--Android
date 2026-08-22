@@ -126,14 +126,39 @@ object DeviceEvidence {
      * the screen, which is the only latency a person experiences.
      */
     fun recordKeystroke(context: Context, micros: Long) {
-        synchronized(ring) {
+        val due = synchronized(ring) {
             ring[ringNext] = micros
             ringNext = (ringNext + 1) % RING
             if (ringCount < RING) ringCount++
-            if (ringCount % FLUSH_EVERY != 0) return
+            ringCount % FLUSH_EVERY == 0
         }
-        flushLatency(context)
+        // Off the main thread, always.
+        //
+        // The first version flushed inline. That put a 256-element sort and four preference
+        // writes on the keystroke path every sixteenth key -- and the timestamp for THIS
+        // keystroke has already been taken by then, so the instrument was adding latency to
+        // the very thing it measures and then not measuring it. An instrument that perturbs
+        // its subject invisibly is worse than no instrument.
+        //
+        // The ring update above stays on the caller's thread: it is four field writes under a
+        // lock held for nanoseconds, and handing it off would need an allocation per key.
+        if (due) flusher.execute { flushLatency(context.applicationContext) }
     }
+
+    /**
+     * One thread, unbounded queue, daemon.
+     *
+     * Single-threaded so flushes cannot interleave and write percentiles out of order. Daemon
+     * so it can never hold the process open -- a diagnostic that keeps a keyboard alive after
+     * the system has finished with it would be a battery bug wearing a measurement's clothes.
+     */
+    private val flusher: java.util.concurrent.ExecutorService =
+        java.util.concurrent.Executors.newSingleThreadExecutor { runnable ->
+            Thread(runnable, "ime-evidence").apply {
+                isDaemon = true
+                priority = Thread.MIN_PRIORITY
+            }
+        }
 
     /** Writes percentiles of the in-memory ring. Raw samples are never persisted. */
     fun flushLatency(context: Context) {
@@ -228,8 +253,20 @@ object DeviceEvidence {
         edit(context) { clear() }
     }
 
-    private fun bump(context: Context, key: String) = edit(context) {
-        putInt(key, prefs(context).getInt(key, 0) + 1)
+    /**
+     * A counter, incremented off the caller's thread.
+     *
+     * `recordPreviewShown` is called from `onDraw`. A read-modify-write against
+     * `SharedPreferences` on the frame path is small, and it is still the frame path -- these
+     * counters exist to measure the keyboard, not to slow it. Nothing reads them except the
+     * self-check screen, so eventual consistency is exactly the right guarantee.
+     */
+    private fun bump(context: Context, key: String) {
+        val app = context.applicationContext
+        flusher.execute {
+            val p = prefs(app)
+            p.edit().putInt(key, p.getInt(key, 0) + 1).apply()
+        }
     }
 
     private inline fun edit(
