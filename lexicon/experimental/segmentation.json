@@ -10,19 +10,31 @@
   "sharing": {
     "verb": {
       "jaccard": 0.2459090476190483,
-      "n": 5000
+      "n": 5000,
+      "size_ceiling": 0.9004233333333257,
+      "design_ideal": 0.27874333333332746,
+      "ground_truth_pairs": 5000
     },
     "prefix": {
       "jaccard": 0.4962090476190471,
-      "n": 5000
+      "n": 5000,
+      "size_ceiling": 0.7284933333333105,
+      "design_ideal": 0.593439550140584,
+      "ground_truth_pairs": 2134
     },
     "ktiv": {
       "jaccard": 0.31861619047618833,
-      "n": 5000
+      "n": 5000,
+      "size_ceiling": 0.8814766666666582,
+      "design_ideal": null,
+      "ground_truth_pairs": 2762
     },
     "control": {
       "jaccard": 0.009317619047619062,
-      "n": 5000
+      "n": 5000,
+      "size_ceiling": 0.7881366666666431,
+      "design_ideal": 0.016232014388489195,
+      "ground_truth_pairs": 1112
     }
   }
 }

@@ -161,24 +161,49 @@ direction, in the prefix family: a stem that segments to one unit gives
 `|{S}| / |{P, S}|` = **0.5000**, and the measurement is **0.4962** — the prefix layer is
 sitting essentially *on* its ceiling while my prediction said it would score twice it.
 
-So the absolute sharing figures cannot be read as "how much of the word is shared". Read against
-their ceilings:
-
-| family | ceiling | measured | share of ceiling |
-|---|---|---|---|
-| verb | 0.3333, exact | 0.2459 | **73.8%** |
-| prefix | 0.5000 at a one-unit stem | 0.4962 | **~99%** |
-| ktiv | none — this is what BPE has to earn | 0.3186 | — |
-| control | none | 0.0093 | — |
-
 **The clause that decided is unaffected**, because it was written as a ratio to the control
 measured in the same run rather than as an absolute. That was luck as much as judgement, and it
 is worth saying which.
 
-**A named gap in the harness:** `build_segmentation.py` does not compute these ceilings, so it
-reported four numbers whose scale it could not tell the reader. The ceilings above are exact
-arithmetic rather than a re-run, and the script is left as the thing that produced the published
-figures. Reporting sharing against its ceiling is work this harness owes.
+### The gap is closed, and closing it corrected me a second time
+
+The harness now computes two ceilings per family and the run was repeated. **Every previously
+published figure came back identical** — 0.2459, 0.4962, 0.3186, 0.0093, 1.809, 16,384, zero
+uncovered — so the addition changed the reporting and not the measurement.
+
+| family | n | mean J | size ceiling | J / size | **design ideal** | **J / ideal** | pairs with ground truth |
+|---|---|---|---|---|---|---|---|
+| verb | 5,000 | 0.2459 | 0.9004 | 0.27 | **0.2787** | **0.88** | 5,000 of 5,000 |
+| prefix | 5,000 | 0.4962 | 0.7285 | 0.68 | **0.5934** | **0.84** | 2,134 of 5,000 |
+| ktiv | 5,000 | 0.3186 | 0.8815 | **0.36** | n/a | n/a | 2,762 of 5,000 |
+| control | 5,000 | 0.0093 | 0.7881 | 0.01 | 0.0162 | 0.57 | 1,112 of 5,000 |
+
+- **size ceiling** — `min(|A|,|B|) / max(|A|,|B|)`, the most any two sets of those sizes could
+  reach. Exact and family-agnostic.
+- **design ideal** — what a *perfect* segmentation scores for this family, computed by
+  decomposing each side with the licensed table rather than by assuming. Pairs the table cannot
+  analyse are counted out rather than folded in at a guess.
+
+**The ceilings I derived by hand, one section above, were wrong in both directions.** I wrote
+0.3333 for verbs and 0.5000 for prefixes; measured against the actual pairs they are **0.2787**
+and **0.5934**. Verbs come in *under* my figure because a perfect decomposition sometimes
+carries a prefix unit too — `[P,L,F]` against `[L,F]` is 1/4, not 1/3 — and prefixes come in
+*over* it because a stem often decomposes to two ideal units rather than one, giving 2/3.
+
+So the corrected reading is **0.88 of ideal for verbs and 0.84 for prefixes**, not the 73.8% and
+99% written above from arithmetic I did in my head. That arithmetic is left in place rather than
+edited away, because the point of this section is that it was wrong.
+
+### And the honest reading of the ktiv number is less flattering than 34×
+
+The pre-registered clause compares ktiv sharing to the control, and at **34.20×** it passes
+comfortably. Against the *sizes* of the two segmentations, though, ktiv reaches
+**0.36 of what those sizes would allow** — the weakest of the three families. Both statements
+are true. The first is the one the rule asked for; the second is the one that says what the
+subword layer is actually doing for ktiv variants, which is **connecting them weakly**.
+
+That is the number to carry forward, and `H1`'s warning stays attached to it: this family's
+generator admits pairs that are two different words, where high sharing would be a defect.
 
 ## Where the prediction was wrong
 

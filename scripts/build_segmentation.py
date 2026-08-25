@@ -18,6 +18,30 @@ Segmentation has the opposite failure mode: refusing to split a real prefix cost
 sharing this experiment is measuring, and `ha+bayit` has a three-character stem. `MIN_STEM`
 here is therefore **2**, stated rather than silently inherited or silently changed.
 
+### Sharing is reported against its CEILING, because the raw number is unreadable without one
+Jaccard over unit *sets* has a structural maximum that depends on how many units each side has,
+and the first run of this harness printed four numbers whose scale it could not tell the reader.
+Two inflections of one lemma both segment to `[L, F]`, share `L` and must differ in `F`, so the
+best any correct implementation can score is **1/3**. A one-unit stem under a prefix caps at
+**1/2**. Reported against 0.90, as the G1 prediction did, those look like failures; reported
+against their ceilings they are 74% and 99%.
+
+Two ceilings are printed, and they answer different questions:
+
+- **size ceiling**, `min(|A|,|B|) / max(|A|,|B|)` — the most any two sets of those sizes could
+  score. Exact, family-agnostic, and an upper bound on everything.
+- **design ideal** — what a *perfect* segmentation would score for this family, computed from
+  the licensed table rather than assumed: each side is decomposed into its true prefix, lemma
+  and features, and the Jaccard of those is taken. Where the table has no analysis for a side,
+  the pair is counted as **no ground truth** rather than folded in at a guessed value.
+
+The ktiv family has **no design ideal**, and that is a property of the family and not an
+omission. Ideally the two spellings of one word would be identical, giving 1.0 — but the pair
+generator accepts any `w` and `w` minus one `ו`/`י` that are both in the lexicon, and `bayit`
+/`bat` is such a pair while being two different words. For that portion **high sharing would be
+a defect, not a success**, so only the size ceiling is printed and the number is left to be read
+with `H1`'s warning attached.
+
 ### What this does not do
 It does not touch the shipped lexicon, the shipped assets, or any gate. It writes a
 segmentation and a measurement, and nothing reads them yet.
@@ -171,6 +195,24 @@ def jaccard(a: list[str], b: list[str]) -> float:
     return len(sa & sb) / len(sa | sb) if (sa | sb) else 0.0
 
 
+def size_ceiling(a: list[str], b: list[str]) -> float:
+    """The most any two sets of these sizes could score: containment of the smaller."""
+    m, n = len(set(a)), len(set(b))
+    return min(m, n) / max(m, n) if max(m, n) else 0.0
+
+
+def ideal_units(w: str, verbs, lex: set[str]) -> list[str] | None:
+    """A perfect decomposition, from the licensed table. None when it has no analysis."""
+    for p in PREFIXES:
+        if len(w) - len(p) >= MIN_STEM and w.startswith(p):
+            rest = w[len(p):]
+            if rest in verbs:
+                return [f"P:{p}", f"L:{verbs[rest][0]}", f"F:{verbs[rest][1]}"]
+    if w in verbs:
+        return [f"L:{verbs[w][0]}", f"F:{verbs[w][1]}"]
+    return None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -276,17 +318,41 @@ def main() -> int:
                for _ in range(args.pairs)]
 
     results = {}
+    print()
+    print(f"{'family':9} {'n':>6} {'mean J':>8} {'size ceil':>10} {'J/size':>8} "
+          f"{'design ideal':>13} {'J/ideal':>9}  ground truth")
     for name, pairs in (("verb", verb_pairs), ("prefix", prefix_pairs),
                         ("ktiv", ktiv_pairs), ("control", control)):
         if not pairs:
-            results[name] = (0.0, 0)
+            results[name] = {"jaccard": 0.0, "n": 0}
             continue
-        j = sum(jaccard(seg.segment(a), seg.segment(b)) for a, b in pairs) / len(pairs)
-        results[name] = (j, len(pairs))
-        print(f"sharing {name:8} mean Jaccard {j:.4f}   n={len(pairs):,}")
+        js, sc, ideals = [], [], []
+        for a, b in pairs:
+            ua, ub = seg.segment(a), seg.segment(b)
+            js.append(jaccard(ua, ub))
+            sc.append(size_ceiling(ua, ub))
+            ia, ib = ideal_units(a, verbs, lex), ideal_units(b, verbs, lex)
+            if ia is not None and ib is not None:
+                ideals.append(jaccard(ia, ib))
+        j = sum(js) / len(js)
+        ceil = sum(sc) / len(sc)
+        # The ktiv family has no design ideal; see the module docstring.
+        ideal = (sum(ideals) / len(ideals)) if (ideals and name != "ktiv") else None
+        results[name] = {
+            "jaccard": j, "n": len(pairs), "size_ceiling": ceil,
+            "design_ideal": ideal, "ground_truth_pairs": len(ideals),
+        }
+        print(f"{name:9} {len(pairs):>6,} {j:>8.4f} {ceil:>10.4f} {j / ceil if ceil else 0:>8.2f} "
+              f"{('%.4f' % ideal) if ideal is not None else '     n/a':>13} "
+              f"{('%.2f' % (j / ideal)) if ideal else '      n/a':>9}  "
+              f"{len(ideals):,} of {len(pairs):,}")
+    print("  ktiv has no design ideal on purpose: the generator admits real-word pairs that are "
+          "NOT one word,")
+    print("  and for those high sharing would be a defect. Read it with H1's upper-bound "
+          "warning attached.")
 
-    ktiv_j = results["ktiv"][0]
-    ctrl_j = results["control"][0]
+    ktiv_j = results["ktiv"]["jaccard"]
+    ctrl_j = results["control"]["jaccard"]
     ratio = ktiv_j / ctrl_j if ctrl_j > 0 else float("inf")
 
     print()
@@ -307,7 +373,7 @@ def main() -> int:
             "vocab": total_vocab, "merges": len(learned), "min_stem": MIN_STEM,
             "prefixes": len(PREFIXES), "lemmas": len(lemmas), "features": len(feats),
             "chars": len(chars), "mean_units_per_token": mean_units,
-            "sharing": {k: {"jaccard": v[0], "n": v[1]} for k, v in results.items()},
+            "sharing": results,
         }, f, ensure_ascii=False, indent=2)
     print(f"wrote {args.out}")
     return 0
