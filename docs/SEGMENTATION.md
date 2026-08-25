@@ -241,3 +241,91 @@ be the right trade or the wrong one; what it is not is a decision anybody made. 
 No model exists. No accuracy claim exists. The 71.25% of the lexicon that is not verbs still
 receives subwords rather than morphology, the corpora are still the Hebrew-letters-only slices
 `H1` found blind to script mixing, and nothing in the shipped app reads any of this.
+
+---
+
+# G2 — the noun and adjective layer. Prediction recorded before the dump is fetched.
+
+`G1` left **71.25% of the lexicon on BPE**, because no licensed noun or adjective table was in
+this build. One exists, and it is better licensed than anything here already.
+
+## The source
+
+**Wikidata Lexemes.** Wikidata's copyright page states verbatim: *"All structured data from the
+main, Property, **Lexeme**, and EntitySchema namespaces is available under the Creative Commons
+CC0 License."* CC0 requires **no attribution** — the first source in this project with no
+downstream obligation at all, against source A's CC BY 4.0 and source B's CC BY-SA 4.0. It is
+attributed anyway, in `docs/LICENSES.md`, because that is what this repository does.
+
+Coverage, queried live from the Wikidata Query Service on 2026-08-25:
+
+| lexical category | lexemes | forms |
+|---|---|---|
+| **noun** | **19,389** | **228,499** |
+| **adjective** | **4,279** | **33,655** |
+| verb | 4,709 | 167,673 |
+| proper noun | 894 | 85 |
+
+Fetched as a **dated** dump, not `latest`, so it is byte-stable and pinnable the way
+`GATE-LEX-2` pins the other two:
+`wikidata-20260819-lexemes.json.gz`, **604,534,688 bytes**, Last-Modified 2026-08-19.
+
+## This is not "add the table". The budget will not have it.
+
+| | units |
+|---|---|
+| `G1` fixed units today (79 prefix + 3,516 lemma + 57 feature + 27 char) | 3,679 |
+| noun + adjective lemmas, all of them | 23,668 |
+| **total if all are admitted** | **27,347** |
+| budget, `K1` shape B | **16,384** |
+| **over by** | **10,963**, before one BPE unit or one noun feature |
+
+So the experiment is not whether the table helps. It is **which lexemes earn a slot**, inside a
+fixed 16,384 — exactly the constraint `K1` named: *you buy vocabulary with bytes and never with
+milliseconds.* Lexemes are ranked by the shipped frequency of their forms, the top **N** are
+admitted, and BPE fills whatever is left so the total is 16,384 in every configuration.
+
+`N` is swept over **0 (the G1 baseline), 2,000, 4,000, 8,000, 12,000**. Fixed now; no sixth
+value after seeing a result.
+
+## The prediction, written now
+
+Point 1 is arithmetic and is **established, not predicted**: no configuration admits all 23,668.
+
+2. **Noun/adjective pair sharing reaches verb-level — ≥ 0.80 of its design ideal — at N ≥ 4,000.**
+   The verb layer reaches 0.88 and there is no reason this layer should differ in kind.
+3. **Compression improves.** Mean units per token falls below `G1`'s **1.809**, because a noun
+   form becomes `[L, F]` instead of two or three BPE pieces.
+4. **Ktiv sharing FALLS as N rises**, by **0.02–0.08 at N = 8,000**. BPE units are what currently
+   connect `tochnit`/`tochniyot`, and admitting lemma units displaces them. This is the
+   prediction that can kill the layer, and it is the one worth running for.
+5. The best configuration is at an **intermediate N**, not at either end.
+
+If ktiv sharing *rises* with N, Wikidata is listing ktiv variants as forms of one lexeme, which
+would be a larger win than anything predicted here and gets checked before it is believed.
+
+## The stopping rule
+
+The layer is adopted only if, at some `N` in the grid, all of:
+
+| clause | bar |
+|---|---|
+| coverage | exactly **100%**, asserted |
+| budget | total vocabulary **≤ 16,384** |
+| compression | mean units per token **≤ G1's, measured in the same run** |
+| the new layer works | noun/adjective sharing **≥ 0.80 of its design ideal** |
+| **the purpose is not traded away** | **ktiv sharing ≥ G1's, measured in the same run** |
+
+The last clause is the guard. Under purpose ג, connecting the two spellings of one word is the
+point; a layer that serves nouns by breaking that is a **trade to report, not a change to make**.
+Both comparison bars are against `G1` re-measured in the same run, never against the published
+1.809 and 0.3186 — the flaw `S1` exposed, not repeated.
+
+## What this does NOT cover
+
+- **Accuracy.** Still no model, still no claim that any of this predicts a word.
+- **Proper nouns, adverbs, prepositions.** 894 + 114 + 60 lexemes, left on BPE.
+- **Whether Wikidata's Hebrew coverage is any good.** 19,389 noun lexemes is a count, not a
+  quality measure, and no one here has looked at a sample.
+- **The shipped lexicon.** This reads a dump for a segmentation; it does not propose rebuilding
+  `he_lexicon.txt.gz`, which is `GATE-LEX-1`'s subject and a separate decision.
