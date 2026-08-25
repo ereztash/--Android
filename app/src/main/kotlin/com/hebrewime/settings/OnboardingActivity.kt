@@ -119,6 +119,14 @@ private fun OnboardingScreen(
                 stringResource(R.string.onboarding_sensitive_title),
                 stringResource(R.string.onboarding_sensitive_body),
             )
+            // Sits BEFORE the two enable steps deliberately. Someone arriving from a keyboard
+            // that rewrites words as they type will read "nothing happened" as broken rather
+            // than as a decision, and by the time they reach settings they have already formed
+            // the impression. See the comment on onboarding_expect_body.
+            InfoCard(
+                stringResource(R.string.onboarding_expect_title),
+                stringResource(R.string.onboarding_expect_body),
+            )
 
             Text(
                 stringResource(R.string.onboarding_step_enable),

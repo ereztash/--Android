@@ -21,7 +21,7 @@ made from memory.
 |---|---|---|---|---|---|---|
 | C — a change may be committed | 11 | 9 | 0 | 0 | 2 | **MET** |
 | R — a build may be handed to a human | 7 | 1 | 0 | 6 | 0 | **NOT MET** |
-| P — the app may be published | 9 | 1 | 1 | 7 | 0 | **NOT MET** |
+| P — the app may be published | 9 | 2 | 1 | 6 | 0 | **NOT MET** |
 
 <!-- DOD-COUNTS-END -->
 
@@ -173,10 +173,23 @@ repository.
 | P5 | Listing, Data Safety, content rating, screenshots and a hosted privacy-policy URL are submitted | NOT RUN | `M8-STORE`, `M8-ASSETS`, `docs/STORE_LISTING.md`, `docs/DATA_SAFETY.md` |
 | P6 | The targetSdk extension is filed before 2026-08-31 | NOT RUN | `docs/OPERATOR_NOTICES.md` |
 | P7 | **No shipped feature sits below its own pre-registered stopping rule without a dated operator override** | NOT MET | `docs/LABELING_LOG.md` |
-| P8 | No number in user-facing text is wider than the measurement behind it — the listing quotes the human-labelled precision floor, not the injected-error recall | NOT RUN | `docs/STORE_LISTING.md`, `docs/LABELING_LOG.md` |
+| P8 | No number in user-facing text is wider than the measurement behind it — the listing quotes the human-labelled precision bounds, not the injected-error recall | MET | `docs/STORE_LISTING.md`, `app/src/main/res/values/strings.xml`, `docs/LABELING_LOG.md` |
 | P9 | The attribution the lexicon licences require is present in the shipped app | MET | `docs/LICENSES.md` |
 
 <!-- DOD-TIER-END: P -->
+
+### P8 is MET, and what that is and is not
+
+The drafted listing and the app's first screen now say what the real-word check is worth before
+a user meets it: the listing quotes **[12.5%, 39.7%]** — both bounds, from 320 real firings
+judged blind — and the first screen says *wrong more often than it is right*, a phrasing chosen
+because it holds at either end of that interval and does not go stale when the layer is
+measured again. Neither quotes the 63.73% injected-error recall, which is the number that would
+read as a quality claim and is not one.
+
+**What P8 covers is the text in this repository.** What the operator eventually pastes into Play
+Console is theirs, and this criterion cannot reach it. Writing the honest version here first is
+the only thing that can be done about that from this side, and it is what MET means on this row.
 
 ### P7 is not a formality, and it is the one criterion currently failing
 

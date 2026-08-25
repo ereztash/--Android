@@ -14,6 +14,28 @@
     <string name="onboarding_sensitive_title">Sensitive fields are left alone</string>
     <string name="onboarding_sensitive_body">In password, email, phone and payment fields the
         keyboard turns off suggestions, learning and history entirely.</string>
+    <string name="onboarding_expect_title">It suggests. You choose.</string>
+    <!--
+      The expectation this string exists to set, and why it is on the FIRST screen rather than
+      buried in settings: someone arriving from a keyboard that silently rewrites words will
+      read "nothing happened when I typed teh" as a broken keyboard rather than as a decision.
+      shouldAutoReplace is implemented, measured and never called — on the golden corpus the
+      shipped configuration would have replaced 24.25% of misspellings with 1.90% of them
+      wrong, which is text the user meant, silently changed. One tap is the cheaper error, and
+      that trade is worth one card.
+
+      "wrong more often than it is right" is chosen so it holds at BOTH ends of the measured
+      interval — 12.5% at the floor, 39.7% at the ceiling, 320 real firings judged blind by a
+      Hebrew speaker. A single figure here would either understate at the floor or overstate at
+      the ceiling, and would go stale the next time the layer is measured. See
+      docs/LABELING_LOG.md.
+    -->
+    <string name="onboarding_expect_body">This keyboard never changes what you have typed.
+        Every correction and completion is a suggestion you tap — there is no autocorrect
+        working behind you, and no setting that turns one on.\n\nSome of those suggestions are
+        wrong. The check that catches a correctly spelled word in the wrong place is wrong more
+        often than it is right, measured against a Hebrew speaker judging real cases. Treat it
+        as a second look, not a verdict — ignore it and nothing happens.</string>
     <string name="onboarding_step_enable">Step 1 — Enable the keyboard</string>
     <string name="onboarding_step_select">Step 2 — Switch to it</string>
     <string name="onboarding_enable_button">Open keyboard settings</string>

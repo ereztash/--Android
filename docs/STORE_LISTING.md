@@ -61,9 +61,26 @@ network permission, and three gates keep it that way.
 >
 > It also catches a mistake a spellchecker cannot: *im* where *am* was meant. Both are real
 > Hebrew words, so nothing about either is misspelled — only the sentence around them shows
-> which one belongs. The keyboard reads that sentence and offers the other word.
+> which one belongs. The keyboard reads that sentence and offers the other word. **It is wrong
+> about this more often than it is right** — see *What to expect* below, which is there so that
+> is not a surprise.
 >
-> It offers. It never changes your text by itself; every correction is one you tap.
+> **What to expect**
+>
+> • **Nothing is ever replaced automatically.** Every correction, completion and fix is a
+> suggestion you tap. There is no autocorrect working behind you, and no setting that turns one
+> on. If you have come from a keyboard that rewrites words as you type, this will feel quiet at
+> first — that is the design, not a fault.
+>
+> • **The suggestions are allowed to be wrong.** The check that catches a correctly spelled word
+> in the wrong place was judged blind by a Hebrew speaker on 320 real cases: it was right in **at
+> least 12.5% and at most 39.7%** of them. It is a second look, not a verdict. Ignoring it costs
+> you nothing, because nothing changes unless you tap.
+>
+> • **It knows written Hebrew better than it knows slang.** The dictionary is built from openly
+> licensed word lists and Hebrew text. It is strongest on ordinary written Hebrew and weakest on
+> slang, brand names and abbreviations it has never met — and you can add any of those yourself,
+> in one tap, encrypted.
 >
 > **Your own words, encrypted**
 >
