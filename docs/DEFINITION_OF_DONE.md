@@ -19,7 +19,7 @@ made from memory.
 
 | Tier | Criteria | MET | NOT MET | NOT RUN | WAIVED | Verdict |
 |---|---|---|---|---|---|---|
-| C — a change may be committed | 11 | 9 | 0 | 0 | 2 | **MET** |
+| C — a change may be committed | 11 | 8 | 1 | 0 | 2 | **NOT MET** |
 | R — a build may be handed to a human | 7 | 1 | 0 | 6 | 0 | **NOT MET** |
 | P — the app may be published | 9 | 1 | 1 | 7 | 0 | **NOT MET** |
 
@@ -86,7 +86,7 @@ Owner: whoever makes the change. Checked on every push, by CI.
 | C1 | The `:core` suite runs and passes, and the suite is proven non-empty — a task that runs zero tests is a zero denominator, not a green tick | MET | `scripts/assert_tests_ran.py`, `.github/workflows/ci.yml` |
 | C2 | Debug, release and `netcontrol` APKs assemble, and the latency harness still compiles even though it cannot run | MET | `.github/workflows/ci.yml` |
 | C3 | Android lint reports 0 errors | MET | `.github/workflows/ci.yml` |
-| C4 | Every gate is PASS **with its own control demonstrated red in the same run**, or NOT-MEASURED against a named absent input | MET | `scripts/run_gates.py`, `GATE-META-1`, `GATE-DENOM-1` |
+| C4 | Every gate is PASS **with its own control demonstrated red in the same run**, or NOT-MEASURED against a named absent input | NOT MET | `scripts/run_gates.py`, `GATE-STORE-1`, `GATE-META-1`, `GATE-DENOM-1` |
 | C5 | The shipping artifact still carries no network capability — manifests, sources, resolved coordinates, and the DEX of the APK that ships | MET | `GATE-NET-1`, `GATE-NET-2`, `GATE-NET-3` |
 | C6 | No IME API that compiles cleanly and fails at runtime; no ECB, fixed IV, hardcoded key or seeded `SecureRandom` | MET | `GATE-API-1`, `GATE-CRYPTO-1` |
 | C7 | The release artifact stays inside a size budget written down **after** measuring it | MET | `GATE-SIZE-1` |
@@ -96,6 +96,30 @@ Owner: whoever makes the change. Checked on every push, by CI.
 | C11 | Every number published in a document carries its denominator, and the hash of the corpus that produced it | WAIVED | `WAIVER-2`, `GATE-DOC-2` |
 
 <!-- DOD-TIER-END: C -->
+
+### C4 is NOT MET, and this file found it on its first run
+
+`GATE-STORE-1` has been neither PASS nor NOT-MEASURED on any CI run since the commit that
+introduced it. `scripts/build_store_assets.py` imports Pillow at module level and
+`.github/workflows/ci.yml` never installs it, so on a runner the script raises
+`ModuleNotFoundError` before it can compare a single pixel. With Pillow present it passes on
+this tree in full, which is what makes this a workflow defect rather than an asset one.
+
+Two things follow, and the second is worse than the first:
+
+- **The gate job has been red on the base branch for four commits** and this is the reason. It
+  is not caused by anything in this change.
+- **The crash is being read as a red control.** `run_gates.py` records `GATE-STORE-1` as
+  `control red (exit=1)` — but the control exited 1 because the interpreter could not import
+  a module, not because a planted defect was caught. A control that *cannot run* proves
+  nothing, and this repository already knows that: it is why `NOT-MEASURED` exists and why
+  `GATE-LEX-2` is reported distinctly from `NOT-A-GATE`. That distinction is not being made
+  when a gate script dies on import.
+
+Neither is fixed here — both are older than this change and neither is about the definition of
+done. What is recorded here is that C4 does not hold on this commit, which is precisely what a
+definition of done is for.
+
 
 ---
 

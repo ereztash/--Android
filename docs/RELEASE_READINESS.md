@@ -105,9 +105,10 @@ path for automatic replacement was unreachable, because nothing ever performed o
 > **What it takes for any item on that list to count as done is
 > [`docs/DEFINITION_OF_DONE.md`](DEFINITION_OF_DONE.md)** — three tiers, the same four states
 > this document's matrix uses, and a gate that fails the build on a criterion nobody can
-> check. Its tier P currently reads **NOT MET** with one criterion **NOT MET** outright: the
-> adjacent real-word layer ships below the precision rule registered before its labels
-> existed, and nobody has yet written down a decision either way.
+> check. **All three tiers currently read NOT MET**, two of them on a criterion that is NOT MET
+> outright: `GATE-STORE-1` has been crashing on import on every CI run since the commit that
+> added it, and the adjacent real-word layer ships below the precision rule registered before
+> its labels existed with nobody having written down a decision either way.
 
 ### 1. Put it on a phone (nobody else can start until this happens)
 
