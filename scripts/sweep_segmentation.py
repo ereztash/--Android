@@ -46,15 +46,27 @@ from build_segmentation import (  # noqa: E402
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 NOUN_ADJ = os.path.join(ROOT, "lexicon/cache/he_noun_adj.json")
 BUDGET = 16_384
-SLOT_GRID = [0, 2_000, 4_000, 8_000, 12_000]      # fixed in the pre-registration
+SLOT_GRID = [0, 2_000, 4_000, 8_000, 12_000]      # fixed in the G2 pre-registration
+BUDGET_GRID = [16_384, 24_576, 32_768]                # fixed in the G3 pre-registration
+MODES = ["layered", "shortest"]                       # ditto
+EMB = 32                                              # K1 shape B; bytes = vocab * EMB
+AFFORDABLE_BYTES = 2_426_473                          # K1: what replacing the bigram table frees
 
 
 class G2Segmenter(Segmenter):
-    """G1's segmenter with one layer inserted: given noun/adjective paradigms."""
+    """G1's segmenter with one layer inserted: given noun/adjective paradigms.
 
-    def __init__(self, verbs, nouns, ranks, lexicon):
+    `mode` is the G3 dimension. `layered` is what G2 measured: the noun layer wins whenever it
+    has an analysis. `shortest` computes both and keeps the shorter sequence, which cannot lose
+    on compression by construction and therefore isolates the ORDER effect from the SCARCITY
+    effect. A tie goes to the analysis, so `shortest` never gives up sharing it could have had
+    for free.
+    """
+
+    def __init__(self, verbs, nouns, ranks, lexicon, mode: str = "layered"):
         super().__init__(verbs, ranks, lexicon)
         self.nouns = nouns
+        self.mode = mode
 
     def _stem(self, s: str) -> list[str]:
         hit = self.verbs.get(s)
@@ -62,7 +74,11 @@ class G2Segmenter(Segmenter):
             return [f"L:{hit[0]}", f"F:{hit[1]}"]
         hit = self.nouns.get(s)
         if hit:
-            return [f"N:{hit[0]}", f"G:{hit[1]}"]
+            analysed = [f"N:{hit[0]}", f"G:{hit[1]}"]
+            if self.mode == "layered":
+                return analysed
+            sub = [f"S:{u}" for u in bpe_apply(s, self.ranks)]
+            return sub if len(sub) < len(analysed) else analysed
         return [f"S:{u}" for u in bpe_apply(s, self.ranks)]
 
 
