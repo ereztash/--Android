@@ -19,7 +19,7 @@ made from memory.
 
 | Tier | Criteria | MET | NOT MET | NOT RUN | WAIVED | Verdict |
 |---|---|---|---|---|---|---|
-| C — a change may be committed | 11 | 8 | 1 | 0 | 2 | **NOT MET** |
+| C — a change may be committed | 11 | 9 | 0 | 0 | 2 | **MET** |
 | R — a build may be handed to a human | 7 | 1 | 0 | 6 | 0 | **NOT MET** |
 | P — the app may be published | 9 | 1 | 1 | 7 | 0 | **NOT MET** |
 
@@ -86,7 +86,7 @@ Owner: whoever makes the change. Checked on every push, by CI.
 | C1 | The `:core` suite runs and passes, and the suite is proven non-empty — a task that runs zero tests is a zero denominator, not a green tick | MET | `scripts/assert_tests_ran.py`, `.github/workflows/ci.yml` |
 | C2 | Debug, release and `netcontrol` APKs assemble, and the latency harness still compiles even though it cannot run | MET | `.github/workflows/ci.yml` |
 | C3 | Android lint reports 0 errors | MET | `.github/workflows/ci.yml` |
-| C4 | Every gate is PASS **with its own control demonstrated red in the same run**, or NOT-MEASURED against a named absent input | NOT MET | `scripts/run_gates.py`, `GATE-STORE-1`, `GATE-META-1`, `GATE-DENOM-1` |
+| C4 | Every gate is PASS **with its own control demonstrated red in the same run**, or NOT-MEASURED against a named absent input | MET | `scripts/run_gates.py`, `GATE-STORE-1`, `GATE-META-1`, `GATE-DENOM-1` |
 | C5 | The shipping artifact still carries no network capability — manifests, sources, resolved coordinates, and the DEX of the APK that ships | MET | `GATE-NET-1`, `GATE-NET-2`, `GATE-NET-3` |
 | C6 | No IME API that compiles cleanly and fails at runtime; no ECB, fixed IV, hardcoded key or seeded `SecureRandom` | MET | `GATE-API-1`, `GATE-CRYPTO-1` |
 | C7 | The release artifact stays inside a size budget written down **after** measuring it | MET | `GATE-SIZE-1` |
@@ -97,7 +97,7 @@ Owner: whoever makes the change. Checked on every push, by CI.
 
 <!-- DOD-TIER-END: C -->
 
-### C4 is NOT MET, and this file found it on its first run
+### C4 was NOT MET, and this file found it on its first run
 
 `GATE-STORE-1` has been neither PASS nor NOT-MEASURED on any CI run since the commit that
 introduced it. `scripts/build_store_assets.py` imports Pillow at module level and
@@ -120,10 +120,16 @@ Two things follow, and the second is worse than the first:
   made when a gate script dies on import, and installing Pillow does not make it** — it only
   removes the one case that exposed it. Open, and not fixed here.
 
-C4 stays **NOT MET** until a gates run comes back green on this branch. The fix is pushed; the
-evidence is not in yet, and in this repository the claim follows the measurement rather than
-the intention. When that run exists, C4 changes state and the counts are regenerated from the
-table — not before.
+C4 read **NOT MET** from the moment the failure was diagnosed until a gates run came back
+green — not from the moment the fix was pushed. It is **MET** now on that run's evidence: CI
+runs 66 and 67 on `f88fbc3`, both green, the first green gates run on this project since
+`568c317`. `GATE-STORE-1` went from `exit=1` with a control that had crashed, to `exit=0` with
+its control demonstrated red, and the "Test the gates themselves" step ran for the first time
+in five commits — it had been skipped every time, because the step before it failed.
+
+The gap between the fix and the state change is the point. A criterion that flips when someone
+pushes what they believe is a fix is a criterion that records intentions; this one records
+runs.
 
 
 ---
