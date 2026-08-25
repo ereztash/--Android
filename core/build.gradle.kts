@@ -83,6 +83,9 @@ tasks.withType<Test>().configureEach {
     // and reported on the ODD half, which the test asserts are disjoint rather than inferring
     // it from the rule that split them. Opt-in, because it is a sweep and not a regression.
     systemProperty("runOfferSweep", project.findProperty("runOfferSweep")?.toString() ?: "")
+    // K1, inference feasibility: arithmetic only, random weights, no accuracy claim. Opt-in
+    // because it is a probe, and one-sided because it runs on a build host and not a phone.
+    systemProperty("runInferenceProbe", project.findProperty("runInferenceProbe")?.toString() ?: "")
 
     // Warm-up under a deliberately small heap. An IME is one of the most heap-constrained
     // processes on Android and this project has no device to measure on, so the substitute is

@@ -120,3 +120,100 @@ questions with separate rules, and none of them is opened by this.
 - **The rest of the keystroke path.** It times a forward step in isolation, not the path around
   it. GATE-TRACE-2 exists because a suspending call once sat inside a traced region for four
   milestones, and an isolated microbenchmark is exactly the shape that hides that.
+
+---
+
+## K1 RESULT — the arithmetic is not the constraint. The bytes are.
+
+One run, five shapes, two modes, every bar fixed beforehand. Build host, JDK 17.0.19 via
+`jvmToolchain(17)`. Reproduce with `./gradlew :core:test --tests "*InferenceFeasibilityProbe*"
+-PrunInferenceProbe=1`.
+
+### The baseline, measured in this run
+
+| | |
+|---|---|
+| whole current suggestion path, `predict()` | p50 **0.136 ms** · p95 **0.520 ms** · max 11.260 ms · n=2,000 |
+| trie build, same run | **167.3 ms** over 355,587 words |
+| **the bar** | score-k p95 **≤ 0.520 ms** |
+
+The bar is 0.520 ms and not the published 2.88 ms because the rule says *measured in the same
+run*, and because these are different calls — `M5-P95` times the correction path over 4,000
+queries. The figure measured here is **five times stricter** than the published one, which is
+the safe direction to be wrong in.
+
+### The numbers
+
+| id | vocab | emb | hidden | layers | int8 bytes | fits | **score-k** p95 | **full-softmax** p95 |
+|---|---|---|---|---|---|---|---|---|
+| A | 8,192 | 32 | 128 | 1 | 286,848 | **now** | **0.020 ms** | 0.200 ms |
+| B | 16,384 | 32 | 128 | 1 | 548,992 | **now** | **0.018 ms** | 0.495 ms |
+| C | 32,768 | 48 | 192 | 1 | 1,628,352 | if the table goes | **0.045 ms** | 1.212 ms |
+| D | 65,536 | 64 | 256 | 2 | 4,375,040 | **no** | 0.170 ms | 3.433 ms |
+| **E** | 355,587 | 32 | 128 | 1 | 11,403,488 | **no** | 0.026 ms | **9.016 ms** |
+
+### Against the rule
+
+| clause | required | measured | |
+|---|---|---|---|
+| kill | a budget-fitting shape at score-k p95 ≤ 0.520 ms | A, B and C all clear it | **not killed** |
+| control | shape E `full-softmax` must breach the bar | 9.016 ms against 0.520 ms | **breached — the harness can fail** |
+| load | cold load ≤ the trie build in the same run | 2.6–56.2 ms against 167.3 ms | **passes**, as a lower bound |
+| memory | resident ≤ 2× serialised | see below | **NOT-MEASURED** |
+
+**The memory clause is NOT-MEASURED, not failed.** The instrument returned **−408,760 bytes**
+for shape A. A negative resident size is physically impossible, which disqualifies the reading
+in both directions rather than only the inconvenient one. Two causes, both mine: a gc-and-delta
+measurement is at the JVM's discretion, and **the probe allocates a second same-size buffer** to
+simulate a cold load, so the 2.1–2.9× ratios measure the harness rather than the design. What
+would measure it is a heap dump or a deterministic retained-size calculation, and neither was
+done. The clause stands open.
+
+### The headline
+
+**Shape B — 16,384 units, 548,992 bytes — fits in the 576,837 free asset bytes today, without
+touching the bigram table, and costs 0.018 ms per keystroke against a 0.520 ms baseline.**
+
+That is **one twenty-ninth** of what the keyboard already spends per keystroke, for the task
+`H1` and `D1` say is the one that matters. On a build host. That caveat is not decoration — see
+the limits below.
+
+### Where the prediction was wrong
+
+Four were recorded. **Two are wrong, one is half wrong, one is right.**
+
+| # | predicted | measured | |
+|---|---|---|---|
+| 1 | score-k at A–C lands in 0.05–0.50 ms | **0.018–0.045 ms** — two of three below the range | ✗ (too pessimistic) |
+| 2a | the two modes differ by **more than two orders of magnitude** | 10× at A, 27× at B and C. **Two orders only at E** (347×) | ✗ |
+| 2b | full-softmax breaches the bar from shape C upward | C 1.212, D 3.433, E 9.016, all over 0.520 | ✓ |
+| 3 | the binding constraint is the **vocabulary**, not the speed | D and E are ruled out **by bytes alone** while their score-k step is trivial | ✓ |
+| 4 | cold load is where this hurts | 2.6–56.2 ms against a 167.3 ms trie build. It does not hurt | ✗ |
+
+### The mechanism, which is worth more than the headline
+
+**score-k is independent of vocabulary size.** Shape E carries 355,587 units and scores in
+**0.026 ms** — indistinguishable from shape A's 8,192 units at 0.020 ms, because scoring eight
+candidates touches eight embedding rows whatever the table's height. Only the recurrent step and
+`k` matter.
+
+So the two costs separate completely:
+
+- **Latency is set by `hidden` and `k`.** It does not care how many words you know.
+- **Bytes are set by `vocab × emb`.** They do not care how fast you are.
+
+That is why prediction 3 holds and prediction 1 was too cautious, and it settles the shape of the
+design question: **you buy vocabulary with bytes and never with milliseconds.**
+
+### What this does and does not license
+
+`D1` said the ceiling is representational. `H1` said half of conversational Hebrew has a
+real-word neighbour. K1 says the arithmetic for choosing between those neighbours costs 3.5% of
+the current per-keystroke budget at a size that fits today.
+
+**None of that is a model.** Weights were random. **No accuracy claim exists**, and the three
+questions that would produce one — a segmentation, a training corpus and its licence, and
+whether a model of this size is any good — are untouched, each needing its own rule.
+
+And it is still a build host. The one thing K1 licenses is asking **`M7-LAT`** on a phone, which
+has a harness, has never run, and is 25 minutes of somebody's time.

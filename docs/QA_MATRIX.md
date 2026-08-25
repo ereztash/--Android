@@ -87,10 +87,10 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | GATE-NET-1 | No network capability — shipping deps | 113 resolved coordinates | Planted okhttp + Firebase coordinates |
 | GATE-NET-2 | **Built debug APK** — permissions + DEX | 1 permission, 16 descriptors over 16 DEX files (28,652,352 bytes) | **A real assembled `netcontrol` APK** |
 | GATE-NET-3 | **Built RELEASE APK** — permissions + DEX | 1 permission, **2 descriptors** over 1 DEX file (1,968,128 bytes) | The same real APK against the release baseline |
-| GATE-API-1 | No IME API that compiles cleanly and fails at runtime (§1.1/1.3/1.4/1.6) | 103 files, 6 rules | Planted session-override, return-value branch, hardcoded backspace, blocking fetch |
-| GATE-API-1 | `getInitial*` accessors only inside the privacy boundary (§1.2) | 103 files | Planted read outside the boundary |
-| GATE-API-1 | Nothing typed reaches logcat or stdout | 103 files, production sources | Planted `Log.d` and `println` |
-| GATE-CRYPTO-1 | No ECB, hardcoded IV/key, seeded `SecureRandom`, broken primitive | 103 files, 4 rules | Planted `AES/ECB`, fixed IV, hardcoded key, MD5, seeded random |
+| GATE-API-1 | No IME API that compiles cleanly and fails at runtime (§1.1/1.3/1.4/1.6) | 104 files, 6 rules | Planted session-override, return-value branch, hardcoded backspace, blocking fetch |
+| GATE-API-1 | `getInitial*` accessors only inside the privacy boundary (§1.2) | 104 files | Planted read outside the boundary |
+| GATE-API-1 | Nothing typed reaches logcat or stdout | 104 files, production sources | Planted `Log.d` and `println` |
+| GATE-CRYPTO-1 | No ECB, hardcoded IV/key, seeded `SecureRandom`, broken primitive | 104 files, 4 rules | Planted `AES/ECB`, fixed IV, hardcoded key, MD5, seeded random |
 | GATE-LEX-1 | Shipped lexicon matches its manifest | 1 artifact, 355,587 forms | One byte flipped |
 | GATE-LEX-2 | Upstream source integrity | 2 sources | One byte flipped before hashing |
 | GATE-LEX-3 | The lexicon **inside the APK** hashes to the manifest's value | 1 asset, 4,607,433 bytes | One byte appended |
@@ -98,7 +98,7 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | GATE-MANIFEST-1 | IME service declares `exported`, `BIND_INPUT_METHOD`, the action, the meta-data | 4 requirements | `exported` flipped to false |
 | GATE-R8-1 | R8 has not stripped what the system instantiates by name | 4 requirements on the minified build | Service declaration invalidated |
 | GATE-LEARN-1 | The learned model persists counts over integer ids and nothing that can hold text | 2 learning source files | An encoder that accepts a `String` |
-| GATE-LEARN-2 | Learning happens in exactly one place, guarded by `session.mayLearn` | 107 Kotlin source files | A second, unguarded call site |
+| GATE-LEARN-2 | Learning happens in exactly one place, guarded by `session.mayLearn` | 108 Kotlin source files | A second, unguarded call site |
 | GATE-STORE-1 | The committed Play assets are what the app's own resources render to. They are generated from `res/`, not drawn beside it | 2 assets, byte-compared | One pixel of the icon background changed |
 | GATE-LEARN-3 | No diagnostic store persists a string it did not choose from a fixed set. `DeviceEvidence` writes to disk from the keystroke path; that promise needs a gate, not a comment | 2 diagnostic stores, 3 string keys allowed by name | A diagnostic that writes down the word a timing was measured on |
 | GATE-BIGRAM-1 | The bigram table **inside the APK** is byte-identical to the one every prediction number was measured on, and its header agrees with the manifest | 1 asset, 2,697,304 bytes, 51,900 groups | One byte appended |
@@ -190,6 +190,9 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | L1-PROTECT | What the once-seen protection costs | −0.32 top-1, −0.39 top-3 vs `minimumSessions=1` | same slice — **the cheaper setting is not shipped** |
 | L1-WITHHELD | Share of learned pairs that are eligible to be suggested | **5.8%** (mean 52 of 888 per pseudo-user) | 120 pseudo-users |
 | L1-OOV | Share of learned pairs touching the out-of-lexicon sentinel | 8.3% | 106,545 pairs |
+| K1-SCORE | Per-keystroke cost of int8 scoring over 8 candidates, in Kotlin, at a shape that fits the asset budget today | **0.018 ms p95** (16,384 units, 548,992 bytes) against a **0.520 ms** whole-path baseline measured in the same run | 2,000 timed steps after 500 warm-up. **Arithmetic only — random weights, no accuracy claim.** Build host, not a phone: this can kill the branch and cannot bless it. Control: shape E full-softmax breached the bar at 9.016 ms |
+| K1-SEPARATION | Whether scoring cost depends on vocabulary size | **It does not.** 355,587 units score in 0.026 ms; 8,192 units in 0.020 ms | Latency is set by `hidden` and `k`; bytes by `vocab × emb`. Vocabulary is bought with bytes and never with milliseconds |
+| K1-MEMORY | Resident footprint against serialised bytes | **NOT-MEASURED** — the instrument returned −408,760 bytes for one shape | A negative resident size disqualifies the reading in both directions. The probe also holds a redundant same-size buffer, so the ratios measure the harness. Needs a heap dump or a deterministic retained-size calculation |
 | H1-KTIV-DENSITY | Share of conversational tokens one `ו`/`י` deletion from another real word | **50.78%** conversational · 47.30% wiki | 40,434 / 85,840 Hebrew tokens. **Upper bound** — it counts real-word neighbours, which is broader than true ktiv variation. This is the structural reason no threshold rescues the real-word layer |
 | H1-PREFIX | Share of conversational tokens carrying an agglutinated prefix chain | **42.81%**, of which 42.38% are **also** stored as their own surface form | Same denominators. **Upper bound** — a heuristic, not a morphological analysis; `מים` decomposes as `מ`+`ים` and `ים` is a word |
 | H1-COVERAGE | Share of conversational tokens already in the lexicon as surface forms | **99.16%** conversational · 95.01% wiki | The lexicon is not the bottleneck; correction is not failing for lack of words |
