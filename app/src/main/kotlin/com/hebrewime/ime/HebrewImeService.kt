@@ -8,6 +8,7 @@ import android.view.inputmethod.InputConnection
 import android.widget.LinearLayout
 import com.hebrewime.core.input.InputContextBuffer
 import com.hebrewime.core.keyboard.EditCommand
+import com.hebrewime.core.text.BidiPin
 import com.hebrewime.core.keyboard.Key
 import com.hebrewime.core.keyboard.KeyPressPlanner
 import com.hebrewime.core.keyboard.Layouts
@@ -72,6 +73,12 @@ class HebrewImeService : InputMethodService() {
     private val contextBuffer = InputContextBuffer()
     private var currentLayoutId: String = Layouts.HEBREW
     private var shifted: Boolean = false
+
+    /**
+     * Whether this input session has already had its writing direction pinned. Reset with the
+     * session, so a new field starts unpinned and a field is never pinned twice.
+     */
+    private var directionPinned: Boolean = false
 
     private lateinit var correction: CorrectionController
 
@@ -150,6 +157,7 @@ class HebrewImeService : InputMethodService() {
     override fun onStartInput(info: EditorInfo?, restarting: Boolean) {
         super.onStartInput(info, restarting)
         shifted = false
+        directionPinned = false
         // Results computed for the previous field must never surface in this one -- which
         // matters most when the previous field was a password.
         correction.cancelOutstanding()
@@ -222,6 +230,7 @@ class HebrewImeService : InputMethodService() {
         candidateStrip?.setCandidates(emptyList())
         session = restrictedSession()
         shifted = false
+        directionPinned = false
     }
 
     override fun onDestroy() {
@@ -345,8 +354,23 @@ class HebrewImeService : InputMethodService() {
     private fun execute(command: EditCommand, ic: InputConnection) {
         when (command) {
             is EditCommand.CommitText -> {
-                ic.commitText(command.text, 1)
-                contextBuffer.onTextCommitted(command.text)
+                if (BidiPin.shouldPin(command.text, contextBuffer.textBefore, directionPinned)) {
+                    // Both marks placed once, cursor left BETWEEN them, so every later
+                    // character lands inside the pair at zero steady-state cost. B2 measured
+                    // that each mark alone breaks 115 previously-convergent lines and only the
+                    // pair is clean -- see BidiPin.
+                    ic.commitText(BidiPin.leading(command.text), 1)
+                    // newCursorPosition = 0 places the cursor at the START of what was just
+                    // inserted, which is what leaves the trailing mark after the caret.
+                    ic.commitText(BidiPin.trailing(), 0)
+                    // Only what is BEFORE the cursor goes into the buffer. The trailing mark is
+                    // after it, so it is not context and must not be counted as any.
+                    contextBuffer.onTextCommitted(BidiPin.leading(command.text))
+                    directionPinned = true
+                } else {
+                    ic.commitText(command.text, 1)
+                    contextBuffer.onTextCommitted(command.text)
+                }
                 if (shifted) setShift(false)
             }
 

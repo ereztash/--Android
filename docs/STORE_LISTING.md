@@ -72,6 +72,13 @@ network permission, and three gates keep it that way.
 > on. If you have come from a keyboard that rewrites words as you type, this will feel quiet at
 > first — that is the design, not a fault.
 >
+> • **It adds one invisible character at each end of what you type, and only in Hebrew.** Hebrew
+> written inside an app whose own language is English can come out with its brackets and its
+> English words in the wrong places — measured on real typed Hebrew, **29% of lines** are
+> affected and **77%** of lines containing brackets. Two invisible direction marks fix that. They
+> are standard Unicode, they disappear if anything strips formatting, and they are never added to
+> a field you have not typed Hebrew into.
+>
 > • **It does not try to catch a correctly spelled word in the wrong place.** That check was
 > built, measured against a Hebrew speaker's blind judgement on 320 real cases, and **removed**:
 > it was right in at most 39.7% of them and interrupted roughly five times for every time it

@@ -83,6 +83,12 @@ class BidiArmsTest {
         "ARM-LRI" to { s -> perForeignRun(s) { "$LRI$it$PDI" } },
         "ARM-RLM-AFTER" to { s -> perForeignRun(s) { "$it$RLM" } },
         "ARM-RLM-AROUND" to { s -> perForeignRun(s) { "$RLM$it$RLM" } },
+        // The two halves, measured separately because they cost wildly different things to
+        // implement. A LEADING mark is committed once, when the field is empty. A TRAILING mark
+        // must be deleted and re-committed on EVERY keystroke, which is an extra IPC per press
+        // and a desync risk on a path this project deliberately keeps free of round-trips.
+        "ARM-EDGE-LEAD" to { s: String -> if (s.none { isHebrew(it) }) s else "$RLM$s" },
+        "ARM-EDGE-TRAIL" to { s: String -> if (s.none { isHebrew(it) }) s else "$s$RLM" },
         "ARM-EDGE" to { s -> edge(s) },
         "ARM-FSI-EDGE" to { s -> edge(perForeignRun(s) { "$FSI$it$PDI" }) },
     )

@@ -190,6 +190,57 @@ backwards.
 the harness for the same reason, and shipping `ARM-FSI-EDGE` is a decision with a trade the rule
 did not price — which makes it the operator's, with a date and a reason, the way `P7` was.
 
+## SHIPPED — `ARM-EDGE`, on the operator's decision, 2026-08-25
+
+**`ARM-EDGE` ships. It is not the arm the rule adopted.**
+
+The rule adopted `ARM-FSI-EDGE` at 100%. The operator chose `ARM-EDGE` at 67% because the
+post-hoc check priced what the rule had not: `ARM-FSI-EDGE` changes the rendering for **339 of
+3,257** lines belonging to users who had no problem, and `ARM-EDGE` changes it for **none**
+while still removing **100% of the bracket divergence** — the complaint verified against both
+Gboard and SwiftKey.
+
+That is a decision made against a rule's verdict, so it is recorded as one: **`WAIVER-3` in
+[`docs/DEFINITION_OF_DONE.md`](DEFINITION_OF_DONE.md)**, with a date, an owner, a reason and its
+compensating controls. `P7` exists for exactly this and stays MET because the override is
+written down.
+
+### Both marks, because each alone is worse than nothing
+
+Measured before implementing, because the two halves cost very different things to build:
+
+| arm | fixed | broke | preserves the Hebrew-locale rendering |
+|---|---|---|---|
+| `ARM-EDGE-LEAD` — leading mark only | 3/952 (0%) | **115** | 100% |
+| `ARM-EDGE-TRAIL` — trailing mark only | 275/952 (29%) | **115** | 100% |
+| **`ARM-EDGE` — both** | **641/952 (67%)** | **0** | **100%** |
+
+**Neither half is safe alone.** The cheap implementation — one mark, committed once and never
+maintained — was measured and is not available.
+
+### How the pair is placed at zero steady-state cost
+
+The obvious reading of "a mark at each end" is a treadmill: delete and re-commit the trailing
+mark on every keypress, an extra IPC per press on a path this project keeps deliberately free of
+round-trips. Instead **both marks are placed once**, on the first Hebrew character committed into
+a field the IME knows to be empty, with the cursor left **between** them. Every later character
+lands inside the pair.
+
+`core/src/main/kotlin/com/hebrewime/core/text/BidiPin.kt`. Guards, each with a test:
+
+- the preceding context must be **known** and **empty** — `null` means the IME cannot see the
+  field, and unknown means no, never "probably empty";
+- never twice in one session;
+- never for a field the user has not typed Hebrew into, so an untouched field stays genuinely
+  empty rather than holding two invisible characters that would make a *required field* check
+  pass on nothing;
+- `U+200F` is not a word character, so the leading mark is a word boundary and `currentWord` is
+  the Hebrew the user typed. **Every first-word lookup in every field depends on that**, and
+  `BidiPinTest` pins it.
+
+A **presence** is protected by a test; an **absence** needed `GATE-WITHDRAWN-1`. Removing this
+fails `BidiPinTest`, which is why it gets no gate of its own.
+
 ## What is still not measured
 
 **Cost.** Both surviving arms insert invisible characters into the user's text on every keystroke
