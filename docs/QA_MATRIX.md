@@ -87,10 +87,10 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | GATE-NET-1 | No network capability — shipping deps | 113 resolved coordinates | Planted okhttp + Firebase coordinates |
 | GATE-NET-2 | **Built debug APK** — permissions + DEX | 1 permission, 16 descriptors over 16 DEX files (28,652,352 bytes) | **A real assembled `netcontrol` APK** |
 | GATE-NET-3 | **Built RELEASE APK** — permissions + DEX | 1 permission, **2 descriptors** over 1 DEX file (1,968,128 bytes) | The same real APK against the release baseline |
-| GATE-API-1 | No IME API that compiles cleanly and fails at runtime (§1.1/1.3/1.4/1.6) | 104 files, 6 rules | Planted session-override, return-value branch, hardcoded backspace, blocking fetch |
-| GATE-API-1 | `getInitial*` accessors only inside the privacy boundary (§1.2) | 104 files | Planted read outside the boundary |
-| GATE-API-1 | Nothing typed reaches logcat or stdout | 104 files, production sources | Planted `Log.d` and `println` |
-| GATE-CRYPTO-1 | No ECB, hardcoded IV/key, seeded `SecureRandom`, broken primitive | 104 files, 4 rules | Planted `AES/ECB`, fixed IV, hardcoded key, MD5, seeded random |
+| GATE-API-1 | No IME API that compiles cleanly and fails at runtime (§1.1/1.3/1.4/1.6) | 105 files, 6 rules | Planted session-override, return-value branch, hardcoded backspace, blocking fetch |
+| GATE-API-1 | `getInitial*` accessors only inside the privacy boundary (§1.2) | 105 files | Planted read outside the boundary |
+| GATE-API-1 | Nothing typed reaches logcat or stdout | 105 files, production sources | Planted `Log.d` and `println` |
+| GATE-CRYPTO-1 | No ECB, hardcoded IV/key, seeded `SecureRandom`, broken primitive | 105 files, 4 rules | Planted `AES/ECB`, fixed IV, hardcoded key, MD5, seeded random |
 | GATE-LEX-1 | Shipped lexicon matches its manifest | 1 artifact, 355,587 forms | One byte flipped |
 | GATE-LEX-2 | Upstream source integrity | 2 sources | One byte flipped before hashing |
 | GATE-LEX-3 | The lexicon **inside the APK** hashes to the manifest's value | 1 asset, 4,607,433 bytes | One byte appended |
@@ -98,7 +98,7 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | GATE-MANIFEST-1 | IME service declares `exported`, `BIND_INPUT_METHOD`, the action, the meta-data | 4 requirements | `exported` flipped to false |
 | GATE-R8-1 | R8 has not stripped what the system instantiates by name | 4 requirements on the minified build | Service declaration invalidated |
 | GATE-LEARN-1 | The learned model persists counts over integer ids and nothing that can hold text | 2 learning source files | An encoder that accepts a `String` |
-| GATE-LEARN-2 | Learning happens in exactly one place, guarded by `session.mayLearn` | 108 Kotlin source files | A second, unguarded call site |
+| GATE-LEARN-2 | Learning happens in exactly one place, guarded by `session.mayLearn` | 109 Kotlin source files | A second, unguarded call site |
 | GATE-STORE-1 | The committed Play assets are what the app's own resources render to. They are generated from `res/`, not drawn beside it | 2 assets, byte-compared | One pixel of the icon background changed |
 | GATE-LEARN-3 | No diagnostic store persists a string it did not choose from a fixed set. `DeviceEvidence` writes to disk from the keystroke path; that promise needs a gate, not a comment | 2 diagnostic stores, 3 string keys allowed by name | A diagnostic that writes down the word a timing was measured on |
 | GATE-BIGRAM-1 | The bigram table **inside the APK** is byte-identical to the one every prediction number was measured on, and its header agrees with the manifest | 1 asset, 2,697,304 bytes, 51,900 groups | One byte appended |
@@ -206,6 +206,12 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | H1-COVERAGE | Share of conversational tokens already in the lexicon as surface forms | **99.16%** conversational · 95.01% wiki | The lexicon is not the bottleneck; correction is not failing for lack of words |
 | O1-OFFER | Withholding the next-word offer on weak evidence — best configuration reaching 20% precision among offered | dev **22.53%** / test **22.54%** precision, at **13.19%** retention against a 70% bar | 20,000 positions per slice, committed eval slice split even/odd. **RULE NOT MET, nothing adopted.** `s1` is flat; `margin` is the only signal that moves |
 | O1-REGISTER | The same shipped engine on held-out transcribed dialogue instead of encyclopedic prose | prefix-1 completion top-3 **5.35% → 23.72%** (×4.43); next-word top-3 **9.09% → 12.09%** | 20,000 positions each. Held out by construction from the subtitle half of the training mix. **Not phone typing** — `M10-REGISTER` stays NOT MEASURED |
+| B1-BRACKETS | Whether the verified bracket complaint reproduces as a property of the committed text | **It does not. 0 of 8.** `(שלום)` renders identically under an LTR and an RTL paragraph. **P1 falsified** — the pre-registered prediction was ≥80% | `java.text.Bidi` (UAX #9), 37 items, 4 arms. The complaint is real; the keyboard's *output* is not what causes it |
+| B1-MIXED | Whether Hebrew mixed with Latin and digits reproduces the second complaint | **4 of 4, 100%**, and 4 of 4 for Hebrew+Latin without digits. `גרסה 5 של Android` puts *Android* at opposite ends of the line depending on the app's locale | The complaint the pre-registration was **not** aiming at. Same run |
+| B1-ARMS | Three candidate mitigations against a four-clause rule committed beforehand | **NOTHING ADOPTED.** ARM-SWAP fixed 0, broke 1, **corrupts round-trip**; ARM-RLM fixed 4/13 against a 90% bar; ARM-ISOLATE fixed 0 and **broke 22**, including all three pure-Hebrew controls | Isolates are opaque from the outside and take placement from the paragraph direction. **P4 was backwards** |
+| B1-PC1 | Divergence on the two shipped evaluation corpora | **Exactly 0 on 12,000 lines** (6,000 conversational + 6,000 wiki) | The positive control, and the count that quantifies the hole `H1` found: those corpora were never capable of showing this |
+| B1-PC3 | The reachability control caught a defect in itself | It built the emittable set by re-reading `Key.output` and called `A G P I O` unreachable; `KeyPressPlanner.plan` uppercases on shift | A control checking a *copy* of the rule instead of the rule. Now runs every key through the shipped planner in both shift states |
+| B1-LABEL | *Post hoc, not pre-registered.* Why the complaint is real anyway | The `(` key commits U+0028; rule L4 mirrors it in an RTL run, so a `)` glyph appears on press. Following the key label and pressing `)` instead **inverts the logical string in 8 of 8 items** | An affordance problem in the key labels, not a text problem in the output. Different fix, different place, different cost |
 | M12-SIZE | Release artifact | APK 5,161,766 B; AAB 5,940,182 B | R8 cut DEX from 28,527,620 to 1,922,156 B. Assets are 3,023,216 B, of which the bigram table is 1,849,636 B |
 
 ## FAILED
@@ -492,6 +498,8 @@ identifies people, so only percentiles and a count are written down.
 | M5-NOSUGGEST | Splitting the 12.08% no-suggestion cases into stripper false-accepts vs no-candidate | Per-case human adjudication |
 | M1-TYPO | Prefix-stripper typo-rejection rate (the spec's 88.4% at MIN_STEM 4) | A typo corpus and a correctly-constructed prefix-free non-word control |
 | M10-REGISTER | Prediction accuracy on **phone typing** rather than Wikipedia prose | No corpus of Hebrew phone typing exists here. The register is wrong and held-out discipline does not fix that. |
+| M12-GBOARD-CODEPOINT | Whether Gboard and SwiftKey commit U+0028 or U+0029 from their Hebrew symbol layouts, and how they label the key | Needs a device. `B1` makes this matter more, not less: the finding is now that the key *labels* are the trap, and no line of that run touched a device. |
+| M13-BIDI-RENDER | Whether Android's `TextView` renders what `java.text.Bidi` resolves | `B1`'s oracle is the algorithm, not the platform's text layout. Every `B1` claim is about conformant rendering; a field that renders non-conformantly is outside what was measured. |
 | M11-BASERATE | How often real Hebrew typing produces an error **inside** the confusion inventory | Needs a corpus of genuine human errors. Without it, 63.73% recall answers only "given the error is one this detector can express", and no precision figure can be computed from a 0.253% false-alarm rate. |
 | M11-KTIV-PAIR | Whether the `ו`/`י` pair is worth including | Available as `HebrewConfusions.KTIV_MALE` and **not measured**. It is the largest source of real-word pairs and mostly not a confusion at all. |
 | M12-PERSONAL-RANK | Whether ranking personal words above lexicon words is right | No corpus of personal dictionaries. Recorded as a design decision with no measurement behind it. |

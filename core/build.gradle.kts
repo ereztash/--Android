@@ -86,6 +86,9 @@ tasks.withType<Test>().configureEach {
     // K1, inference feasibility: arithmetic only, random weights, no accuracy claim. Opt-in
     // because it is a probe, and one-sided because it runs on a build host and not a phone.
     systemProperty("runInferenceProbe", project.findProperty("runInferenceProbe")?.toString() ?: "")
+    // B1, bidi divergence: java.text.Bidi over a hand-built corpus of the characters both eval
+    // corpora delete by construction. Opt-in because it is a probe and a sweep of four arms.
+    systemProperty("runBidiProbe", project.findProperty("runBidiProbe")?.toString() ?: "")
 
     // Warm-up under a deliberately small heap. An IME is one of the most heap-constrained
     // processes on Android and this project has no device to measure on, so the substitute is

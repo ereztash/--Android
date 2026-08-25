@@ -147,4 +147,134 @@ direction of what it commits. No keyboard measured in `MARKET_EVIDENCE.md` does 
 
 ## Result
 
-*Not run yet. This section is filled in by the commit that runs the harness, and by no other.*
+Run with `./gradlew :core:test --tests '*BidiDivergenceProbe*' -PrunBidiProbe=1`.
+Harness: `core/src/test/kotlin/com/hebrewime/core/text/BidiDivergenceProbe.kt`.
+
+### The controls first, because without them nothing below counts
+
+| control | outcome |
+|---|---|
+| **PC-1** — divergence on the two Hebrew-letters-only eval corpora | **PASS — exactly 0 on 12,000 lines** (6,000 conversational + 6,000 wiki) |
+| **PC-2** — planted defect, rule L4 skipped | **RED — 8 of 8 bracket items change.** The harness measures mirroring |
+| **PC-3** — reachability | **caught a defect in itself** (below) |
+
+**PC-1 is the number that quantifies the hole.** Twelve thousand lines of the corpora every
+accuracy claim in this repository rests on, and **not one of them can diverge**. They were never
+capable of showing this. That is the same hole `FRICTION_INVENTORY` reported as 0.00%
+script-mixing, now stated as a count of lines rather than a rate.
+
+**PC-3 caught the harness, not the corpus.** Its first version built the set of emittable
+characters by re-reading `Key.output`, and reported `A G P I O` unreachable. They are reachable:
+`KeyPressPlanner.plan` uppercases when shift is latched. The control was checking a *copy* of the
+rule instead of the rule — the exact defect it exists to catch. It now runs every key of every
+layout through the shipped `KeyPressPlanner` in both shift states.
+
+### Divergence by arm — `V(LTR) ≠ V(RTL)`, the same keypresses in two apps
+
+| category | ARM-NONE | ARM-SWAP | ARM-RLM | ARM-ISOLATE | n |
+|---|---|---|---|---|---|
+| 1 brackets | **0 (0%)** | 1 (13%) | 3 (38%) | 8 (100%) | 8 |
+| 2 he+latin | **4 (100%)** | 4 (100%) | 4 (100%) | 4 (100%) | 4 |
+| 3 he+digits | 0 (0%) | 0 (0%) | 0 (0%) | 4 (100%) | 4 |
+| 4 he+latin+digits | **4 (100%)** | 4 (100%) | 4 (100%) | 4 (100%) | 4 |
+| 5 he+marks | 2 (50%) | 2 (50%) | 0 (0%) | 4 (100%) | 4 |
+| 6 he+neutrals | 3 (38%) | 3 (38%) | 1 (13%) | 8 (100%) | 8 |
+| 7 control he-only | 0 (0%) | 0 (0%) | 0 (0%) | 3 (100%) | 3 |
+| 7 control latin-only | 0 (0%) | 0 (0%) | 0 (0%) | 0 (0%) | 2 |
+| **ALL** | **13 (35%)** | 14 (38%) | 12 (32%) | 35 (95%) | 37 |
+
+### Against the four predictions
+
+| | prediction | outcome |
+|---|---|---|
+| **P1** | ARM-NONE diverges on **≥ 80%** of the bracket category | **FALSIFIED. 0%.** Not one bracket string diverges |
+| **P2** | ARM-NONE diverges on **≥ 1** Hebrew+Latin+digits string | **CONFIRMED — 4 of 4, 100%** |
+| **P3** | ARM-SWAP fails round-trip; ARM-RLM and ARM-ISOLATE pass | **CONFIRMED** |
+| **P4** | ARM-ISOLATE fixes ≥ 90% and breaks none | **FALSIFIED, and backwards.** Fixed 0, broke 22 |
+
+### Against the adoption rule
+
+    ARM-NONE diverges on 13 of 37 items; 24 converge.
+
+| arm | fixed | broke | round-trip | PC-1 | ADOPTED? |
+|---|---|---|---|---|---|
+| ARM-SWAP | 0/13 (0%) | 1 | **CORRUPTS** | ok | no |
+| ARM-RLM | 4/13 (31%) | 3 | clean | ok | no |
+| ARM-ISOLATE | 0/13 (0%) | **22** | clean | ok | no |
+
+**VERDICT: no arm meets all four clauses — NOTHING IS ADOPTED.**
+
+---
+
+## What was actually learned, including where the pre-registration was wrong
+
+**1. The bracket complaint does not reproduce as a property of the committed text.** Zero of
+eight. `(שלום)` renders as `(םולש)` under an LTR paragraph and under an RTL paragraph alike. Two
+of the four predictions were wrong and this is the one that matters: the thing the market
+research found verified against both Gboard and SwiftKey is **not** something a keyboard's
+output can be blamed for.
+
+**2. What reproduces at 100% is the *other* complaint.** Hebrew mixed with Latin — with or
+without digits — diverges on every single item. `גרסה 5 של Android` puts "Android" at opposite
+ends of the line depending on the app's locale:
+
+    logical        גרסה 5 של Android
+    LTR paragraph  לש 5 הסרג Android
+    RTL paragraph  Android לש 5 הסרג
+
+That is the SwiftKey reviewer's *"משבשת את סדר והרצף של מה שאני כותב"*, reproduced from first
+principles, and it is the complaint we were **not** aiming at.
+
+**3. The fix everyone asks for is the worst of the three.** ARM-SWAP — make the `(` key emit
+`)` so it "looks right" — fixed **nothing**, broke one item, and is the only arm that fails
+round-trip: it changes a character rather than adding a control, so the text copied out of the
+field is not the text the user meant. It hides the symptom by corrupting the data.
+
+**4. Isolates are actively harmful here, which I had backwards.** ARM-ISOLATE was predicted to
+fix ≥ 90%. It fixed 0 and broke 22 — including all three pure-Hebrew control items, which were
+safe before. An isolate is opaque from the outside and takes its *placement* from the paragraph
+direction, so wrapping the content converts a safe string into a direction-dependent one. The
+pre-registration reasoned about what happens inside an isolate and never asked what happens
+around it.
+
+**5. ARM-RLM is the only arm that helps at all** — 31% of the divergent set, clean round-trip —
+and it is nowhere near the 90% bar, and it breaks 3. Below the bar is below the bar.
+
+---
+
+## Post hoc, and labelled as such
+
+Not pre-registered. A hypothesis, not a result; it is written down because P1's falsification
+demands an explanation and this is the one the data supports.
+
+The key labelled `(` commits U+0028. Rule L4 mirrors it inside an RTL run, so **a `)`-shaped
+glyph appears the moment the key is pressed.** The text is correct. The key label contradicts
+what the screen shows. If the user "fixes" that by pressing `)` instead — which is exactly what
+a reasonable person does — the logical string inverts:
+
+    intended     (שלום)   →   (םולש)
+    "corrected"  )שלום(   →   )םולש(
+
+**8 of 8 bracket items change meaning if the user follows the key label.** So the complaint is
+real, the users are not imagining it, and it is **an affordance problem in the key labels rather
+than a text problem in the output** — which is a different fix, in a different place, at a
+different cost, from anything the four arms tried.
+
+The instrument dating: the JDK recognises the isolate directionality class, so its Unicode bidi
+tables are 6.3 or later and N0/BD16 (bracket pairs) is present. That dates the tables; it does
+not by itself explain the bracket result. A first attempt to discriminate N0 by comparing a
+matched `(HE)` against an unmatched `(HE` is **kept in the harness as a note rather than
+deleted: it does not discriminate.** Worked by hand, N0-present and N0-absent produce the same
+visual string for that input. A control that cannot come out two ways was never a control.
+
+---
+
+## What this still cannot say
+
+`M12-GBOARD-CODEPOINT` remains **NOT MEASURED**, and after this run it matters more, not less.
+The finding is now that the *labels* are the trap. Whether Gboard and SwiftKey label and commit
+the same way is a device question, and no line of this run touched a device.
+
+`M13-BIDI-RENDER` is added and is **NOT MEASURED**: `java.text.Bidi` is the algorithm, not
+Android's `TextView`. Everything above is a claim about conformant rendering. A field that
+renders non-conformantly is outside what this measured.

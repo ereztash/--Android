@@ -238,11 +238,13 @@ Hebrew.
 Ordered by cost, not by ambition. Neither is a commitment; both are written so they can fail.
 
 1. **Extend the corpora and the gates to the characters they currently delete, and build a bidi
-   defect suite with a positive control.** The control is the point: reproduce the bracket
-   inversion in Gboard and SwiftKey first. If it does not reproduce, there is no defect and the
-   suite is `NOT-A-GATE`. If it does, this repository holds a reproducible, verifiable defect
-   that Google and Microsoft ship — which is exactly the kind of artifact that manufactures
-   standing where none was inherited, and it sits inside purpose ג rather than beside it.
+   defect suite with a positive control.** ~~The control is the point: reproduce the bracket
+   inversion first.~~ **RUN — see `docs/BIDI.md` (B1).** The bracket complaint does **not**
+   reproduce as a property of the committed text: 0 of 8. What reproduces at **100%** is the
+   *other* verified complaint, Hebrew mixed with Latin and digits. All three candidate
+   mitigations failed a rule committed beforehand, and the popular one corrupts the text.
+   Post hoc, the mechanism looks like an affordance problem in the key labels rather than a
+   text problem in the output.
 2. **Publish the register finding as a free, reproducible artifact.** ×4.43 with the harness that
    produced it. Path E's shape, and the only path on this page with precedent.
 
