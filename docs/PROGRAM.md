@@ -181,7 +181,7 @@ curiosity about corpora and not a finding about keyboards, and the artifact is c
 
 **Cost.** Days, after W1.
 
-### W6 — the two cheap open checks
+### W6 — **DONE**, and it stopped being a checkbox. See [`docs/COMPETITORS.md`](COMPETITORS.md). The position is open, and **AOSP's own Hebrew fix makes every measured axis worse**
 
 **FUTO Keyboard's Hebrew support** — 20 minutes, and it decides whether *offline and actually
 good* is an open position or an occupied one. Still not run.

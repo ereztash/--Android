@@ -79,6 +79,23 @@ class BidiArmsTest {
 
     private val arms: List<Pair<String, (String) -> String>> = listOf(
         "ARM-NONE" to { s: String -> s },
+        // What AOSP LatinIME actually ships for Hebrew, and therefore what every keyboard
+        // descended from it inherits -- FUTO included, whose v0.1.27 release note reads
+        // "Fixed some behavior when it comes to typing parentheses in Hebrew".
+        //
+        // AOSP `values-iw/donottranslate-more-keys.xml` defines
+        //     keyspec_left_parenthesis  = "(|)"
+        //     keyspec_right_parenthesis = ")|("
+        // and KeySpecParser's own javadoc documents the format as `keyLabel|keyOutputText`.
+        // So the key LABELLED `(` COMMITS U+0029. That is not a rendering trick: it changes
+        // the character in the user's text.
+        //
+        // `B1` measured this as ARM-SWAP and it was the only arm to fail the round-trip
+        // clause. It is included here to measure the SHIPPED behaviour of the incumbent
+        // against real typed Hebrew, which nothing in this repository had done.
+        "ARM-SWAP (AOSP ships this)" to { s: String ->
+            buildString { for (c in s) append(if (c == '(') ')' else if (c == ')') '(' else c) }
+        },
         "ARM-FSI" to { s -> perForeignRun(s) { "$FSI$it$PDI" } },
         "ARM-LRI" to { s -> perForeignRun(s) { "$LRI$it$PDI" } },
         "ARM-RLM-AFTER" to { s -> perForeignRun(s) { "$it$RLM" } },
