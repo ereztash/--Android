@@ -224,5 +224,143 @@
    "wikipedia": "NOT RUN - source absent in this container"
   },
   "not_measured": "Facebook comments are not phone messaging. M10-REGISTER is narrowed, not closed. Token boundaries are the source's, not this repository's, and every tokenization-sensitive number inherits them."
- }
+ },
+ "alphabet": {
+  "he_conversational_test.txt.gz": {
+   "kept": [
+    "hebrew_letter",
+    "whitespace"
+   ],
+   "dropped": {
+    "hebrew_point": "`build_subtitle_corpus.py` keeps only `[א-ת]+` runs. Same filter, same omission, same consequence as the wiki slices -- and this is the corpus the repository's headline register number came from, which W1 then corrected from 23.72% to 10.33%.",
+    "hebrew_punct": "`build_subtitle_corpus.py` keeps only `[א-ת]+` runs. Same filter, same omission, same consequence as the wiki slices -- and this is the corpus the repository's headline register number came from, which W1 then corrected from 23.72% to 10.33%.",
+    "latin_letter": "`build_subtitle_corpus.py` keeps only `[א-ת]+` runs. Same filter, same omission, same consequence as the wiki slices -- and this is the corpus the repository's headline register number came from, which W1 then corrected from 23.72% to 10.33%.",
+    "digit": "`build_subtitle_corpus.py` keeps only `[א-ת]+` runs. Same filter, same omission, same consequence as the wiki slices -- and this is the corpus the repository's headline register number came from, which W1 then corrected from 23.72% to 10.33%.",
+    "bracket": "`build_subtitle_corpus.py` keeps only `[א-ת]+` runs. Same filter, same omission, same consequence as the wiki slices -- and this is the corpus the repository's headline register number came from, which W1 then corrected from 23.72% to 10.33%.",
+    "quote": "`build_subtitle_corpus.py` keeps only `[א-ת]+` runs. Same filter, same omission, same consequence as the wiki slices -- and this is the corpus the repository's headline register number came from, which W1 then corrected from 23.72% to 10.33%.",
+    "ascii_punct": "`build_subtitle_corpus.py` keeps only `[א-ת]+` runs. Same filter, same omission, same consequence as the wiki slices -- and this is the corpus the repository's headline register number came from, which W1 then corrected from 23.72% to 10.33%.",
+    "emoji": "`build_subtitle_corpus.py` keeps only `[א-ת]+` runs. Same filter, same omission, same consequence as the wiki slices -- and this is the corpus the repository's headline register number came from, which W1 then corrected from 23.72% to 10.33%.",
+    "other": "`build_subtitle_corpus.py` keeps only `[א-ת]+` runs. Same filter, same omission, same consequence as the wiki slices -- and this is the corpus the repository's headline register number came from, which W1 then corrected from 23.72% to 10.33%."
+   }
+  },
+  "he_typed_filtered.txt.gz": {
+   "kept": [
+    "hebrew_letter",
+    "whitespace"
+   ],
+   "dropped": {
+    "hebrew_point": "Deliberate: this is W1's FILTERED arm, which exists to be comparable to the corpora above. It applies `[א-ת]+` on purpose so that the difference between it and `he_typed_raw.txt.gz` isolates the cost of the alphabet. The deletion here is the measurement, not an oversight.",
+    "hebrew_punct": "Deliberate: this is W1's FILTERED arm, which exists to be comparable to the corpora above. It applies `[א-ת]+` on purpose so that the difference between it and `he_typed_raw.txt.gz` isolates the cost of the alphabet. The deletion here is the measurement, not an oversight.",
+    "latin_letter": "Deliberate: this is W1's FILTERED arm, which exists to be comparable to the corpora above. It applies `[א-ת]+` on purpose so that the difference between it and `he_typed_raw.txt.gz` isolates the cost of the alphabet. The deletion here is the measurement, not an oversight.",
+    "digit": "Deliberate: this is W1's FILTERED arm, which exists to be comparable to the corpora above. It applies `[א-ת]+` on purpose so that the difference between it and `he_typed_raw.txt.gz` isolates the cost of the alphabet. The deletion here is the measurement, not an oversight.",
+    "bracket": "Deliberate: this is W1's FILTERED arm, which exists to be comparable to the corpora above. It applies `[א-ת]+` on purpose so that the difference between it and `he_typed_raw.txt.gz` isolates the cost of the alphabet. The deletion here is the measurement, not an oversight.",
+    "quote": "Deliberate: this is W1's FILTERED arm, which exists to be comparable to the corpora above. It applies `[א-ת]+` on purpose so that the difference between it and `he_typed_raw.txt.gz` isolates the cost of the alphabet. The deletion here is the measurement, not an oversight.",
+    "ascii_punct": "Deliberate: this is W1's FILTERED arm, which exists to be comparable to the corpora above. It applies `[א-ת]+` on purpose so that the difference between it and `he_typed_raw.txt.gz` isolates the cost of the alphabet. The deletion here is the measurement, not an oversight.",
+    "emoji": "Deliberate: this is W1's FILTERED arm, which exists to be comparable to the corpora above. It applies `[א-ת]+` on purpose so that the difference between it and `he_typed_raw.txt.gz` isolates the cost of the alphabet. The deletion here is the measurement, not an oversight.",
+    "other": "Deliberate: this is W1's FILTERED arm, which exists to be comparable to the corpora above. It applies `[א-ת]+` on purpose so that the difference between it and `he_typed_raw.txt.gz` isolates the cost of the alphabet. The deletion here is the measurement, not an oversight."
+   }
+  },
+  "he_typed_raw.txt.gz": {
+   "kept": [
+    "ascii_punct",
+    "bracket",
+    "digit",
+    "emoji",
+    "hebrew_letter",
+    "hebrew_point",
+    "hebrew_punct",
+    "latin_letter",
+    "other",
+    "quote",
+    "whitespace"
+   ],
+   "dropped": {}
+  },
+  "hewiki_confusion_dev.txt.gz": {
+   "kept": [
+    "hebrew_letter",
+    "whitespace"
+   ],
+   "dropped": {
+    "hebrew_point": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "hebrew_punct": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "latin_letter": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "digit": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "bracket": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "quote": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "ascii_punct": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "emoji": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "other": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem."
+   }
+  },
+  "hewiki_confusion_test.txt.gz": {
+   "kept": [
+    "hebrew_letter",
+    "whitespace"
+   ],
+   "dropped": {
+    "hebrew_point": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "hebrew_punct": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "latin_letter": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "digit": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "bracket": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "quote": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "ascii_punct": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "emoji": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "other": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem."
+   }
+  },
+  "hewiki_eval_sample.txt.gz": {
+   "kept": [
+    "hebrew_letter",
+    "whitespace"
+   ],
+   "dropped": {
+    "hebrew_point": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "hebrew_punct": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "latin_letter": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "digit": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "bracket": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "quote": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "ascii_punct": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "emoji": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "other": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem."
+   }
+  },
+  "hewiki_learning_dev.txt.gz": {
+   "kept": [
+    "hebrew_letter",
+    "whitespace"
+   ],
+   "dropped": {
+    "hebrew_point": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "hebrew_punct": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "latin_letter": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "digit": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "bracket": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "quote": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "ascii_punct": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "emoji": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "other": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem."
+   }
+  },
+  "hewiki_learning_test.txt.gz": {
+   "kept": [
+    "hebrew_letter",
+    "whitespace"
+   ],
+   "dropped": {
+    "hebrew_point": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "hebrew_punct": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "latin_letter": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "digit": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "bracket": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "quote": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "ascii_punct": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "emoji": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem.",
+    "other": "`build_eval_corpus.py` keeps only `[א-ת]+` runs, so this class was removed before the corpus existed. The filter was never registered as a decision; H1 reported the consequence as 0.00%, A1 measured what was behind it, and B1 measured 12,000 lines of these corpora finding exactly zero bidi divergence because a corpus without brackets cannot show a bracket problem."
+   }
+  }
+ },
+ "alphabet_note": "Declared for GATE-CORPUS-1. `kept` is checked against the artifact's actual bytes; every dropped class carries a reason, because a machine can compute WHICH classes are missing and only a person can say WHY."
 }

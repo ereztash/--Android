@@ -85,7 +85,7 @@ now **A1 above**, which was not on the table when I made that claim.
 
 Ordered by what unblocks what, not by ambition. Each item states what would kill it.
 
-### W1 — a typed-Hebrew evaluation slice *(first, because everything else inherits it)*
+### W1 — a typed-Hebrew evaluation slice — **DONE.** See [`docs/TYPED_REGISTER.md`](TYPED_REGISTER.md). Corrected the headline register claim from 23.72% to **10.33%**
 
 **Change.** `scripts/build_typed_corpus.py`, on the Amram et al. comments (MIT, already
 identified in `CORPUS_REGISTER` as *the only candidate that is typed rather than transcribed* and
@@ -106,7 +106,7 @@ phone messaging: this narrows `M10-REGISTER`, it does not close it.
 
 **Cost.** Hours. The corpus is 2.5 MB.
 
-### W2 — `GATE-CORPUS-1`: a corpus may not silently delete a character class
+### W2 — `GATE-CORPUS-1/2` — **DONE.** Failed on 9 of 9 corpora before a declaration existed
 
 **Change.** Every `build_*_corpus.py` declares in its `MANIFEST.json` which character classes it
 keeps and which it drops. The gate checks the declaration against what the artifact actually

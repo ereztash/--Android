@@ -91,6 +91,7 @@ def _gates(strict: bool) -> list[dict]:
     docs = os.path.join(ROOT, "scripts", "check_docs.py")
     dod = os.path.join(ROOT, "scripts", "check_dod.py")
     withdrawn = os.path.join(ROOT, "scripts", "check_withdrawn.py")
+    corpalpha = os.path.join(ROOT, "scripts", "check_corpus_alphabet.py")
     apk = os.path.join(ROOT, "scripts", "check_apk.py")
     store = os.path.join(ROOT, "scripts", "build_store_assets.py")
     debug_apk = os.path.join(ROOT, "app", "build", "outputs", "apk", "debug", "app-debug.apk")
@@ -320,6 +321,32 @@ def _gates(strict: bool) -> list[dict]:
             "control": [PY, docs, "--root", ROOT, "--inject-defect", "denominator", "--json"],
             "control_desc": "one published denominator off by one -- what a hand-copied "
                             "count looks like the day after a source file is added",
+        },
+        {
+            # `[א-ת]+` deleted every non-Hebrew character from every corpus this project
+            # measures on. It was never registered as a decision and no gate noticed for four
+            # milestones. H1 reported it as 0.00%, A1 measured what was behind it, B1 found
+            # exactly zero divergence on 12,000 lines because the characters were gone, and W1
+            # corrected a headline number that came from one of those corpora. On the tree as
+            # it stood this gate failed on 9 of 9 corpora.
+            "id": "GATE-CORPUS-1",
+            "what": "every corpus declares the character classes it keeps, and the declared "
+                    "kept-set equals what the artifact actually contains",
+            "real": [PY, corpalpha, "--json"] + s,
+            "control": [PY, corpalpha, "--inject-defect", "kept", "--json"],
+            "control_desc": "a declaration that no longer matches the bytes -- what a builder "
+                            "whose filter changed leaves behind",
+        },
+        {
+            # The detector that carries the gate. A machine can compute WHICH classes are
+            # missing; only a person can say WHY, and not saying it is the actual defect.
+            "id": "GATE-CORPUS-2",
+            "what": "every character class a corpus does not contain is declared dropped with "
+                    "a non-empty reason",
+            "real": [PY, corpalpha, "--json"] + s,
+            "control": [PY, corpalpha, "--inject-defect", "reason", "--json"],
+            "control_desc": "a class deleted from a corpus with nothing written about why -- "
+                            "the exact state `[א-ת]+` was in for four milestones",
         },
         {
             # Two layers were withdrawn against a pre-registered rule, and both withdrawals
