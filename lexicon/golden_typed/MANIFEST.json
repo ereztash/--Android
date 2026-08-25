@@ -1,0 +1,46 @@
+{
+  "seed": "hebrew-ime-golden-v1",
+  "source_lexicon_sha256": "6fbc467ddd7801a1b2449c40d77abd797a7eb7e298001551c8e3887ee0648ec8",
+  "source_heldout_sha256": "02fe828ce7ef083ab5db1d602714989d06676c2dadf490376c88b40e30520515",
+  "min_word_length": 4,
+  "source_words": 4000,
+  "corpora": {
+    "A_uniform": {
+      "path": "lexicon/golden_typed/a_uniform.tsv.gz",
+      "entries": 4000,
+      "uncompressed_bytes": 94310,
+      "sha256": "f208e6495b398f22f2a1f0b2a39cc4301d9415612eb7c5dd2b2164cc9486538b",
+      "discarded_landed_on_real_word": 1716,
+      "failed_to_corrupt": 0,
+      "what": "one uniformly chosen edit; the unbiased accuracy number"
+    },
+    "B_adjacency": {
+      "path": "lexicon/golden_typed/b_adjacency.tsv.gz",
+      "entries": 3999,
+      "uncompressed_bytes": 92350,
+      "sha256": "9508766e50084c3fe6e83399914d323626a688cd0cb1c834749e62c7dfffc8f9",
+      "discarded_landed_on_real_word": 1193,
+      "failed_to_corrupt": 1,
+      "what": "same-row horizontal neighbour substitution; PARTLY CIRCULAR, never merged into A"
+    },
+    "C1_control_lexicon": {
+      "path": "lexicon/golden_typed/c1_control_lexicon.txt.gz",
+      "entries": 4000,
+      "uncompressed_bytes": 46184,
+      "sha256": "eaa6dbe9135fc0b1726a54dd53c3ff3b33772fe5a211fd8e284d3683d3936e41",
+      "what": "known-correct words, unmodified; correction rate must be ~0"
+    },
+    "C2_control_real": {
+      "path": "lexicon/golden_typed/c2_control_real.txt.gz",
+      "entries": 4000,
+      "uncompressed_bytes": 48118,
+      "sha256": "1844273a490d975d1520fada0c873b4f115b8a9ae4f156e8b21274436004e271",
+      "what": "raw held-out tokens, unmodified, including proper nouns the lexicon lacks; the realistic false-correction rate"
+    }
+  },
+  "known_limitations": [
+    "Synthetic typos. Real typing errors are not uniformly distributed and include errors this generator cannot make, such as whole-word substitutions and phonetic spellings.",
+    "Source words come from encyclopedic prose, so the register is wrong for a phone keyboard.",
+    "Corpus B is partly circular by construction and must never be quoted as the engine's accuracy."
+  ]
+}

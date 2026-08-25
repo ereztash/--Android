@@ -95,6 +95,8 @@ tasks.withType<Test>().configureEach {
     systemProperty("runPrefixCompletion", project.findProperty("runPrefixCompletion")?.toString() ?: "")
     // B2, the bidi arms B1 never tested, on lines a person typed rather than hand-built.
     systemProperty("runBidiArms", project.findProperty("runBidiArms")?.toString() ?: "")
+    // W8, spelling correction by source register: corpus A (wiki) vs D (typed), same run.
+    systemProperty("runCorrectionRegister", project.findProperty("runCorrectionRegister")?.toString() ?: "")
 
     // Warm-up under a deliberately small heap. An IME is one of the most heap-constrained
     // processes on Android and this project has no device to measure on, so the substitute is

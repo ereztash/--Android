@@ -145,6 +145,11 @@ def write(path: str, lines: list[str]) -> dict:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out-dir", default=OUT_DIR)
+    # W8: only the SOURCE WORDS change. The corruption generator, the discard rule, the seed
+    # stream and the minimum length are byte-identical, or the comparison measures the harness.
+    ap.add_argument("--source", choices=["heldout", "typed"], default="heldout",
+                    help="heldout = held-out Wikipedia (corpora A-C). "
+                         "typed = lexicon/eval/he_typed_raw.txt.gz (corpus D, W8).")
     ap.add_argument("--pairs", type=int, default=TARGET_PAIRS)
     ap.add_argument("--controls", type=int, default=TARGET_CONTROL)
     ap.add_argument("--inject-defect", choices=["reseed"],
@@ -154,7 +159,14 @@ def main() -> int:
     seed = SEED + ("-RESEEDED" if args.inject_defect == "reseed" else "")
 
     lexicon = load_lexicon()
-    heldout = load_heldout()
+    if args.source == "typed":
+        typed_path = os.path.join(ROOT, "lexicon", "eval", "he_typed_raw.txt.gz")
+        with gzip.open(typed_path, "rb") as fh:
+            heldout = [t for line in fh.read().decode("utf-8").split("\n")
+                       for t in line.split(" ") if t]
+        print(f"source: typed ({typed_path}), {len(heldout):,} tokens", file=sys.stderr)
+    else:
+        heldout = load_heldout()
     neighbours = horizontal_neighbours()
 
     # Source words: held-out tokens that ARE real lexicon words and long enough to correct.
