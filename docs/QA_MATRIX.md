@@ -26,8 +26,10 @@ release-ready — and it is not described as release-ready anywhere in this repo
 | minSdk / targetSdk | **31** / 36 — verified in all four built APKs |
 | **Device / emulator** | **NONE. No Android device or emulator exists in this environment, and none of the results below were obtained on one.** |
 
-Scale: 44 production Kotlin files, 32 test files, **214 JVM tests**, 9 gate scripts,
-**18 gates**, 5 positive-control fixtures. **Lint: 0 issues.**
+Scale: 44 production Kotlin files, 32 test files, **214 JVM tests**, 10 gate scripts,
+**29 gates** — the number `scripts/run_gates.py` defines, counted from it rather than
+remembered; this line read **18** while the runner defined 25 — 5 positive-control fixtures.
+**Lint: 0 issues.**
 
 ---
 
@@ -102,6 +104,10 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | GATE-BIGRAM-1 | The bigram table **inside the APK** is byte-identical to the one every prediction number was measured on, and its header agrees with the manifest | 1 asset, 2,697,304 bytes, 51,900 groups | One byte appended |
 | GATE-DOC-1 | The readiness verdict's device-blocked list matches this matrix, **and** the gate denominators published in this table match what the gates actually counted on this tree — **including this row's own id count**, which went stale the day the check for it was written | 22 ids + 5 denominators + this row | A device-blocked id dropped; a denominator off by one |
 | GATE-DOC-3 | This matrix does not contradict **itself**: no id sits in the device-blocked table while another row marks it OBSERVED | the same 22 ids against every OBSERVED row | A row left in the blocked table after being marked OBSERVED |
+| GATE-DOD-1 | Every criterion in the definition of done cites *something*, states one of the four allowed states, and every waived one names a waiver carrying a date, an owner and a reason | 27 criteria, 2 waivers | A criterion citing nothing, in a state nobody defined, beside a waiver decided in conversation |
+| GATE-DOD-2 | Everything a done-criterion cites resolves — a gate the runner defines, a row in this matrix, or a file that exists | the same 27 criteria | A criterion citing a gate and a file that no longer exist |
+| GATE-DOD-3 | No done-criterion reads MET while this matrix records its evidence as never run. `NOT RUN` is not `MET`, one level up from `NOT-MEASURED` is not `PASS` | the same 27 criteria against every not-run row | MET claimed over `M7-LAT` — "ready except for", written one row at a time |
+| GATE-DOD-4 | The counts `DEFINITION_OF_DONE.md` publishes are the ones its own tables contain, per-tier verdict included | 18 published numbers | One published count off by one |
 | GATE-SIZE-1 | The release artifact stays inside a budget written down **after** measuring it | 3 budget entries | Assets measured 50% larger |
 | GATE-XML-1 | Every XML resource parses | 15 files | A comment containing `--` |
 | GATE-TRACE-1 | The benchmark measures sections the app actually emits | 2 section names | Requested sections renamed |

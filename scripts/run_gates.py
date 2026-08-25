@@ -89,6 +89,7 @@ def _gates(strict: bool) -> list[dict]:
     size = os.path.join(ROOT, "scripts", "check_size.py")
     learn = os.path.join(ROOT, "scripts", "check_learning.py")
     docs = os.path.join(ROOT, "scripts", "check_docs.py")
+    dod = os.path.join(ROOT, "scripts", "check_dod.py")
     apk = os.path.join(ROOT, "scripts", "check_apk.py")
     store = os.path.join(ROOT, "scripts", "build_store_assets.py")
     debug_apk = os.path.join(ROOT, "app", "build", "outputs", "apk", "debug", "app-debug.apk")
@@ -303,6 +304,49 @@ def _gates(strict: bool) -> list[dict]:
             "control": [PY, docs, "--root", ROOT, "--inject-defect", "denominator", "--json"],
             "control_desc": "one published denominator off by one -- what a hand-copied "
                             "count looks like the day after a source file is added",
+        },
+        {
+            # The definition of done is the third document whose central claims must be kept
+            # in step with the other two by hand -- the mechanism that produced a stale device
+            # claim twice and a stale denominator inside the gate written against stale
+            # denominators. It arrives with a gate rather than after one.
+            "id": "GATE-DOD-1",
+            "what": "every done-criterion cites something, states one of the four allowed "
+                    "states, and every waived one names a waiver that exists",
+            "real": [PY, dod, "--root", ROOT, "--json"] + s,
+            "control": [PY, dod, "--root", ROOT, "--inject-defect", "unfalsifiable",
+                        "--json"],
+            "control_desc": "a criterion citing nothing, in a state nobody defined, beside a "
+                            "waiver decided in conversation and never written down -- what a "
+                            "criterion written to feel finished looks like",
+        },
+        {
+            "id": "GATE-DOD-2",
+            "what": "everything a done-criterion cites resolves: a gate the runner defines, a "
+                    "row the QA matrix carries, or a file that exists",
+            "real": [PY, dod, "--root", ROOT, "--json"] + s,
+            "control": [PY, dod, "--root", ROOT, "--inject-defect", "phantom", "--json"],
+            "control_desc": "a criterion citing a gate and a file that no longer exist -- "
+                            "evidence renamed out from under a criterion that still reads as "
+                            "satisfied",
+        },
+        {
+            "id": "GATE-DOD-3",
+            "what": "no criterion claims MET while the QA matrix records its evidence as "
+                    "never run",
+            "real": [PY, dod, "--root", ROOT, "--json"] + s,
+            "control": [PY, dod, "--root", ROOT, "--inject-defect", "metoverunrun", "--json"],
+            "control_desc": "MET claimed over M7-LAT, which has never run -- 'ready except "
+                            "for', written one row at a time",
+        },
+        {
+            "id": "GATE-DOD-4",
+            "what": "the counts the definition of done publishes are the ones its own tables "
+                    "contain, verdict included",
+            "real": [PY, dod, "--root", ROOT, "--json"] + s,
+            "control": [PY, dod, "--root", ROOT, "--inject-defect", "count", "--json"],
+            "control_desc": "one published count off by one -- what a hand-copied summary "
+                            "looks like the day after a criterion changes state",
         },
         {
             "id": "GATE-SIZE-1",
