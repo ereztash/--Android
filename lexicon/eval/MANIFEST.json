@@ -1,186 +1,228 @@
 {
-  "purpose": "held-out evaluation for prediction and confusion sets; NOT used to train the bigram model",
+ "purpose": "held-out evaluation for prediction and confusion sets; NOT used to train the bigram model",
+ "source": {
+  "wiki": "hewiki",
+  "dump_date": "20260801",
+  "license": "CC BY-SA 4.0"
+ },
+ "disjointness": {
+  "training_phase": 0.5,
+  "eval_phase": 0.0,
+  "training_ranges": [
+   [
+    58284499,
+    70867411
+   ],
+   [
+    175392273,
+    187975185
+   ],
+   [
+    292362593,
+    304945505
+   ],
+   [
+    409299235,
+    421882147
+   ],
+   [
+    526257249,
+    538840161
+   ],
+   [
+    643106311,
+    655689223
+   ],
+   [
+    760153275,
+    772736187
+   ],
+   [
+    877042803,
+    889625715
+   ],
+   [
+    993968019,
+    1006550931
+   ],
+   [
+    1110988212,
+    1123571124
+   ]
+  ],
+  "eval_ranges": [
+   [
+    635,
+    8389243
+   ],
+   [
+    194863695,
+    203252303
+   ],
+   [
+    389774436,
+    398163044
+   ],
+   [
+    584629017,
+    593017625
+   ],
+   [
+    779618614,
+    788007222
+   ],
+   [
+    974517149,
+    982905757
+   ]
+  ],
+  "intersections": 0,
+  "proven_by": "scripts/build_eval_corpus.py refuses to write when any eval byte range intersects a training byte range"
+ },
+ "corpus": {
+  "sentences": 799319,
+  "tokens": 10660060,
+  "blocks": 392,
+  "compressed_bytes_fetched": 50331654,
+  "uncompressed_bytes": 108094624,
+  "sha256": "a1c14bb99932d38d8426b9455ca72385201db9ce2e197dca4b72cd82c55568da"
+ },
+ "known_limitations": [
+  "Wikipedia prose; the register is wrong for phone typing.",
+  "Sentence splitting is punctuation-based and will merge or split some sentences."
+ ],
+ "sample": {
+  "file": "lexicon/eval/hewiki_eval_sample.txt.gz",
+  "shape": "strided",
+  "offset": 0,
+  "pseudo_users": null,
+  "sentences_per_pseudo_user": null,
+  "used_by": "M10 prediction: the weight sweep, the ordering sweep, and the locked accuracy floors.",
+  "sentences": 6000,
+  "tokens": 85840,
+  "sha256": "cedfb5be743bc15c2b3db381011e2c74f31f512e9373ed4038f198dcb4b3d299",
+  "uncompressed_bytes": 884788
+ },
+ "slices": {
+  "why": "The full corpus is 28 MB and is not committed; these deterministic slices are what the tests read. Re-cut them with scripts/slice_eval_corpus.py after rebuilding the corpus.",
+  "rule": "strided slices: sentences of 4..40 tokens, every 37th from a per-slice offset, first 6000. Block slices: 120 contiguous blocks of 80 sentences each, drawn from the sentences the strided slices left unused.",
+  "parent_sha256": "a1c14bb99932d38d8426b9455ca72385201db9ce2e197dca4b72cd82c55568da",
+  "eligible_in_parent": 732360,
+  "sentences_in_parent": 799319,
+  "pairwise_overlaps": 0,
+  "proven_by": "scripts/slice_eval_corpus.py compares the index sets and refuses to write when any two slices intersect",
+  "sample": {
+   "file": "lexicon/eval/hewiki_eval_sample.txt.gz",
+   "shape": "strided",
+   "offset": 0,
+   "pseudo_users": null,
+   "sentences_per_pseudo_user": null,
+   "used_by": "M10 prediction: the weight sweep, the ordering sweep, and the locked accuracy floors.",
+   "sentences": 6000,
+   "tokens": 85840,
+   "sha256": "cedfb5be743bc15c2b3db381011e2c74f31f512e9373ed4038f198dcb4b3d299",
+   "uncompressed_bytes": 884788
+  },
+  "confusion_dev": {
+   "file": "lexicon/eval/hewiki_confusion_dev.txt.gz",
+   "shape": "strided",
+   "offset": 1,
+   "pseudo_users": null,
+   "sentences_per_pseudo_user": null,
+   "used_by": "M11 real-word errors: the margin sweep. Thresholds are chosen here and nowhere else.",
+   "sentences": 6000,
+   "tokens": 87247,
+   "sha256": "7f6986d675742f95aa6feb16de127d8874fb565fd9ac5d2a2586cf83eb44bff6",
+   "uncompressed_bytes": 896487
+  },
+  "confusion_test": {
+   "file": "lexicon/eval/hewiki_confusion_test.txt.gz",
+   "shape": "strided",
+   "offset": 2,
+   "pseudo_users": null,
+   "sentences_per_pseudo_user": null,
+   "used_by": "M11 real-word errors: the reported recall and false-alarm numbers, measured once with the thresholds already fixed.",
+   "sentences": 6000,
+   "tokens": 86882,
+   "sha256": "9fc528ae547f0bfab6d2893383d388a007abd7dbaedcb20e266f934dbc0d32ff",
+   "uncompressed_bytes": 891742
+  },
+  "learning_dev": {
+   "file": "lexicon/eval/hewiki_learning_dev.txt.gz",
+   "shape": "contiguous blocks",
+   "offset": null,
+   "pseudo_users": 120,
+   "sentences_per_pseudo_user": 80,
+   "used_by": "Adaptive learning: the interpolation sweep and the cold-start curve. Thresholds are chosen here and nowhere else.",
+   "sentences": 9600,
+   "tokens": 132491,
+   "sha256": "0eaa1be095e069026392914a615022d620d599ec3a81e59c8cc7831caedc75ea",
+   "uncompressed_bytes": 1342035
+  },
+  "learning_test": {
+   "file": "lexicon/eval/hewiki_learning_test.txt.gz",
+   "shape": "contiguous blocks",
+   "offset": null,
+   "pseudo_users": 120,
+   "sentences_per_pseudo_user": 80,
+   "used_by": "Adaptive learning: the reported top-1/top-3 and offer rates, measured once with the interpolation already fixed.",
+   "sentences": 9600,
+   "tokens": 127588,
+   "sha256": "d8177a78eace8701da1f5af3371b1b6508db16e4a96a22a2b7656b24006cc2f9",
+   "uncompressed_bytes": 1283088
+  },
+  "conversational_test": {
+   "file": "lexicon/eval/he_conversational_test.txt.gz",
+   "shape": "strided over held-out subtitle sentences",
+   "register": "transcribed dialogue -- NOT written phone messages, which no corpus here contains. A better proxy than an encyclopedia, and nothing more.",
+   "used_by": "R1: every claim about conversational-register accuracy.",
+   "disjoint_from_training_by": "construction -- build_subtitle_corpus.py writes each sentence to exactly one of train / held-out",
+   "sentences": 6000,
+   "tokens": 40434,
+   "sha256": "d4cec6cf2c0241a6dde2d1067ac64a2bb9008ced14b6e22e275c62ece5706109",
+   "uncompressed_bytes": 353144
+  }
+ },
+ "typed_slice_w1": {
+  "purpose": "W1 - the first evaluation slice a person typed. NOT used to train anything.",
   "source": {
-    "wiki": "hewiki",
-    "dump_date": "20260801",
-    "license": "CC BY-SA 4.0"
+   "name": "Amram et al. 2018, user comments on Ynet's Facebook page",
+   "repo": "github.com/omilab/Neural-Sentiment-Analyzer-for-Modern-Hebrew",
+   "files": [
+    "data/token_train.tsv",
+    "data/token_test.tsv"
+   ],
+   "license": "MIT"
+  },
+  "selection": {
+   "min_hebrew_tokens": 4,
+   "max_token_chars": 12,
+   "comments_read": 12804,
+   "comments_kept": 10700
+  },
+  "arms": {
+   "paired": "one selection, two renderings; the files are line-for-line the same comments",
+   "he_typed_raw.txt.gz": {
+    "sha256": "97dae9595a17b0645e47134033200e935fa13f1643ccd2da9dc857fe3385cf95",
+    "uncompressed_bytes": 2503193,
+    "filter": "none"
+   },
+   "he_typed_filtered.txt.gz": {
+    "sha256": "1b610dfcf1fbeb6b62bd7153de0db87baa2cb4596005005f01066aa42bfd4c3f",
+    "uncompressed_bytes": 2374524,
+    "filter": "[א-ת]+ extraction, as build_subtitle_corpus.py"
+   }
   },
   "disjointness": {
-    "training_phase": 0.5,
-    "eval_phase": 0.0,
-    "training_ranges": [
-      [
-        58284499,
-        70867411
-      ],
-      [
-        175392273,
-        187975185
-      ],
-      [
-        292362593,
-        304945505
-      ],
-      [
-        409299235,
-        421882147
-      ],
-      [
-        526257249,
-        538840161
-      ],
-      [
-        643106311,
-        655689223
-      ],
-      [
-        760153275,
-        772736187
-      ],
-      [
-        877042803,
-        889625715
-      ],
-      [
-        993968019,
-        1006550931
-      ],
-      [
-        1110988212,
-        1123571124
-      ]
-    ],
-    "eval_ranges": [
-      [
-        635,
-        8389243
-      ],
-      [
-        194863695,
-        203252303
-      ],
-      [
-        389774436,
-        398163044
-      ],
-      [
-        584629017,
-        593017625
-      ],
-      [
-        779618614,
-        788007222
-      ],
-      [
-        974517149,
-        982905757
-      ]
-    ],
-    "intersections": 0,
-    "proven_by": "scripts/build_eval_corpus.py refuses to write when any eval byte range intersects a training byte range"
+   "opensubtitles": {
+    "subtitle_lines_read": 87457198,
+    "whole_source": true,
+    "distinct_keys_checked": 7397,
+    "colliding_keys": 22,
+    "comments_dropped": 46
+   },
+   "wikipedia": "NOT RUN - source absent in this container"
   },
-  "corpus": {
-    "sentences": 799319,
-    "tokens": 10660060,
-    "blocks": 392,
-    "compressed_bytes_fetched": 50331654,
-    "uncompressed_bytes": 108094624,
-    "sha256": "a1c14bb99932d38d8426b9455ca72385201db9ce2e197dca4b72cd82c55568da"
-  },
-  "known_limitations": [
-    "Wikipedia prose; the register is wrong for phone typing.",
-    "Sentence splitting is punctuation-based and will merge or split some sentences."
-  ],
-  "sample": {
-    "file": "lexicon/eval/hewiki_eval_sample.txt.gz",
-    "shape": "strided",
-    "offset": 0,
-    "pseudo_users": null,
-    "sentences_per_pseudo_user": null,
-    "used_by": "M10 prediction: the weight sweep, the ordering sweep, and the locked accuracy floors.",
-    "sentences": 6000,
-    "tokens": 85840,
-    "sha256": "cedfb5be743bc15c2b3db381011e2c74f31f512e9373ed4038f198dcb4b3d299",
-    "uncompressed_bytes": 884788
-  },
-  "slices": {
-    "why": "The full corpus is 28 MB and is not committed; these deterministic slices are what the tests read. Re-cut them with scripts/slice_eval_corpus.py after rebuilding the corpus.",
-    "rule": "strided slices: sentences of 4..40 tokens, every 37th from a per-slice offset, first 6000. Block slices: 120 contiguous blocks of 80 sentences each, drawn from the sentences the strided slices left unused.",
-    "parent_sha256": "a1c14bb99932d38d8426b9455ca72385201db9ce2e197dca4b72cd82c55568da",
-    "eligible_in_parent": 732360,
-    "sentences_in_parent": 799319,
-    "pairwise_overlaps": 0,
-    "proven_by": "scripts/slice_eval_corpus.py compares the index sets and refuses to write when any two slices intersect",
-    "sample": {
-      "file": "lexicon/eval/hewiki_eval_sample.txt.gz",
-      "shape": "strided",
-      "offset": 0,
-      "pseudo_users": null,
-      "sentences_per_pseudo_user": null,
-      "used_by": "M10 prediction: the weight sweep, the ordering sweep, and the locked accuracy floors.",
-      "sentences": 6000,
-      "tokens": 85840,
-      "sha256": "cedfb5be743bc15c2b3db381011e2c74f31f512e9373ed4038f198dcb4b3d299",
-      "uncompressed_bytes": 884788
-    },
-    "confusion_dev": {
-      "file": "lexicon/eval/hewiki_confusion_dev.txt.gz",
-      "shape": "strided",
-      "offset": 1,
-      "pseudo_users": null,
-      "sentences_per_pseudo_user": null,
-      "used_by": "M11 real-word errors: the margin sweep. Thresholds are chosen here and nowhere else.",
-      "sentences": 6000,
-      "tokens": 87247,
-      "sha256": "7f6986d675742f95aa6feb16de127d8874fb565fd9ac5d2a2586cf83eb44bff6",
-      "uncompressed_bytes": 896487
-    },
-    "confusion_test": {
-      "file": "lexicon/eval/hewiki_confusion_test.txt.gz",
-      "shape": "strided",
-      "offset": 2,
-      "pseudo_users": null,
-      "sentences_per_pseudo_user": null,
-      "used_by": "M11 real-word errors: the reported recall and false-alarm numbers, measured once with the thresholds already fixed.",
-      "sentences": 6000,
-      "tokens": 86882,
-      "sha256": "9fc528ae547f0bfab6d2893383d388a007abd7dbaedcb20e266f934dbc0d32ff",
-      "uncompressed_bytes": 891742
-    },
-    "learning_dev": {
-      "file": "lexicon/eval/hewiki_learning_dev.txt.gz",
-      "shape": "contiguous blocks",
-      "offset": null,
-      "pseudo_users": 120,
-      "sentences_per_pseudo_user": 80,
-      "used_by": "Adaptive learning: the interpolation sweep and the cold-start curve. Thresholds are chosen here and nowhere else.",
-      "sentences": 9600,
-      "tokens": 132491,
-      "sha256": "0eaa1be095e069026392914a615022d620d599ec3a81e59c8cc7831caedc75ea",
-      "uncompressed_bytes": 1342035
-    },
-    "learning_test": {
-      "file": "lexicon/eval/hewiki_learning_test.txt.gz",
-      "shape": "contiguous blocks",
-      "offset": null,
-      "pseudo_users": 120,
-      "sentences_per_pseudo_user": 80,
-      "used_by": "Adaptive learning: the reported top-1/top-3 and offer rates, measured once with the interpolation already fixed.",
-      "sentences": 9600,
-      "tokens": 127588,
-      "sha256": "d8177a78eace8701da1f5af3371b1b6508db16e4a96a22a2b7656b24006cc2f9",
-      "uncompressed_bytes": 1283088
-    },
-    "conversational_test": {
-      "file": "lexicon/eval/he_conversational_test.txt.gz",
-      "shape": "strided over held-out subtitle sentences",
-      "register": "transcribed dialogue -- NOT written phone messages, which no corpus here contains. A better proxy than an encyclopedia, and nothing more.",
-      "used_by": "R1: every claim about conversational-register accuracy.",
-      "disjoint_from_training_by": "construction -- build_subtitle_corpus.py writes each sentence to exactly one of train / held-out",
-      "sentences": 6000,
-      "tokens": 40434,
-      "sha256": "d4cec6cf2c0241a6dde2d1067ac64a2bb9008ced14b6e22e275c62ece5706109",
-      "uncompressed_bytes": 353144
-    }
-  }
+  "not_measured": "Facebook comments are not phone messaging. M10-REGISTER is narrowed, not closed. Token boundaries are the source's, not this repository's, and every tokenization-sensitive number inherits them."
+ }
 }

@@ -694,8 +694,27 @@ dialogue** instead of held-out **encyclopedic prose**:
 
 `5.43% completion top-3 at one letter` has been quoted throughout this repository as though it
 described what a user gets. **It describes what a user would get if they typed Wikipedia.** On
-the register a phone keyboard is actually used in, the same code scores **23.72%** — better than
-one suggestion in four.
+transcribed dialogue the same code scores **23.72%**.
+
+> ### CORRECTED BY W1 — read this before quoting 23.72%
+> This paragraph originally read *"on the register a phone keyboard is actually used in, the same
+> code scores 23.72% — better than one suggestion in four."* **That was wrong, and `W1` measured
+> by how much.** Transcribed dialogue is not the register a phone keyboard is used in: it is
+> speech, written down by a professional. On the closest register that a *person typed* — Ynet
+> comments, MIT, 10,700 of them — the same code scores **10.33%, 95% CI [9.75%, 10.92%]**.
+>
+> The direction of this finding survives: 10.33% is still ~1.9× the encyclopedic 5.43%, and
+> register is still worth more than any tuning measured here. **The magnitude does not.** The
+> honest sentence is *better than one suggestion in ten*, not one in four.
+>
+> Also from `W1`, and pinned here because this table is where it is quoted from: the **5.35%**
+> below is the wiki slice's **odd (test) half**; the whole slice is 5.43% and the even half is
+> 5.38%. 23.72% is a **whole** slice. The comparison mixes cell constructions. It changes no
+> conclusion and it is recorded rather than left to be found. See
+> [`docs/TYPED_REGISTER.md`](TYPED_REGISTER.md).
+>
+> `M10-REGISTER` stays **NOT MEASURED**. Facebook comments are typed; they are not phone
+> messaging.
 
 What this does and does not license:
 

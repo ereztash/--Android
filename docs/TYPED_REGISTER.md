@@ -125,4 +125,103 @@ closer than anything here has had, and one step is what it is.
 
 ## Result
 
-*Not run yet. This section is filled in by the commit that runs the harness, and by no other.*
+`./gradlew :core:test --tests '*TypedRegisterTest*' -PrunTypedRegister=1`.
+Harness: `core/src/test/kotlin/com/hebrewime/core/prediction/TypedRegisterTest.kt`.
+Slice: `scripts/build_typed_corpus.py`, 10,700 comments, arms paired line-for-line.
+
+### The controls first
+
+**PC-1 — PASS.** Conversational prefix-1 completion top-3 returned **23.72%** on n=20,000, the
+published figure exactly.
+
+**And PC-1 found something while passing.** The wiki side of the published register table does
+not come from the slice the conversational side comes from:
+
+| wiki cell | prefix-1 top-3 |
+|---|---|
+| whole slice | 5.43% |
+| dev (even) | 5.38% |
+| **test (odd)** | **5.35%** |
+
+**5.35% is the odd half.** 23.72% is the whole conversational slice. All three wiki cells fall
+within PC-1's 0.1-point tolerance of each other, so the control passed and the direction of
+`O1-REGISTER` is unaffected — but **the published ×4.43 compares a half-slice against a whole
+one**, and that is recorded here rather than left for someone to find. The harness now reports
+every cell inside the tolerance instead of the first one it hits, because reporting the first
+would have hidden exactly this.
+
+**PC-2 — PASS.** Next-word top-3 on conversational: **12.09%** with real context, **0.00%** with
+every other word replaced by a random lexicon word. The metric is carried by context.
+
+**Disjointness.** The whole OpenSubtitles source was streamed — **87,457,198 lines** — against
+the Hebrew-token reduction of every selected comment. **22 colliding keys, 46 comments dropped**,
+10,746 → 10,700. The Wikipedia half is **NOT RUN** and rests on provenance, as registered.
+
+### The table
+
+95% percentile bootstrap over **sentences**, 1,000 resamples, seed 20260825.
+
+| slice | prefix-1 top-3 | 95% CI | top-1 | target OOV | detector flag rate |
+|---|---|---|---|---|---|
+| wiki (encyclopedic) | 5.43% | [5.12%, 5.76%] | 3.49% | 5.75% | 0.28% |
+| subtitles (transcribed) | **23.72%** | [23.08%, 24.41%] | 12.62% | 1.15% | 0.19% |
+| **typed FILTERED** | **10.33%** | **[9.75%, 10.92%]** | 4.99% | 4.12% | 0.33% |
+| typed RAW, Hebrew targets | 10.34% | [9.70%, 10.97%] | 4.90% | 4.04% | 0.30% |
+| typed RAW, all targets | 9.84% | [9.23%, 10.39%] | 4.63% | **7.61%** | 0.29% |
+
+Positions ≈ 20,000 per row; sentences 1,743 / 4,433 / 1,097 / 1,101 / 1,045.
+
+### Against the four predictions
+
+| | prediction | outcome |
+|---|---|---|
+| **W1-P1** | FILTERED strictly between wiki and subtitles | **HELD** — 5.43% … **10.33%** … 23.72% |
+| **W1-P2** | RAW ≥ 3 points below FILTERED | **FALSIFIED** — delta **+0.02** |
+| **W1-P3** | OOV ≥ 2× subtitles on RAW, > subtitles on FILTERED | **HELD** — 1.15% → 4.12% / 4.04% |
+| **W1-P4** | detector flag rate higher on typed | **HELD** — 0.19% → **0.33%** |
+
+**KILL CONDITION: OUTSIDE.** FILTERED's 10.33% is nowhere near the subtitle interval
+[23.08%, 24.41%]. Typed text is a distinct register from transcribed text, and W1 buys
+something.
+
+---
+
+## What was learned
+
+**1. The headline register claim in this repository is overstated by a factor of about 2.3, and
+this run is the correction.** `docs/PREDICTION_MEASUREMENTS.md` says of 23.72%: *"On the register
+a phone keyboard is actually used in, the same code scores 23.72%."* Transcribed dialogue is
+**not** the register a phone keyboard is used in. On the closest typed register that exists here,
+the same code scores **10.33% [9.75%, 10.92%]**. Still better than Wikipedia's 5.43% — the
+direction of `O1-REGISTER` survives — but less than half of what has been quoted.
+
+**2. W1-P2 was falsified, and the falsification is the more useful result.** Leaving punctuation,
+Latin and digits in the *context* costs **+0.02 points** on Hebrew targets: nothing. A
+punctuation token in the context is simply an unknown context word, and the engine already falls
+back to frequency for those, exactly as it does for a rare Hebrew word.
+
+**So the cost of the alphabet is not in prediction quality. It is in coverage.** Counting every
+token a person actually types, out-of-lexicon rises from **4.04% to 7.61%** — nearly double — and
+top-3 falls to 9.84%. **7.61% of what someone types is a token this engine has nothing to say
+about**, and both existing corpora score that at 0% by construction.
+
+**3. Typed text is harder in exactly the way that hurts the layer already below its bar.** The
+real-word error detector's flag rate on **correct** text is 0.19% on transcribed and **0.33% on
+typed** — 1.7×. Its precision ceiling of 39.7% was measured against a rule calling anything under
+40% withdrawable, and `P7` in the definition of done already reads NOT MET. This run moves the
+false-alarm side of that ratio in the wrong direction on the register users actually type in.
+
+**4. The wiki/conversational comparison mixes cell constructions.** 5.35% is a half-slice, 23.72%
+is a whole slice. It does not change any conclusion and it should not have taken a positive
+control on a different experiment to surface it.
+
+---
+
+## What this still does not say
+
+`M10-REGISTER` stays **NOT MEASURED**. Facebook comments are typed, which is the axis this
+experiment was about, and they are still not phone messaging. 10.33% is a better estimate of what
+a user gets than 23.72% was; it is not a measurement of what a user gets.
+
+The token boundaries are the source's. Every number above inherits them, as registered before the
+run.
