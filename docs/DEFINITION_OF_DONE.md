@@ -21,7 +21,7 @@ made from memory.
 |---|---|---|---|---|---|---|
 | C — a change may be committed | 11 | 9 | 0 | 0 | 2 | **MET** |
 | R — a build may be handed to a human | 7 | 1 | 0 | 6 | 0 | **NOT MET** |
-| P — the app may be published | 9 | 2 | 1 | 6 | 0 | **NOT MET** |
+| P — the app may be published | 9 | 3 | 0 | 6 | 0 | **NOT MET** |
 
 <!-- DOD-COUNTS-END -->
 
@@ -172,7 +172,7 @@ repository.
 | P4 | Either a packet capture confirms no traffic, or every published no-network claim says in those words that no capture was ever run | NOT RUN | `M8-NETCAPTURE`, `docs/PRIVACY_POLICY.md` |
 | P5 | Listing, Data Safety, content rating, screenshots and a hosted privacy-policy URL are submitted | NOT RUN | `M8-STORE`, `M8-ASSETS`, `docs/STORE_LISTING.md`, `docs/DATA_SAFETY.md` |
 | P6 | The targetSdk extension is filed before 2026-08-31 | NOT RUN | `docs/OPERATOR_NOTICES.md` |
-| P7 | **No shipped feature sits below its own pre-registered stopping rule without a dated operator override** | NOT MET | `docs/LABELING_LOG.md` |
+| P7 | **No shipped feature sits below its own pre-registered stopping rule without a dated operator override** | MET | `GATE-WITHDRAWN-1`, `docs/LABELING_LOG.md` |
 | P8 | No number in user-facing text is wider than the measurement behind it — the listing quotes the human-labelled precision bounds, not the injected-error recall | MET | `docs/STORE_LISTING.md`, `app/src/main/res/values/strings.xml`, `docs/LABELING_LOG.md` |
 | P9 | The attribution the lexicon licences require is present in the shipped app | MET | `docs/LICENSES.md` |
 
@@ -191,18 +191,45 @@ read as a quality claim and is not one.
 Console is theirs, and this criterion cannot reach it. Writing the honest version here first is
 the only thing that can be done about that from this side, and it is what MET means on this row.
 
-### P7 is not a formality, and it is the one criterion currently failing
+### P7 was the one criterion failing. It was decided on 2026-08-25, and the decision was to withdraw.
 
-The adjacent real-word error layer ships. Its precision, measured on 320 real firings labelled
-blind by a Hebrew speaker, is bounded at **[12.5%, 39.7%]**. The rule registered *before* those
-labels existed calls a detector below **40%** withdrawable, and **no ceiling reaches it** —
-margin, letter-pair and frequency restrictions were each tried and none rescues it. The
-distance-2 layer was withdrawn on exactly this evidence; the adjacent layer was not.
+**The adjacent real-word error layer no longer ships.**
 
-So P7 reads NOT MET rather than WAIVED, because **a waiver is a decision someone made** and
-nobody has made this one. It becomes WAIVED the day the operator writes down that it ships
-anyway, with the date and the reason — that is a legitimate outcome and this file is built to
-record it. What it may not become is quiet.
+Its precision, measured on 320 real firings labelled blind by a Hebrew speaker, is bounded at
+**[12.5%, 39.7%]**. The rule registered *before* those labels existed calls a detector below
+**40%** withdrawable, and **the ceiling does not reach the floor of the rule** — margin,
+letter-pair and frequency restrictions were each swept and none rescues it. The evidence
+advantage is flat across bands (16.0 / 12.5 / 16.7), so the detector's own confidence signal
+does not separate its right answers from its wrong ones.
+
+Three things decided it, and none of them is that the feature "failed":
+
+1. **The rule was registered before the data.** Renegotiating it after the labels arrived is
+   the exact thing pre-registration exists to prevent, and it would have been the first time in
+   this repository that a pre-registered rule was renegotiated by the party it constrained.
+2. **4.83 false alarms per true positive is not a neutral cost.** A strip that is wrong five
+   times in six teaches a user to stop reading the strip — including when it is right about
+   something else. The harm is not contained to the layer that causes it.
+3. **`W1` measured it getting worse where it counts.** Its false-alarm rate on *correct* text is
+   0.19% on transcribed dialogue and **0.33% on typed Hebrew** — the register a person actually
+   types in. See [`docs/TYPED_REGISTER.md`](TYPED_REGISTER.md).
+
+And one consistency argument that should have forced this earlier: **the distance-2 layer was
+withdrawn on exactly this kind of evidence and the adjacent layer was not.** That inconsistency
+is what this closes.
+
+**What withdrawal means here, precisely.** `RealWordErrorDetector` is no longer constructed in
+the shipped path; `PredictiveEngine.realWordErrors` stays at its default of `null` and the engine
+returns early. The class, its tests and every measurement **stay** — `:core` still constructs it,
+every sweep still reproduces, and nothing about the finding becomes unverifiable. What changed is
+that it no longer runs for a user.
+
+**A withdrawal that lives as an absence is the easiest thing in a codebase to undo by accident**,
+so `GATE-WITHDRAWN-1` asserts the silence, with its control demonstrated red by wiring the
+detector back in. P7 reads MET on that gate, not on this paragraph.
+
+Waiving was available and was not taken. It remains available: re-enabling this layer is a
+legitimate decision, and it belongs here with a date and an owner rather than in a diff.
 
 ---
 

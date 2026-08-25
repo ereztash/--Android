@@ -72,10 +72,10 @@ network permission, and three gates keep it that way.
 > on. If you have come from a keyboard that rewrites words as you type, this will feel quiet at
 > first — that is the design, not a fault.
 >
-> • **The suggestions are allowed to be wrong.** The check that catches a correctly spelled word
-> in the wrong place was judged blind by a Hebrew speaker on 320 real cases: it was right in **at
-> least 12.5% and at most 39.7%** of them. It is a second look, not a verdict. Ignoring it costs
-> you nothing, because nothing changes unless you tap.
+> • **It does not try to catch a correctly spelled word in the wrong place.** That check was
+> built, measured against a Hebrew speaker's blind judgement on 320 real cases, and **removed**:
+> it was right in at most 39.7% of them and interrupted roughly five times for every time it
+> helped. A suggestion that wrong teaches you to stop reading suggestions, so it is not here.
 >
 > • **It knows written Hebrew better than it knows slang.** The dictionary is built from openly
 > licensed word lists and Hebrew text. It is strongest on ordinary written Hebrew and weakest on

@@ -90,6 +90,7 @@ def _gates(strict: bool) -> list[dict]:
     learn = os.path.join(ROOT, "scripts", "check_learning.py")
     docs = os.path.join(ROOT, "scripts", "check_docs.py")
     dod = os.path.join(ROOT, "scripts", "check_dod.py")
+    withdrawn = os.path.join(ROOT, "scripts", "check_withdrawn.py")
     apk = os.path.join(ROOT, "scripts", "check_apk.py")
     store = os.path.join(ROOT, "scripts", "build_store_assets.py")
     debug_apk = os.path.join(ROOT, "app", "build", "outputs", "apk", "debug", "app-debug.apk")
@@ -281,6 +282,21 @@ def _gates(strict: bool) -> list[dict]:
                             "-- the exact drift that made the same sentence stale twice",
         },
         {
+            # A FOURTH control on the same script. check_docs.py now carries three detectors,
+            # and the TOTAL gate count is the one that had no reader at all: it went stale in
+            # two documents the moment GATE-WITHDRAWN-1 was added, and --fix-denominators
+            # rewrote none of them because no rule covered the number. The gate against stale
+            # counts had a stale count just outside its own reach.
+            "id": "GATE-DOC-4",
+            "what": "the total number of gates published in QA_MATRIX.md and README.md is the "
+                    "number run_gates.py actually defines",
+            "real": [PY, docs, "--root", ROOT, "--json"] + s,
+            "control": [PY, docs, "--root", ROOT, "--inject-defect", "gatecount", "--json"],
+            "control_desc": "both documents publishing one gate more than the runner defines "
+                            "-- what every hand-copied total looks like the day after a gate "
+                            "is added",
+        },
+        {
             # A third control on the same detector, because "stale" only exercises the
             # cross-document comparison. This one exercises the matrix against itself, which
             # went unchecked until a bullet in QA_MATRIX.md was found contradicting a table
@@ -304,6 +320,20 @@ def _gates(strict: bool) -> list[dict]:
             "control": [PY, docs, "--root", ROOT, "--inject-defect", "denominator", "--json"],
             "control_desc": "one published denominator off by one -- what a hand-copied "
                             "count looks like the day after a source file is added",
+        },
+        {
+            # Two layers were withdrawn against a pre-registered rule, and both withdrawals
+            # live as an ABSENCE -- a constructor no longer called, a default left at null.
+            # An absence is the easiest thing in a codebase to undo by accident, and nothing
+            # asserted the silence until this gate existed.
+            "id": "GATE-WITHDRAWN-1",
+            "what": "no layer withdrawn against a pre-registered stopping rule is constructed "
+                    "in the shipped path",
+            "real": [PY, withdrawn, "--json"] + s,
+            "control": [PY, withdrawn, "--inject-defect", "reenable", "--json"],
+            "control_desc": "the real-word detector wired back into the shipped controller -- "
+                            "what a merge resolution or a 'restored' missing wire-up looks "
+                            "like the day nobody remembers why the slot was empty",
         },
         {
             # The definition of done is the third document whose central claims must be kept

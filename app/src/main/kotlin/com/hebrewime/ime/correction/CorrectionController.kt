@@ -2,7 +2,6 @@ package com.hebrewime.ime.correction
 
 import android.content.Context
 import androidx.tracing.Trace
-import com.hebrewime.core.confusion.RealWordErrorDetector
 import com.hebrewime.core.correction.CorrectionEngine
 import com.hebrewime.core.correction.HebrewFrequency
 import com.hebrewime.core.correction.LexiconTrie
@@ -442,18 +441,35 @@ class CorrectionController(
         // Defaults, whose bigramWeight was chosen from the sweep in
         // docs/PREDICTION_MEASUREMENTS.md and not before it.
         config = PredictiveEngine.Config(),
-        // Real-word errors: `אם` where `עם` was meant. Confusion sets are generated from the
-        // lexicon on demand, so the adjacent path still costs no asset bytes. Both thresholds
-        // come from a dev slice that shares no sentence with the slice they were measured on.
+        // Real-word errors: `אם` where `עם` was meant.
         //
-        // The frequency table is what lets it speak at BLIND positions -- those where the
-        // adjacent window has evidence for neither candidate. The distance-2 table that used
-        // to sit in the third slot is WITHDRAWN: measured against human judgement it earned
-        // 0.11 recall points for 387,300 bytes, and spoke twice in 1.8 million words of clean
-        // text. BigramModel.EMPTY is its default and Config.skipMargin is 0, which is off.
-        realWordErrors = RealWordErrorDetector(
-            a.lexicon, a.bigrams, frequency = a.frequency,
-        ),
+        // ### WITHDRAWN 2026-08-25. This slot is deliberately empty.
+        //
+        // The rule was registered BEFORE the labels existed: a detector whose precision is
+        // under 40% is withdrawable. Measured on 320 real firings judged blind by a Hebrew
+        // speaker, precision is bounded at [12.5%, 39.7%] -- **the ceiling does not reach the
+        // floor of the rule**, and no configuration rescues it. Margin, letter-pair and
+        // frequency restrictions were each swept and each failed; the evidence advantage is
+        // flat across bands (16.0 / 12.5 / 16.7), so the detector's own confidence signal does
+        // not separate its right answers from its wrong ones.
+        //
+        // 4.83 false alarms per true positive among decided items means the modal response to
+        // a flag is dismissal. That is not neutral: a strip wrong five times in six teaches
+        // the user to stop reading the strip, including when it is right about something else.
+        //
+        // W1 then measured it getting WORSE in the register people actually type in -- its
+        // false-alarm rate on CORRECT text is 0.19% on transcribed dialogue and 0.33% on typed
+        // Hebrew. See docs/TYPED_REGISTER.md.
+        //
+        // The distance-2 layer was withdrawn on exactly this kind of evidence and the adjacent
+        // layer was not. That inconsistency is what is being closed here.
+        //
+        // The class, its tests and every measurement stay: `:core` still constructs it, the
+        // sweeps still reproduce, and nothing about the finding becomes unverifiable. What
+        // changes is that it no longer runs for a user. `GATE-WITHDRAWN-1` keeps it that way.
+        //
+        // realWordErrors is left at its default of null. PredictiveEngine returns early when it
+        // is null, so this is off rather than configured-quiet.
         personal = personal,
         // Empty unless the user opted in, and an empty model is arithmetically identical to no
         // model at all -- LearningNeutralityTest asserts that over 135,960 contexts.

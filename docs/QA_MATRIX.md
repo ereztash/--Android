@@ -26,8 +26,8 @@ release-ready — and it is not described as release-ready anywhere in this repo
 | minSdk / targetSdk | **31** / 36 — verified in all four built APKs |
 | **Device / emulator** | **NONE. No Android device or emulator exists in this environment, and none of the results below were obtained on one.** |
 
-Scale: 44 production Kotlin files, 55 test files, **288 JVM tests**, 10 gate scripts,
-**29 gates** — the number `scripts/run_gates.py` defines, counted from it rather than
+Scale: 44 production Kotlin files, 55 test files, **288 JVM tests**, 11 gate scripts,
+**31 gates** — the number `scripts/run_gates.py` defines, counted from it rather than
 remembered; this line read **18** while the runner defined 25 — 5 positive-control fixtures.
 **Lint: 0 issues.**
 
@@ -113,6 +113,8 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | GATE-TRACE-1 | The benchmark measures sections the app actually emits | 2 section names | Requested sections renamed |
 | GATE-TRACE-2 | No traced region contains a call that suspends. `Trace` sections are per-thread, and a coroutine resuming on another worker closes a section it never opened | 2 traced regions, 6 suspending names | `readUserModel()` inside a `beginSection` region |
 | GATE-DENOM-1 | A check that examined nothing never reports PASS | meta-gate | The network gate over an empty directory |
+| GATE-WITHDRAWN-1 | No layer withdrawn against a pre-registered stopping rule is constructed in the shipped path | 16 shipped Kotlin files | The real-word detector wired back into the shipped controller |
+| GATE-DOC-4 | The total gate count published in `QA_MATRIX.md` and `README.md` is the number `run_gates.py` defines | 2 published totals | Both documents publishing one gate more than the runner defines |
 | GATE-META-1 | A neutered control is caught as `NOT-A-GATE` | 3 gates | A control file emptied by hand |
 
 ## PASSED — tests
@@ -206,6 +208,9 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | H1-COVERAGE | Share of conversational tokens already in the lexicon as surface forms | **99.16%** conversational · 95.01% wiki | The lexicon is not the bottleneck; correction is not failing for lack of words |
 | O1-OFFER | Withholding the next-word offer on weak evidence — best configuration reaching 20% precision among offered | dev **22.53%** / test **22.54%** precision, at **13.19%** retention against a 70% bar | 20,000 positions per slice, committed eval slice split even/odd. **RULE NOT MET, nothing adopted.** `s1` is flat; `margin` is the only signal that moves |
 | O1-REGISTER | The same shipped engine on held-out transcribed dialogue instead of encyclopedic prose | prefix-1 completion top-3 **5.35% → 23.72%** (×4.43); next-word top-3 **9.09% → 12.09%** | 20,000 positions each. Held out by construction from the subtitle half of the training mix. **Not phone typing** — `M10-REGISTER` stays NOT MEASURED |
+| P7-DECIDED | The one definition-of-done criterion that read NOT MET | **DECIDED 2026-08-25: WITHDRAW.** The adjacent real-word error layer no longer ships. `RealWordErrorDetector` is not constructed in the shipped path; `PredictiveEngine.realWordErrors` stays `null` and the engine returns early | Waiving was available and was not taken. The rule was registered before the labels; renegotiating it after the data would have been the first time here that a pre-registered rule was renegotiated by the party it constrains |
+| P7-EVIDENCE | What decided it | Precision **[12.5%, 39.7%]** against a 40% rule — the ceiling does not reach the floor. **4.83 false alarms per true positive.** Evidence advantage flat across bands (16.0 / 12.5 / 16.7). `W1`: false-alarm rate on correct text **0.19% transcribed → 0.33% typed** | And a consistency argument: the distance-2 layer was withdrawn on exactly this kind of evidence and the adjacent layer was not |
+| P7-KEPT | What withdrawal did **not** remove | The class, its tests and every measurement stay. `:core` still constructs it and every sweep still reproduces | Nothing about the finding becomes unverifiable. What changed is that it no longer runs for a user |
 | W1-TYPED | Prediction on the first evaluation slice a person typed | **prefix-1 completion top-3 10.33%, 95% CI [9.75%, 10.92%]**, against 23.72% on transcribed dialogue and 5.43% on encyclopedic prose, all re-measured in the same run | 10,700 Ynet comments (MIT), ~20,000 positions per row, bootstrap over **sentences**. **Corrects the repository's headline register claim by ×2.3** — see `docs/PREDICTION_MEASUREMENTS.md`. `M10-REGISTER` unchanged |
 | W1-ALPHABET-COST | What leaving the deleted characters in actually costs | **Not prediction quality — coverage.** Punctuation and Latin in the *context* cost **+0.02 points** on Hebrew targets (`W1-P2` FALSIFIED). Counting every token a person types, OOV rises **4.04% → 7.61%** and top-3 falls to 9.84% | **7.61% of typed tokens are words this engine has nothing to say about.** Both existing corpora score that at 0% by construction |
 | W1-FALSEALARM | The real-word detector's flag rate on **correct** text, by register | **0.19% transcribed → 0.33% typed (×1.7)** | Moves the false-alarm side of a layer whose precision ceiling is 39.7% against a 40% withdrawal rule. `P7` in the definition of done already reads NOT MET |
