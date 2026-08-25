@@ -417,3 +417,75 @@ decision is the operator's.
 - **Nothing about a larger budget.** Every configuration here totals 16,384 because `K1` shape B
   does. At a budget where BPE keeps its merges *and* the lemmas fit, this trade does not arise —
   and that budget has not been measured.
+
+---
+
+# G3 — is the compression penalty scarcity, or is it layer order?
+
+`G2` failed on one clause: units per token rose from **1.809** to 2.060–2.168 at every slot
+count. The obvious reading is scarcity — admitting lemmas displaced BPE merges — and the obvious
+next move is a larger budget.
+
+**I do not think that is the mechanism, and this is written before measuring it.**
+
+The segmenter tries the noun layer **before** BPE. So a noun form present in the table becomes
+`[N:lemma, G:features]` — two units — **even when BPE holds that whole word as one unit, and at
+any budget whatever.** If that is right, the penalty is caused by *layer order*, not by slot
+scarcity, and a larger budget cannot cure it.
+
+So this measures two things at once, and the second is the real question.
+
+## What "the larger budget" actually costs
+
+Everything at once — `G1`'s 3,679 fixed units, BPE at its full 12,705 merges, all 17,236
+noun/adjective lemmas and their 137 feature bundles — is **33,757 units**.
+
+| | bytes at `emb = 32` | fits 576,837 free today | fits 2,426,473 if the bigram table goes |
+|---|---|---|---|
+| 33,757 units | **1,100,832** | **no** | **yes**, with ~1.3 MB spare |
+
+So "a larger budget" is not a new ask. It is the budget `K1` already priced for a model that
+**replaces** the bigram table. It is affordable; the question is whether it helps.
+
+## The two dimensions, fixed now
+
+**Budgets:** 16,384 (the `G1`/`G2` line), 24,576, 32,768. At each, admit as many noun/adjective
+lexemes as fit, BPE taking the remainder.
+
+**Modes:**
+- **`layered`** — the noun layer before BPE, exactly as `G2` ran it.
+- **`shortest`** — segment both ways and **keep whichever unit sequence is shorter**. This
+  cannot lose on compression by construction, so it isolates the ordering effect from the
+  scarcity effect.
+
+## The prediction, written now
+
+1. **`layered` keeps the penalty at every budget.** Units per token stays **≥ 2.0** even at
+   32,768, because the cause is ordering and not scarcity.
+2. **`shortest` never loses on compression** — units per token **≤ 1.809** at every budget. This
+   is true by construction and is recorded as a check on the harness, not as a finding.
+3. **`shortest` gives back most of the sharing.** A frequent noun takes the BPE path and loses
+   its lemma unit, so noun/adjective `J / ideal` falls from `layered`'s 0.99 to somewhere in
+   **0.45–0.75**. This is the number I am least sure of.
+4. The byte arithmetic above holds: 33,757 units is affordable only against the
+   table-replacing budget.
+5. **No configuration satisfies every clause.** The layer is a genuine trade at every budget and
+   in both modes — sharing against compression — rather than an artifact of a tight budget.
+
+Point 5 is the headline and the one that can be falsified. If some cell passes all five clauses,
+`G2`'s verdict was a scarcity artifact after all and I was wrong about the mechanism.
+
+## The stopping rule
+
+Unchanged from `G2`, with the byte clause made explicit:
+
+| clause | bar |
+|---|---|
+| coverage | exactly **100%** |
+| compression | units per token **≤ G1's, measured in the same run** |
+| the layer works | noun/adjective **≥ 0.80 of its design ideal** |
+| the purpose is not traded away | ktiv **≥ G1's, measured in the same run** |
+| **affordable** | vocabulary × 32 bytes **≤ 2,426,473**, the budget `K1` priced for replacing the bigram table |
+
+Adopting requires all five in one cell. Anything else is reported as a trade and left to the
+operator, exactly as `G2` was.
