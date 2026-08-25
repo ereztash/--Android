@@ -99,7 +99,8 @@ Added 2026-08-25 for `G2`, the noun and adjective layer. See `docs/SEGMENTATION.
 |---|---|
 | source | `wikidata-20260819-lexemes.json.gz`, a **dated** dump so it is byte-stable |
 | url | `https://dumps.wikimedia.org/wikidatawiki/entities/20260819/wikidata-20260819-lexemes.json.gz` |
-| bytes | 604,534,688 |
+| bytes | 604,534,688 — fetched 2026-08-25, byte count exactly as pinned |
+| sha256 | `7f3ef4fd45296f63e2facfbfbb6af5c5395e75d073100c6eb5fa9829f783df1c` |
 | licence | **CC0 1.0** — Wikidata's copyright page states verbatim that *"All structured data from the main, Property, Lexeme, and EntitySchema namespaces is available under the Creative Commons CC0 License."* |
 | attribution required | **None.** CC0 is a public-domain dedication. |
 | attributed anyway | Wikidata contributors, in this file and in the settings screen's attribution list |

@@ -270,6 +270,13 @@ Fetched as a **dated** dump, not `latest`, so it is byte-stable and pinnable the
 `GATE-LEX-2` pins the other two:
 `wikidata-20260819-lexemes.json.gz`, **604,534,688 bytes**, Last-Modified 2026-08-19.
 
+Fetched 2026-08-25. The byte count came back **exactly** as the pre-registration recorded it,
+and the digest is
+
+```
+7f3ef4fd45296f63e2facfbfbb6af5c5395e75d073100c6eb5fa9829f783df1c  wikidata-20260819-lexemes.json.gz
+```
+
 ## This is not "add the table". The budget will not have it.
 
 | | units |
