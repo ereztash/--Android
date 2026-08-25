@@ -249,3 +249,8 @@ Ordered by cost, not by ambition. Neither is a commitment; both are written so t
    produced it. Path E's shape, and the only path on this page with precedent.
 
 Everything else on this page is a reason to stop, and is recorded as one.
+
+**Both were run. See [`docs/BIDI.md`](BIDI.md) for the first and
+[`docs/PROGRAM.md`](PROGRAM.md) for what the two of them together turn into — including `A1`,
+a measurement made for that plan which reordered it, and a correction to the claim on this page
+that the bidi suite would demonstrate a defect Google and Microsoft ship. It did not.

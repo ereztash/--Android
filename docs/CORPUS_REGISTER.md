@@ -205,6 +205,27 @@ forbidden.
 
 ---
 
+# A1 — the one typed corpus that has now been fetched
+
+`docs/PROGRAM.md` A1 needed a register that was **typed by a person** rather than transcribed
+from speech. This is the only one on the list below that has been fetched, hashed and used.
+
+| field | value |
+|---|---|
+| corpus | Amram et al. 2018, user comments on Ynet's Facebook page |
+| source | `github.com/omilab/Neural-Sentiment-Analyzer-for-Modern-Hebrew`, `data/token_*.tsv` |
+| licence | **MIT** |
+| size | 12,804 comments; 10,746 pass this repo's own >= 4-Hebrew-token filter |
+| `token_train.tsv` sha256 | `b394fc765f10fde63001c7b92f2bc4bb43278884ee3be07c855724b0634e6aae` |
+| `token_test.tsv` sha256 | `0c19097173125fc42fe52b2b4415df19ee818a6d6547ac4bc40da8725924cbc7` |
+| used for | `A1` only — the alphabet comparison. **Nothing is trained on it and no accuracy number comes from it** |
+
+**What it is not.** Facebook comments are not phone messaging. The text is tokenized, with
+punctuation spaced out; that does not move a character-presence rate, which is all `A1` measures,
+and it *would* move a tokenization or bigram measurement. `M10-REGISTER` stays NOT MEASURED.
+
+---
+
 # What was never reached for, and is openly licensed
 
 The sentence at the top of this document — *written fifteen times, acted on zero times* — was
