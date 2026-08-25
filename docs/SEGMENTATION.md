@@ -489,3 +489,78 @@ Unchanged from `G2`, with the byte clause made explicit:
 
 Adopting requires all five in one cell. Anything else is reported as a trade and left to the
 operator, exactly as `G2` was.
+
+## G3 RESULT — neither ordering nor scarcity. The layers are not independent.
+
+`G1` re-measured in this run: **1.809** units per token, ktiv **0.3171**.
+
+| budget | mode | vocab | bytes | uncov | units/token | vs G1 | noun J/ideal | ktiv | vs G1 |
+|---|---|---|---|---|---|---|---|---|---|
+| 16,384 | layered | 20,554 | 657,728 | 0 | 2.725 | +0.916 | 1.00 | 0.3882 | +0.0712 |
+| 16,384 | shortest | 20,554 | 657,728 | 0 | 2.724 | +0.915 | 1.01 | 0.3932 | +0.0762 |
+| 24,576 | layered | 24,576 | 786,432 | 0 | 2.103 | +0.294 | 0.99 | 0.3196 | +0.0025 |
+| 24,576 | shortest | 24,576 | 786,432 | 0 | 2.016 | +0.207 | 0.99 | 0.3235 | +0.0065 |
+| 32,768 | layered | 32,768 | 1,048,576 | 0 | 2.078 | +0.270 | 0.99 | 0.3156 | −0.0014 |
+| 32,768 | shortest | 32,768 | 1,048,576 | 0 | **1.944** | **+0.135** | 0.99 | 0.3115 | −0.0056 |
+
+**NO cell meets every clause. NOTHING IS ADOPTED.** Compression fails everywhere; every
+configuration is affordable and every one covers 100%.
+
+### Where the prediction was wrong
+
+| # | recorded | measured | |
+|---|---|---|---|
+| 1 | `layered` keeps the penalty at every budget, ≥ 2.0 | 2.725 / 2.103 / **2.078** | ✓ |
+| 2 | `shortest` never loses on compression — **by construction** | 2.724 / 2.016 / **1.944**, all above 1.809 | ✗ **and the word "construction" was the error** |
+| 3 | `shortest` gives back the sharing, falling to 0.45–0.75 | **0.99–1.01**. It gives back none of it | ✗ |
+| 4 | the byte arithmetic holds | it does; all three are affordable | ✓ |
+| 5 | no configuration satisfies every clause | none does | ✓ |
+
+### Point 2 is the instructive failure, and the reasoning error is nameable
+
+I wrote that `shortest` *cannot lose on compression by construction*, because it takes
+`min(analysis, subwords)`. That is true only if **the subword alternative is held fixed**, and it
+is not. Admitting the noun layer removes every noun form from BPE's training residual, so BPE
+learns a *different* set of merges — tuned to the words that remain. A noun that `G1`'s BPE held
+as one whole-word unit may now cost three, and `min(2, 3) = 2` is still worse than the 1 it used
+to be.
+
+**The guarantee held per-stem against the wrong baseline.** I compared against a BPE that no
+longer exists in that configuration.
+
+### The mechanism, which is deeper than either hypothesis I registered
+
+`G2` said scarcity. `G3` predicted ordering. It is **neither**: the two layers are **not
+independent**. The analysis layer degrades the subword layer by **starving it of the data it
+would have learned from** — 214,648 noun and adjective surface forms leave BPE's training set the
+moment the table is admitted, and BPE's merges get worse for everything that remains near them.
+
+That is why `shortest`, which should have been a free win, buys only 0.134 units per token back
+out of the 0.269 that `layered` costs at 32,768.
+
+### Two harness defects found by reading the output, not by the harness
+
+- **The row labelled "budget 16,384" has a vocabulary of 20,554.** The fixed units alone —
+  16,738 lemmas plus 137 features plus 3,679 — exceed that budget, so BPE went to zero merges and
+  the total overshot. `G2`'s script asserted `vocab ≤ budget`; this one replaced that clause with
+  affordability and lost the check. **That row is not a 16,384 configuration and its label is
+  wrong.** Its numbers are real and belong to a 20,554-unit vocabulary with no subword layer at
+  all.
+- **`noun J/ideal` reads 1.01**, which is impossible for a ratio to its own ceiling. The
+  numerator is averaged over all 5,000 pairs and the denominator only over the pairs with ground
+  truth on both sides, so they have different denominators. It is a reporting artifact, not a
+  result, and the fix is to compute both over the same subset.
+
+Neither changes the verdict — compression fails by 0.135 at the best cell, far outside either
+defect — but both are recorded rather than tidied away.
+
+### What stands after G1, G2 and G3
+
+**A given morphological analysis of Hebrew nouns is correct, free of licence obligations, hits
+its own ceiling, and does not pay for itself at any budget this project can afford.** Three
+experiments, three mechanisms proposed, and the one that survives is the one none of them
+predicted: the analysis and the subword layers compete for the same training data, not just for
+the same slots.
+
+The lever `H1` pointed at — half of conversational Hebrew having a real-word neighbour — is
+**not** reached by giving the model better morphology. That is now measured three ways.
