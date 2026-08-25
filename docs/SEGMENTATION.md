@@ -123,3 +123,96 @@ the same run and never against a remembered constant — the flaw `S1` exposed h
 - **Whether the discarded columns should change the shipped lexicon.** This reads source A for a
   segmentation; it does not propose rebuilding the lexicon, which is `GATE-LEX-1`'s subject and
   a separate decision.
+
+---
+
+## G1 RESULT — all four clauses pass, and my own sanity check says read them carefully
+
+One run, `python3 scripts/build_segmentation.py`, every bar fixed beforehand.
+
+| | |
+|---|---|
+| residual types the BPE layer must cover | **88,581** |
+| given units | 79 prefix + 3,516 lemma + 57 feature + 27 char = **3,679** |
+| learned merges | 12,705 |
+| **total vocabulary** | **16,384** |
+
+| clause | bar | measured | |
+|---|---|---|---|
+| coverage | exactly 100% | **0 uncovered of 481,861** | **pass** |
+| budget | ≤ 16,384 units | 16,384 | **pass** |
+| compression | ≤ 3.0 units per token | **1.809** | **pass** |
+| the language | ktiv sharing ≥ 3× control, same run | 0.3186 / 0.0093 = **34.20×** | **pass** |
+
+## But the wiring check fired, and it was pointing at me
+
+The pre-registration says of the verb family: *"≥ 0.90. Near-tautological; recorded so that a
+wiring fault is visible rather than flattering."* It came back at **0.2459**, and the honest
+first move is to treat that as the check doing its job rather than as a curiosity.
+
+It was. The fault is in the prediction, and it is arithmetic:
+
+> Two inflections of one lemma both segment to **two units**, `[L:lemma, F:features]`. They
+> share `L` and differ in `F`. Jaccard over unit **sets** is therefore
+> `|{L}| / |{L, Fa, Fb}|` = **1/3 = 0.3333**, and no correct implementation can exceed it.
+
+**I predicted 0.90 against a structural ceiling of 0.33.** The same error, in the same
+direction, in the prefix family: a stem that segments to one unit gives
+`|{S}| / |{P, S}|` = **0.5000**, and the measurement is **0.4962** — the prefix layer is
+sitting essentially *on* its ceiling while my prediction said it would score twice it.
+
+So the absolute sharing figures cannot be read as "how much of the word is shared". Read against
+their ceilings:
+
+| family | ceiling | measured | share of ceiling |
+|---|---|---|---|
+| verb | 0.3333, exact | 0.2459 | **73.8%** |
+| prefix | 0.5000 at a one-unit stem | 0.4962 | **~99%** |
+| ktiv | none — this is what BPE has to earn | 0.3186 | — |
+| control | none | 0.0093 | — |
+
+**The clause that decided is unaffected**, because it was written as a ratio to the control
+measured in the same run rather than as an absolute. That was luck as much as judgement, and it
+is worth saying which.
+
+**A named gap in the harness:** `build_segmentation.py` does not compute these ceilings, so it
+reported four numbers whose scale it could not tell the reader. The ceilings above are exact
+arithmetic rather than a re-run, and the script is left as the thing that produced the published
+figures. Reporting sharing against its ceiling is work this harness owes.
+
+## Where the prediction was wrong
+
+Six were recorded. **Four are wrong.**
+
+| # | predicted | measured | |
+|---|---|---|---|
+| 1 | vocabulary at or under 16,384, BPE ~12,600 | 16,384 with 12,705 merges | ✓ |
+| 2 | 2.0–3.0 units per token | **1.809** — below the range | ✗ better than predicted |
+| 3 | verb sharing ≥ 0.90 | 0.2459, against a ceiling of 0.3333 | ✗ **impossible as written** |
+| 4 | prefix sharing ≥ 0.90 | 0.4962, against a ceiling of 0.5000 | ✗ **impossible as written** |
+| 5 | ktiv sharing 0.35–0.60 | **0.3186** — just under | ✗ |
+| 6 | control below 0.15 | 0.0093 | ✓ |
+
+## Three findings the clauses do not carry
+
+**1. The given layers absorb far more than I assumed.** The BPE layer had to cover **88,581**
+residual types, not the ~250,000 I sized the run for. The closed prefix grammar and the licensed
+verb table between them account for most of the lexicon's bulk before a single merge is learned.
+That is the enumeration finding from `H1`, now quantified from the other side.
+
+**2. Compression is better than predicted: 1.809 units per token.** A recurrent model over this
+segmentation sees sequences under two units long on average, which is the quantity `K1` said
+latency is set by.
+
+**3. Ambiguity is being discarded, and this is the first place it is written down.** Source A
+carries **86** distinct feature bundles; the segmenter reaches **57**. The map from a surface
+form to an analysis is **many-to-one** — Hebrew verb forms are systematically ambiguous — and
+`load_verbs()` keeps the **first** analysis it sees and drops the rest. For a keyboard that may
+be the right trade or the wrong one; what it is not is a decision anybody made. It is
+`build_lexicon.py`'s "read one column" one level down.
+
+## What this still does not license
+
+No model exists. No accuracy claim exists. The 71.25% of the lexicon that is not verbs still
+receives subwords rather than morphology, the corpora are still the Hebrew-letters-only slices
+`H1` found blind to script mixing, and nothing in the shipped app reads any of this.

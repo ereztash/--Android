@@ -1,0 +1,28 @@
+{
+  "vocab": 16384,
+  "merges": 12705,
+  "min_stem": 2,
+  "prefixes": 79,
+  "lemmas": 3516,
+  "features": 57,
+  "chars": 27,
+  "mean_units_per_token": 1.8087747934906266,
+  "sharing": {
+    "verb": {
+      "jaccard": 0.2459090476190483,
+      "n": 5000
+    },
+    "prefix": {
+      "jaccard": 0.4962090476190471,
+      "n": 5000
+    },
+    "ktiv": {
+      "jaccard": 0.31861619047618833,
+      "n": 5000
+    },
+    "control": {
+      "jaccard": 0.009317619047619062,
+      "n": 5000
+    }
+  }
+}
