@@ -26,7 +26,7 @@ release-ready — and it is not described as release-ready anywhere in this repo
 | minSdk / targetSdk | **31** / 36 — verified in all four built APKs |
 | **Device / emulator** | **NONE. No Android device or emulator exists in this environment, and none of the results below were obtained on one.** |
 
-Scale: 44 production Kotlin files, 54 test files, **287 JVM tests**, 10 gate scripts,
+Scale: 44 production Kotlin files, 55 test files, **288 JVM tests**, 10 gate scripts,
 **29 gates** — the number `scripts/run_gates.py` defines, counted from it rather than
 remembered; this line read **18** while the runner defined 25 — 5 positive-control fixtures.
 **Lint: 0 issues.**
