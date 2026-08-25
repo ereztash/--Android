@@ -1044,3 +1044,89 @@ withdrawn without re-measuring the other.
 | release APK | 5,457,116 | **5,069,695** |
 | assets in artifact | 3,250,074 | **2,862,144** |
 | assets headroom | 349,926 | **737,856** |
+
+---
+
+# D1's constraint, re-examined against the artifacts
+
+`D1`'s stopping rule contains the most consequential sentence in this repository:
+
+> **"No BERT at runtime, ever.** The shipped artifact is a table of integers. If the only way to
+> get the benefit is to run the model on the phone, D1 fails — `GATE-NET-1/2/3` and the size
+> budget are not negotiable for this."
+
+It cites two authorities. Both were checked, on 2026-08-25, against the artifacts rather than
+from memory — the method `docs/VERIFICATION.md` uses.
+
+## 1. No gate bans it
+
+`GATE-NET-1`'s source rules and dependency blocklist were read in full. Every entry is a network
+client, a network SDK, an analytics or crash reporter, or WebView. The strings `tflite`,
+`tensorflow`, `onnx`, `executorch` and `pytorch` **appear nowhere in this repository** — not in
+a rule, not in a blocklist, not in a document.
+
+One real distinction is worth naming, and it is the correct one: `com.google.android.gms` and
+`com.google.android.play` **are** blocklisted, so TensorFlow Lite delivered through Play Services
+and any model fetched through Play Feature or AI delivery would trip the gate. A standalone
+inference dependency would not. **The gates ban fetching, not computing** — which is what they
+were built to do.
+
+## 2. The size budget does not forbid it, and the arithmetic is not close
+
+From `tools/size_budget.json`, every number written after the measurement beside it:
+
+| | measured | limit | free |
+|---|---|---|---|
+| assets | 3,023,163 | 3,600,000 | 576,837 |
+| DEX | 1,914,332 | 2,600,000 | 685,668 |
+| APK total | 5,161,766 | 6,500,000 | 1,338,234 |
+
+The bigram table is **1,849,636** of those assets. A parametric model that **replaces** it has
+**2,426,473 bytes** available without raising any limit. Gboard's shipped next-word model is a
+quantized LSTM of about **1.4 MB**. It fits, with roughly a megabyte spare.
+
+Where a squeeze could appear is a native runtime's `.so` across four ABIs. That is a number
+nobody has measured, not a ceiling anybody has written down.
+
+## 3. No measurement forbids it, because the measurement was never taken
+
+The sub-50 ms target is **unverified**: `M7-LAT` has never run. The only latency figure in this
+project is **p95 2.88 ms**, and this repository already says of it that it is "a JVM figure on a
+4-core x86 build host with a warm JIT… it says nothing about a phone."
+
+So there are roughly 47 ms of **unmeasured** headroom. Nothing here licenses the claim that a
+model fits, and nothing licenses the claim that it does not. **The constraint most likely to
+actually bind is the one that was never measured.**
+
+---
+
+## The constraint that IS real, and that the sentence never named
+
+The sentence protects something worth protecting, but it misidentifies it. What this project
+cannot afford is not a parametric model. It is **shipped code it cannot prove anything about.**
+
+The no-network claim is proven three ways: manifest permissions, source scanning, and DEX
+scanning of the built artifact. A native inference runtime is outside all three, and both
+scanners say so in their own `NOT_COVERED`:
+
+> `check_apk.py` — *"Native code (.so) is not scanned. A JNI library could open a socket without
+> any DEX reference."*
+> `check_no_network.py` — *"Network access reached by reflection, a dynamically assembled class
+> name, or native/JNI code is not detected by the source detector."*
+
+**And that constraint is already breached.** The built APK ships **four native libraries** —
+`libandroidx.graphics.path.so`, one per ABI, 37,392 bytes in total — pulled in transitively by a
+graphics dependency. Nobody chose them, no gate can see inside them, and until this paragraph
+they were recorded nowhere. The purity the sentence defends is not a property this app has.
+
+## What that changes
+
+If the binding constraint is **auditability** rather than **parametricity**, the resolution is
+not "no model". It is a model whose inference is **Kotlin in `:core`**, where the source scanner,
+the DEX scanner and R8 all still reach. Integer matrix arithmetic for a small network is a few
+hundred lines. It is slower than a native runtime, it adds no `.so`, and it turns the latency
+question from a fear into `M7-LAT` — a measurement this project already has a harness for.
+
+**Verdict: the sentence is an assumption.** It is not a gate, it is not the budget, and it is
+not a measurement. Recorded here, next to the rule it re-examines, and **nothing is adopted on
+the strength of it** — what it licenses is an experiment with a pre-registration, not a change.
