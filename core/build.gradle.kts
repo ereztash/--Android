@@ -79,6 +79,10 @@ tasks.withType<Test>().configureEach {
     // Adaptive learning: interpolation weight and session floor are swept on learning_dev and
     // reported on learning_test, which share no sentence with it or with each other.
     systemProperty("runLearningSweep", project.findProperty("runLearningSweep")?.toString() ?: "")
+    // O1, the offer policy: thresholds are swept on the EVEN half of the committed eval slice
+    // and reported on the ODD half, which the test asserts are disjoint rather than inferring
+    // it from the rule that split them. Opt-in, because it is a sweep and not a regression.
+    systemProperty("runOfferSweep", project.findProperty("runOfferSweep")?.toString() ?: "")
 
     // Warm-up under a deliberately small heap. An IME is one of the most heap-constrained
     // processes on Android and this project has no device to measure on, so the substitute is
