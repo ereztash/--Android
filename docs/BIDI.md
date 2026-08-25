@@ -208,6 +208,16 @@ layout through the shipped `KeyPressPlanner` in both shift states.
 
 ## What was actually learned, including where the pre-registration was wrong
 
+> ### CORRECTED BY B2 — read this before quoting "0 of 8"
+> This conclusion was drawn from **eight strings I wrote by hand**, all balanced and fully
+> enclosing. On **463 bracket-bearing lines a person actually typed**, the bracket complaint
+> reproduces at **77%**, and `ARM-EDGE` removes 100% of it. See
+> [`docs/BIDI_ARMS.md`](BIDI_ARMS.md).
+>
+> **This file committed the exact defect it diagnoses two paragraphs below**: it measured on
+> material that could not exhibit the thing it was looking for, and reported the absence as a
+> finding. The verified market complaint is real.
+
 **1. The bracket complaint does not reproduce as a property of the committed text.** Zero of
 eight. `(שלום)` renders as `(םולש)` under an LTR paragraph and under an RTL paragraph alike. Two
 of the four predictions were wrong and this is the one that matters: the thing the market

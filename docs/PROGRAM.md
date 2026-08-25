@@ -123,7 +123,7 @@ builder, this is documentation with a test around it and should be called that.
 
 **Cost.** Small — a Python gate in the existing framework.
 
-### W3 — `B2`: the bidi arm `B1` never tested
+### W3 — `B2` — **DONE.** See [`docs/BIDI_ARMS.md`](BIDI_ARMS.md). `ARM-FSI-EDGE` cleared the bar at 100%; `B1`'s bracket conclusion was corrected from *0 of 8* to **77% of 463 real lines**
 
 **Change.** `B1` tested wrapping the *whole* committed run in an isolate, and it broke 22 of 24
 convergent items. The textbook arm — wrapping only the **embedded foreign run** in

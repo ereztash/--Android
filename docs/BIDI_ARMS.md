@@ -103,4 +103,98 @@ without visible latency is `M7-LAT`, which has never run.
 
 ## Result
 
-*Not run yet. This section is filled in by the commit that runs the harness, and by no other.*
+`./gradlew :core:test --tests '*BidiArmsTest*' -PrunBidiArms=1`.
+Corpus: **3,257 real typed lines** — MIXED 794, BRACKET 463, CONTROL-HE 2,000.
+
+### The controls
+
+- **PC-1 — PASS.** 0 of 2,000 Hebrew-only typed lines diverge under ARM-NONE.
+- **PC-2 — RED.** Skipping rule L4 changes 161 of 794 MIXED lines.
+- **PC-3 — fired on its first outing.** `ARM-RLM-AFTER`'s column is **identical to ARM-NONE's**
+  on every family: it is **INERT**. It did not fail, it never fired. That control exists because
+  `W7` produced the same shape and it had to be read by eye.
+
+### Divergence by arm
+
+| arm | MIXED (794) | BRACKET (463) | CONTROL-HE (2,000) | ALL |
+|---|---|---|---|---|
+| ARM-NONE | **597 (75%)** | **355 (77%)** | 0 (0%) | 952 (29%) |
+| ARM-FSI | 616 (78%) | 355 (77%) | 0 | 971 (30%) |
+| ARM-LRI | 616 (78%) | 355 (77%) | 0 | 971 (30%) |
+| ARM-RLM-AFTER | 597 (75%) | 355 (77%) | 0 | 952 (29%) *(inert)* |
+| ARM-RLM-AROUND | 594 (75%) | 355 (77%) | 0 | 949 (29%) |
+| **ARM-EDGE** | 311 (39%) | **0 (0%)** | 0 | 311 (10%) |
+| **ARM-FSI-EDGE** | **0 (0%)** | **0 (0%)** | 0 | **0 (0%)** |
+
+### Against the rule
+
+| arm | fixed | broke | round-trip | ADOPTED? |
+|---|---|---|---|---|
+| ARM-FSI | 16/952 (2%) | **35** | clean | no |
+| ARM-LRI | 16/952 (2%) | **35** | clean | no |
+| ARM-RLM-AFTER | 0/952 (0%) | 0 | clean | no — **inert** |
+| ARM-RLM-AROUND | 3/952 (0%) | 0 | clean | no |
+| ARM-EDGE | 641/952 (67%) | **0** | clean | no — below the 90% bar |
+| **ARM-FSI-EDGE** | **952/952 (100%)** | **0** | clean | **YES** |
+
+**By the rule committed before the run, `ARM-FSI-EDGE` is ADOPTED.**
+
+| prediction | outcome |
+|---|---|
+| **B2-P1** ARM-FSI below the bar | **HELD** — 2%, and it *breaks* 35 |
+| **B2-P2** ≥80% of ARM-FSI's failures edge-placed | **FALSIFIED** — 49% |
+| **B2-P3** every new arm round-trips | **HELD** |
+| **B2-P4** ARM-FSI-EDGE clears 90% | **HELD** — at 100% |
+
+---
+
+## The correction that matters most: `B1` was wrong about brackets
+
+`B1` concluded, on 8 hand-built strings, that **the bracket complaint does not reproduce as a
+property of committed text — 0 of 8.** On **463 bracket-bearing lines a person actually typed,
+it reproduces at 77%.**
+
+`B1`'s strings were balanced, fully enclosing, and free of anything else — `(שלום)`,
+`אמרתי (בקול) שלום`. Real typed Hebrew puts brackets at line edges, unbalanced, beside
+punctuation runs and digits. **`B1` committed the exact defect it had diagnosed in the evaluation
+corpora one file earlier**: it measured on material that could not exhibit the thing it was
+looking for, and reported the absence as a finding.
+
+The verified market complaint — parentheses coming out reversed, quoted against both Gboard and
+SwiftKey — **is reproducible after all**, and `ARM-EDGE` alone removes 100% of it.
+
+## Post hoc, and it is not a rescue: consistency is not correctness
+
+Not pre-registered. Divergence measures whether the two renderings **agree**, not whether either
+is **right** — two identical-but-wrong renderings converge. The reference for "right" is
+ARM-NONE under an RTL paragraph: what a Hebrew-locale app shows today, where the complaint does
+not arise.
+
+| arm | preserves the Hebrew-locale rendering | changes it |
+|---|---|---|
+| ARM-FSI / LRI / RLM-AFTER / RLM-AROUND | 2,918 of 3,257 (89.6%) | 339 |
+| **ARM-EDGE** | **3,257 of 3,257 (100.0%)** | **0** |
+| **ARM-FSI-EDGE** | 2,918 of 3,257 (89.6%) | **339** |
+
+**The arm that clears the bar changes what 339 lines look like for users who had no problem.**
+The arm that costs nobody anything fixes 67% and misses the bar.
+
+**This does not un-adopt `ARM-FSI-EDGE`, and it must not.** The rule was registered before the
+run; renegotiating it after seeing the data is precisely what `P7` refused to do and what
+pre-registration exists to prevent. What it establishes is that **the rule was incomplete**: a
+fifth clause — *preserves the rendering users already get where nothing was wrong* — belonged in
+it and was not there. That clause is registered **now, for the next run**, and is not applied
+backwards.
+
+**Adopted here means cleared its bar in the harness.** Nothing ships on this. `W7` was built in
+the harness for the same reason, and shipping `ARM-FSI-EDGE` is a decision with a trade the rule
+did not price — which makes it the operator's, with a date and a reason, the way `P7` was.
+
+## What is still not measured
+
+**Cost.** Both surviving arms insert invisible characters into the user's text on every keystroke
+near a foreign run or a line edge. An `InputConnection` would have to delete and re-commit them
+continuously. **`M7-LAT` has never run**, and no number here says whether that is affordable.
+
+`M13-BIDI-RENDER` — `java.text.Bidi` is the algorithm, not Android's `TextView`.
+`M12-GBOARD-CODEPOINT` — still needs a device.
