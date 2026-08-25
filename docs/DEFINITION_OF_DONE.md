@@ -107,18 +107,23 @@ this tree in full, which is what makes this a workflow defect rather than an ass
 
 Two things follow, and the second is worse than the first:
 
-- **The gate job has been red on the base branch for four commits** and this is the reason. It
-  is not caused by anything in this change.
-- **The crash is being read as a red control.** `run_gates.py` records `GATE-STORE-1` as
+- **The gate job had been red on the base branch for four commits** and this was the reason.
+  Nothing in this change caused it. It is now fixed here, on the operator's instruction: the
+  gates job installs `pillow==12.3.0` before running anything. The version is pinned because
+  `GATE-STORE-1`'s subject is a byte comparison against committed PNGs, which makes the
+  renderer part of the measurement.
+- **The crash was being read as a red control.** `run_gates.py` records `GATE-STORE-1` as
   `control red (exit=1)` — but the control exited 1 because the interpreter could not import
   a module, not because a planted defect was caught. A control that *cannot run* proves
   nothing, and this repository already knows that: it is why `NOT-MEASURED` exists and why
-  `GATE-LEX-2` is reported distinctly from `NOT-A-GATE`. That distinction is not being made
-  when a gate script dies on import.
+  `GATE-LEX-2` is reported distinctly from `NOT-A-GATE`. **That distinction is still not being
+  made when a gate script dies on import, and installing Pillow does not make it** — it only
+  removes the one case that exposed it. Open, and not fixed here.
 
-Neither is fixed here — both are older than this change and neither is about the definition of
-done. What is recorded here is that C4 does not hold on this commit, which is precisely what a
-definition of done is for.
+C4 stays **NOT MET** until a gates run comes back green on this branch. The fix is pushed; the
+evidence is not in yet, and in this repository the claim follows the measurement rather than
+the intention. When that run exists, C4 changes state and the counts are regenerated from the
+table — not before.
 
 
 ---
