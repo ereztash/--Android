@@ -483,3 +483,102 @@ of authentic errors, and is a second reason to want the one this project still d
   subjects.
 - **Not on a device.** `GATE-FONT-1` proves the measured bytes are in the APK. Whether the
   result is visible to a person is `M4-DEVICE`, still NOT RUN.
+
+---
+
+# O1 — the offer policy. Prediction recorded before anything is measured.
+
+## The question
+
+Every number above is about **ranking**: given that the strip speaks, is the right word in it?
+Nothing here has ever measured the other half — **whether it should speak at all**.
+
+The shipped policy speaks whenever the pruned table has any continuation for the previous word.
+That is **86.64%** of positions, and `cap64/mc5` in B1 raised it to 92.32%, which was recorded
+as a gain. From a user's side it is not obviously a gain, and the arithmetic is unflattering:
+
+| | |
+|---|---|
+| next-word top-3, over all positions | **9.09%** |
+| positions where the strip speaks | **86.64%** |
+| **top-3 among the positions where it speaks** | **10.49%** |
+
+A strip that speaks almost always and is right about one time in ten teaches a user, within a
+day or two, to stop looking at it. Once they stop looking, the 10.49% is worth nothing at all —
+the feature's value is not its accuracy but its accuracy **times** whether anyone is still
+reading it.
+
+B1 established that the ranking cannot be bought with bytes: *the representation is the
+ceiling, not the allocation*. This asks whether the **offer decision** is a lever the ranking
+is not.
+
+## The experiment
+
+The engine already computes a number that is a direct measure of evidence: a `NEXT_WORD`
+prediction's `score` is the bigram table's quantized log-count for that pair, `round(log2(c) *
+8)`. Withhold the offer when that evidence is weak, and measure what the strip is worth when it
+does speak.
+
+Three signals, **fixed now**, and no fourth will be tried after seeing a result:
+
+1. **`s1`** — the top-ranked prediction's score.
+2. **`margin`** — `s1 − s2`, with `s2 = 0` when the engine returned fewer than two.
+3. **the conjunction** — `s1 ≥ a` **and** `margin ≥ b`.
+
+Same harness, same shipped configuration, same eligibility rule as every cell above (a target
+of at least 3 characters, `previous` the token before it).
+
+### The slices, and which one is allowed to choose anything
+
+| slice | sentences | role |
+|---|---|---|
+| committed Wikipedia eval slice, **even** indices | 3,000 | **dev** — the only slice a threshold may be chosen on |
+| committed Wikipedia eval slice, **odd** indices | 3,000 | **test** — reported against, never selected on |
+| `he_conversational_test.txt.gz` | 6,000 | **register check** — never selected on, and the register a user actually types in |
+
+The two halves are disjoint by construction and the test asserts it rather than inferring it
+from the rule that produced them.
+
+## The prediction, written now
+
+1. **Precision-among-offered rises monotonically with the threshold.** `s1` is an evidence
+   count, and contexts whose best continuation was seen thousands of times are genuinely better
+   predicted than ones whose best was seen six times. If this is flat, the ranking has already
+   spent the signal and the answer is B1's answer again, arriving from a third direction.
+2. **The rule below is NOT met.** Reaching 20% precision-among-offered will cost more than the
+   rule allows: I expect retention at that point to land in **40–60%**, short of 70%.
+3. **`margin` is the weaker signal of the two.** A large gap between the first and second
+   continuation says the context is lopsided, not that it is well-evidenced; `s1` says both.
+4. **The conjunction beats either alone by less than 2 points of precision** at equal
+   retention, because the two signals are computed from the same counts and are not
+   independent.
+
+If precision-among-offered comes out **above 25%** anywhere with retention above 80%, the
+harness is wrong and gets checked before the result is believed. That would mean the shipped
+policy is discarding a very large, very cheap win, and this project has learned to distrust
+those.
+
+## The stopping rule
+
+Adopt an offer threshold only if **all** of the following hold:
+
+- on **dev**, some configuration reaches **precision-among-offered@3 ≥ 20.0%** — a doubling of
+  the shipped 10.49% — while **retaining ≥ 70%** of the top-3 hits the shipped policy produces;
+- that same configuration, on **test**, lands within **3.0 points** of its dev precision and
+  still retains ≥ 70%.
+
+Anything else is recorded and **nothing is adopted**. The 70% floor is there because withheld
+offers are a real loss to the user and not a free saving: every hit removed is a word they
+would have tapped.
+
+**Prefix-1 completion is measured alongside and is explicitly NOT under this rule.** It is the
+worst-scoring cell in the document (5.43% top-3) and the same question applies to it, but a
+rule that can be satisfied by whichever of two metrics happens to cooperate is not a rule. It
+is reported as an observation, and adopting on it would need its own pre-registration.
+
+## Why this is worth running even though prediction 2 says it fails
+
+Because "the strip speaks in 86.64% of positions" has been carried as a feature for two
+milestones and the other side of it has never been on a page. If the rule fails, the result is
+a third independent measurement of the same ceiling — after B1 on allocation and the human
+labelling on the confusion layer's thresholds — and the finding stops being a suspicion.
