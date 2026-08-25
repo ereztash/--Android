@@ -26,7 +26,7 @@ release-ready — and it is not described as release-ready anywhere in this repo
 | minSdk / targetSdk | **31** / 36 — verified in all four built APKs |
 | **Device / emulator** | **NONE. No Android device or emulator exists in this environment, and none of the results below were obtained on one.** |
 
-Scale: 44 production Kotlin files, 32 test files, **214 JVM tests**, 10 gate scripts,
+Scale: 44 production Kotlin files, 54 test files, **287 JVM tests**, 10 gate scripts,
 **29 gates** — the number `scripts/run_gates.py` defines, counted from it rather than
 remembered; this line read **18** while the runner defined 25 — 5 positive-control fixtures.
 **Lint: 0 issues.**
@@ -190,6 +190,8 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | L1-PROTECT | What the once-seen protection costs | −0.32 top-1, −0.39 top-3 vs `minimumSessions=1` | same slice — **the cheaper setting is not shipped** |
 | L1-WITHHELD | Share of learned pairs that are eligible to be suggested | **5.8%** (mean 52 of 888 per pseudo-user) | 120 pseudo-users |
 | L1-OOV | Share of learned pairs touching the out-of-lexicon sentinel | 8.3% | 106,545 pairs |
+| O1-OFFER | Withholding the next-word offer on weak evidence — best configuration reaching 20% precision among offered | dev **22.53%** / test **22.54%** precision, at **13.19%** retention against a 70% bar | 20,000 positions per slice, committed eval slice split even/odd. **RULE NOT MET, nothing adopted.** `s1` is flat; `margin` is the only signal that moves |
+| O1-REGISTER | The same shipped engine on held-out transcribed dialogue instead of encyclopedic prose | prefix-1 completion top-3 **5.35% → 23.72%** (×4.43); next-word top-3 **9.09% → 12.09%** | 20,000 positions each. Held out by construction from the subtitle half of the training mix. **Not phone typing** — `M10-REGISTER` stays NOT MEASURED |
 | M12-SIZE | Release artifact | APK 5,161,766 B; AAB 5,940,182 B | R8 cut DEX from 28,527,620 to 1,922,156 B. Assets are 3,023,216 B, of which the bigram table is 1,849,636 B |
 
 ## FAILED

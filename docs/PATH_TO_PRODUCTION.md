@@ -21,7 +21,7 @@ cites something that no longer exists, or reads MET over a check that has never 
 | | |
 |---|---|
 | Gates, each with a positive control demonstrated red | **29** |
-| JVM tests | **286**, 0 failures, 0 skipped |
+| JVM tests | **287**, 0 failures, 0 skipped |
 | Android lint on the release build | 0 errors, 7 style warnings |
 | Release APK + AAB | build, survive R8, carry no network permission |
 | Signing pipeline | **proven end to end** with a throwaway key, then destroyed |
