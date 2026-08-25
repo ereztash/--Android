@@ -139,7 +139,7 @@ mixed-script Hebrew becomes a documented limitation — and a candidate for the 
 
 **Cost.** Days. Blocked on W1 only for the corpus; can be pre-registered now.
 
-### W4 — `GATE-LABEL-1`: a key's label must be the glyph its output produces
+### W4 — **DONE**, and narrower than proposed. See [`docs/KEY_LABELS.md`](KEY_LABELS.md). The rule is *match **or say why***, not *match* — relabelling was rejected on this repository's own documented precedent
 
 **Change.** For every character key, the glyph rendered from `output` in that layout's
 `scriptDirection` must equal `label`. The `Key` data class **already separates the two fields**,
