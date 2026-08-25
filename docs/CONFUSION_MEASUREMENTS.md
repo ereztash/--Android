@@ -1130,3 +1130,8 @@ question from a fear into `M7-LAT` — a measurement this project already has a 
 **Verdict: the sentence is an assumption.** It is not a gate, it is not the budget, and it is
 not a measurement. Recorded here, next to the rule it re-examines, and **nothing is adopted on
 the strength of it** — what it licenses is an experiment with a pre-registration, not a change.
+
+That pre-registration is [`docs/INFERENCE_FEASIBILITY.md`](INFERENCE_FEASIBILITY.md) — **K1**,
+which asks the one question this verdict leaves open: whether Kotlin can do the arithmetic
+inside the budget. It is one-sided by construction: a result there can kill the branch and
+cannot bless it.
