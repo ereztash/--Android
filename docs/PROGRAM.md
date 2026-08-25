@@ -158,7 +158,7 @@ not in a footnote after shipping.
 
 **Cost.** Small for the gate; the layout split is a contained change.
 
-### W5 — the artifact
+### W5 — **DONE.** See [`docs/FINDINGS.md`](FINDINGS.md) and `scripts/reproduce.sh`. The headline order below is **superseded** — `W6` displaced the alphabet finding as the strongest claim
 
 **Change.** One reproducible entry point that regenerates every headline number from committed
 inputs, plus `docs/FINDINGS.md` written for a reader who does not work here — the existing docs
