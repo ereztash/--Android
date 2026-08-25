@@ -119,4 +119,76 @@ is the thing the definition of done exists to prevent.
 
 ## Result
 
-*Not run yet. This section is filled in by the commit that runs the harness, and by no other.*
+`./gradlew :core:test --tests '*PrefixCompletionTest*' -PrunPrefixCompletion=1`.
+
+### `append` — the arm fires on two thirds of keystrokes and changes nothing
+
+| slice | prefix | base top-3 | arm top-3 | delta | arm fires | broke top-1 |
+|---|---|---|---|---|---|---|
+| typed | 1 | 9.84% | 9.84% | **+0.00** | 0.0% | 0.00% |
+| typed | 2 | 36.62% | 36.62% | **+0.00** | 62.8% | 0.00% |
+| **typed** | **3** | **55.09%** | **55.10%** | **+0.00** | **66.2%** | 0.00% |
+| transcribed | 3 | 73.87% | 73.87% | +0.00 | 62.3% | 0.00% |
+| encyclopedic | 3 | 47.98% | 47.98% | +0.00 | 71.1% | 0.00% |
+
+**Zero, everywhere, to two decimal places** — while generating candidates on **66.2%** of
+positions. The reason is `limit = 3`: the baseline already returns a full strip on effectively
+every position, so an appended candidate has nowhere to go. *Fill to `limit`* is not a mechanism
+when `limit` is already met.
+
+### `interleave` — letting them compete is catastrophic
+
+| slice | prefix | base top-3 | arm top-3 | delta | base top-1 | arm top-1 | broke top-1 |
+|---|---|---|---|---|---|---|---|
+| **typed** | **3** | **55.09%** | **45.51%** | **−9.58** | 39.62% | 28.72% | **11.54%** |
+| typed | 2 | 36.62% | 29.62% | −7.00 | 24.39% | 18.44% | 6.57% |
+| transcribed | 3 | 73.87% | 64.97% | **−8.91** | 55.60% | 46.14% | 9.79% |
+| encyclopedic | 3 | 47.98% | 39.90% | **−8.08** | 32.90% | 25.16% | 8.34% |
+
+It destroys **11.54%** of the positions that were top-1 correct and costs nine points of top-3 on
+every register. The scale mismatch written into the pre-registration — a prefixed candidate is
+scored over the *remainder*, not over what the user typed — is not a caveat. It is the result.
+
+### Against the rule
+
+| clause | append | interleave |
+|---|---|---|
+| 1. prefix-3 typed top-3 improves ≥ 0.50pp | **+0.00 FAIL** | **−9.58 FAIL** |
+| 2. ≤ 0.10pp of top-1-correct broken | 0.00 PASS *(cannot fail — proves nothing)* | **11.54 FAIL** |
+| 3. prefix-1 does not fall > 0.10pp | +0.00 PASS | +0.00 PASS |
+| 4. other registers do not regress > 0.10pp | +0.00 PASS | **−8.91 / −8.08 FAIL** |
+
+**W7-P1 falsified** (no improvement at prefix-3). **W7-P2 held** — prefix-1 moved by exactly
+0.00, as written down before the run, because stripping a prefix from a one-character string
+leaves nothing to complete. **W7-P3 falsified, and badly**: the arm fires on **66.2%** of
+positions against a bar of 15%. *An arm that fires everywhere is not a fallback, it is a second
+engine* — that sentence was in the pre-registration and it is what happened.
+
+**VERDICT: NO mode meets every clause — NOTHING IS ADOPTED.**
+
+---
+
+## What was learned
+
+**1. The gap is real and this arm cannot reach it.** The ceiling was measured at 1.98% of
+targets before anything was built. `append` captured 0.00 of it; `interleave` captured it and
+paid nine points for the privilege. Reaching those 1.98% requires *displacing* a correct literal
+completion, and the measurement prices that trade at roughly **−5 points for every +1**.
+
+**2. `limit = 3` is the binding constraint, not the lexicon.** The strip is already full on
+essentially every position. Any "fallback" mechanism that appends is inert by construction, and
+this is worth knowing before the next one is proposed.
+
+**3. Clause 2 was designed to be unfalsifiable under one mode and it was.** `append` cannot break
+top-1, so its 0.00 is not evidence. That is why both modes were run: the clause only became a
+clause under `interleave`, where it failed by 115×.
+
+**4. Both of the "0-byte fixes" that started this were already shipped.** Recorded at the top of
+this file, and the real out-of-lexicon rate on typed Hebrew is **5.52%**, not the 8.12% `A2`
+published.
+
+## What is NOT concluded
+
+That prefix-aware completion is impossible. A different mechanism — generating prefixed forms
+into the *lexicon* rather than at query time, or a score calibrated across the two spaces — is
+untested, and this run says nothing about it beyond pricing what it must beat.

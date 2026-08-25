@@ -91,6 +91,8 @@ tasks.withType<Test>().configureEach {
     systemProperty("runBidiProbe", project.findProperty("runBidiProbe")?.toString() ?: "")
     // W1, the typed register: the first evaluation slice a person typed. Opt-in; PC-1 gates it.
     systemProperty("runTypedRegister", project.findProperty("runTypedRegister")?.toString() ?: "")
+    // W7, prefix-aware completion: measured in the harness before anything reaches the engine.
+    systemProperty("runPrefixCompletion", project.findProperty("runPrefixCompletion")?.toString() ?: "")
 
     // Warm-up under a deliberately small heap. An IME is one of the most heap-constrained
     // processes on Android and this project has no device to measure on, so the substitute is
