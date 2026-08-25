@@ -336,3 +336,84 @@ Both comparison bars are against `G1` re-measured in the same run, never against
   quality measure, and no one here has looked at a sample.
 - **The shipped lexicon.** This reads a dump for a segmentation; it does not propose rebuilding
   `he_lexicon.txt.gz`, which is `GATE-LEX-1`'s subject and a separate decision.
+
+## G2 RESULT — the layer works perfectly and is NOT ADOPTED
+
+One run, five slot counts, every bar against `N = 0` re-measured in the same run. `N = 0` is
+`G1`, and it reproduced: **1.809 units per token**, ktiv **0.3207** against the 0.3186 published
+— the difference is the sampling seed reaching a different 5,000 pairs, not a change.
+
+| N | vocab | uncovered | units/token | noun/adj J | its ideal | **J / ideal** | ktiv J | vs G1 |
+|---|---|---|---|---|---|---|---|---|
+| **0** | 16,384 | 0 | **1.809** | — | — | — | **0.3207** | — |
+| 2,000 | 16,384 | 0 | 2.060 | 0.3197 | 0.3206 | **1.00** | 0.3162 | −0.0045 |
+| 4,000 | 16,384 | 0 | 2.080 | 0.3561 | 0.3591 | **0.99** | 0.3237 | +0.0030 |
+| 8,000 | 16,384 | 0 | 2.100 | 0.4040 | 0.4092 | **0.99** | 0.3196 | −0.0011 |
+| 12,000 | 16,384 | 0 | 2.168 | 0.4615 | 0.4666 | **0.99** | 0.3326 | +0.0118 |
+
+### Which clause killed it
+
+Not the one I built the guard for.
+
+| clause | bar | result |
+|---|---|---|
+| coverage | exactly 100% | passes everywhere |
+| budget | ≤ 16,384 | passes everywhere, by construction |
+| the new layer works | noun/adj ≥ 0.80 of its design ideal | **1.00 at N=2,000**, 0.99 after — it sits *on* its ceiling |
+| the purpose is not traded away | ktiv ≥ G1's | passes at N=4,000 and N=12,000 |
+| **compression** | **units/token ≤ G1's** | **fails at every N.** 1.809 → 2.060–2.168 |
+
+**NOTHING IS ADOPTED**, on a clause I predicted would be the easy one.
+
+### Where the prediction was wrong
+
+Five points were recorded. **Three are wrong**, one is right, one was arithmetic.
+
+| # | recorded | measured | |
+|---|---|---|---|
+| 1 | no configuration admits all of them | at N=12,000 BPE is down to **915** merges | established, not predicted |
+| 2 | noun/adj sharing ≥ 0.80 of ideal at N ≥ 4,000 | **1.00 at N=2,000** | ✓, and earlier than predicted |
+| 3 | compression **improves**, below 1.809 | **rises at every N** | ✗ — and this is what killed it |
+| 4 | ktiv **falls** 0.02–0.08 at N=8,000 | **−0.0011**; the whole range is ±0.012 and trends *up* | ✗ |
+| 5 | the best configuration is at an intermediate N | both metrics are monotone; there is no interior optimum | ✗ |
+
+Point 4 is the instructive failure. I wrote *"this is the prediction that can kill the layer, and
+it is the one worth running for"*, and built the fifth clause as its guard. **The guard was aimed
+at a risk that does not exist.** Displacing 11,790 BPE merges did not break the connection
+between two spellings of one word. What it broke was something I had predicted would improve.
+
+### Why compression gets worse, which is the finding
+
+A noun form under this layer becomes `[N:lemma, G:features]` — **two units, always**. BPE with
+12,705 merges had already memorised the frequent ones as **one unit each**. So a correct
+morphological analysis is *longer* than a memorised whole word, and swapping 11,790 merges for
+11,664 lemmas trades short encodings of common words for exact analyses of them.
+
+The layer is not failing at its job. Its `J / ideal` is **0.99–1.00**: it reaches its ceiling
+essentially perfectly. The ceiling is simply **low** — two forms of one noun share the lemma and
+must differ in the features, the same structural cap the verb family has — while BPE's whole-word
+units cost one slot and one token.
+
+**Given morphology is not automatically better than memorised subwords at this budget.** That is
+the same shape as `D1`'s finding that *a table covers the head*, arriving from the opposite
+direction: at 16,384 slots, memorisation wins the head of the distribution and analysis only pays
+in the tail.
+
+### The trade, named and left to the operator
+
+The bar that failed is one I wrote, and it is strict: *no worse compression at all*. A different
+bar — say, ≤ 5% worse — would adopt at N=12,000, which buys noun/adjective sharing of 0.4615
+against nothing, and a ktiv gain of +0.0118, for 0.359 extra units per token.
+
+**That bar is not being relaxed here.** `S1` is in this repository precisely because a rule
+loosened after seeing the result is not a rule. The trade is reported with its numbers and the
+decision is the operator's.
+
+### What this does NOT establish
+
+- **Not that the table is bad.** It is CC0, it is correct, and the layer built on it hits its
+  own ceiling. What failed is a budget trade, not the data.
+- **Nothing about accuracy.** Still no model, still no claim that any of this predicts a word.
+- **Nothing about a larger budget.** Every configuration here totals 16,384 because `K1` shape B
+  does. At a budget where BPE keeps its merges *and* the lemmas fit, this trade does not arise —
+  and that budget has not been measured.
