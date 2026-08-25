@@ -190,6 +190,9 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | L1-PROTECT | What the once-seen protection costs | −0.32 top-1, −0.39 top-3 vs `minimumSessions=1` | same slice — **the cheaper setting is not shipped** |
 | L1-WITHHELD | Share of learned pairs that are eligible to be suggested | **5.8%** (mean 52 of 888 per pseudo-user) | 120 pseudo-users |
 | L1-OOV | Share of learned pairs touching the out-of-lexicon sentinel | 8.3% | 106,545 pairs |
+| H1-KTIV-DENSITY | Share of conversational tokens one `ו`/`י` deletion from another real word | **50.78%** conversational · 47.30% wiki | 40,434 / 85,840 Hebrew tokens. **Upper bound** — it counts real-word neighbours, which is broader than true ktiv variation. This is the structural reason no threshold rescues the real-word layer |
+| H1-PREFIX | Share of conversational tokens carrying an agglutinated prefix chain | **42.81%**, of which 42.38% are **also** stored as their own surface form | Same denominators. **Upper bound** — a heuristic, not a morphological analysis; `מים` decomposes as `מ`+`ים` and `ים` is a word |
+| H1-COVERAGE | Share of conversational tokens already in the lexicon as surface forms | **99.16%** conversational · 95.01% wiki | The lexicon is not the bottleneck; correction is not failing for lack of words |
 | O1-OFFER | Withholding the next-word offer on weak evidence — best configuration reaching 20% precision among offered | dev **22.53%** / test **22.54%** precision, at **13.19%** retention against a 70% bar | 20,000 positions per slice, committed eval slice split even/odd. **RULE NOT MET, nothing adopted.** `s1` is flat; `margin` is the only signal that moves |
 | O1-REGISTER | The same shipped engine on held-out transcribed dialogue instead of encyclopedic prose | prefix-1 completion top-3 **5.35% → 23.72%** (×4.43); next-word top-3 **9.09% → 12.09%** | 20,000 positions each. Held out by construction from the subtitle half of the training mix. **Not phone typing** — `M10-REGISTER` stays NOT MEASURED |
 | M12-SIZE | Release artifact | APK 5,161,766 B; AAB 5,940,182 B | R8 cut DEX from 28,527,620 to 1,922,156 B. Assets are 3,023,216 B, of which the bigram table is 1,849,636 B |
@@ -470,6 +473,7 @@ identifies people, so only percentiles and a count are written down.
 
 | ID | Check | Why it cannot be answered here |
 |---|---|---|
+| H1-ALPHABET | How often Hebrew typing mixes scripts, or uses geresh/gershayim, and what the keyboard does at those points | Every corpus here is Hebrew-letters-only **by construction** — `build_subtitle_corpus.py` keeps `[א-ת]+` runs and `build_eval_corpus.py` does the same. Latin, digits, gershayim and all punctuation are discarded before a token is written, so the measured 0.00% is a property of the regex and not of Hebrew. The app ships 861 abbreviation forms and is evaluated on text containing zero instances of the character they need. See `docs/FRICTION_INVENTORY.md`. |
 | M5-REAL-TYPOS | Correction accuracy on **real** Hebrew typing errors | No such corpus exists here. The true error distribution lies between corpus A (uniform) and B (adjacency) and nothing in this project knows where. This is what would settle whether the adjacency discount should be enabled. |
 | M4-OTP-ACC | OTP heuristic precision and recall | No labelled corpus of OTP fields. One was not fabricated. |
 | M1-KTIV | Ktiv male/haser coverage over all reform-affected lemmas | No list of affected lemmas. The 10 pairs checked are the 10 the spec names, not a sample. |
