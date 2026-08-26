@@ -15,6 +15,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # GATE-STORE-1 re-renders the Play assets and compares bytes, and
+      # scripts/build_store_assets.py imports Pillow at module level. Nothing installed it, so
+      # from the commit that added the gate (054a456) onwards the script died on
+      # ModuleNotFoundError before comparing a single pixel -- and run_gates.py recorded that
+      # crash as "control red (exit=1)", because a control that CANNOT RUN and one that ran and
+      # caught a planted defect exit the same way. The gate job was red for four commits on
+      # that alone.
+      #
+      # The VERSION is pinned, not floated. GATE-STORE-1's subject is a byte comparison against
+      # committed PNGs, so the renderer is part of the measurement: an unpinned Pillow means the
+      # gate can go red on a release that changed nothing about this repository's assets.
+      # 12.3.0 is the version the committed assets were verified against.
+      #
+      # This runs before the XML fast-fail so that one interpreter serves the whole job. It
+      # costs a few seconds; the fast-fail exists to skip several MINUTES of Gradle and Android
+      # SDK setup, and that ordering is unchanged.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install the gate scripts' one third-party dependency
+        run: python3 -m pip install --disable-pip-version-check pillow==12.3.0
+
       # Cheapest gate first: a malformed XML comment costs several minutes of build to
       # discover otherwise, behind an error with no line number.
       - name: GATE-XML-1 (fast fail)

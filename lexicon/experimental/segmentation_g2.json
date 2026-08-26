@@ -1,0 +1,148 @@
+{
+  "budget": 16384,
+  "rows": [
+    {
+      "slots": 0,
+      "vocab": 16384,
+      "uncovered": 0,
+      "mean_units": 1.8087747934906266,
+      "noun_lemmas": 0,
+      "merges": 12705,
+      "nounadj": {
+        "jaccard": 0.0,
+        "n": 0,
+        "ideal": null
+      },
+      "ktiv": {
+        "jaccard": 0.3207319047619022,
+        "n": 5000,
+        "size_ceiling": 0.8824566666666608,
+        "ideal": null,
+        "ground_truth": 0
+      },
+      "control": {
+        "jaccard": 0.00869380952380953,
+        "n": 5000,
+        "size_ceiling": 0.7922223809523568,
+        "ideal": 0.01614998523767344,
+        "ground_truth": 1129
+      }
+    },
+    {
+      "slots": 2000,
+      "vocab": 16384,
+      "uncovered": 0,
+      "mean_units": 2.0603205223326904,
+      "noun_lemmas": 1917,
+      "merges": 10665,
+      "nounadj": {
+        "jaccard": 0.3197433333333263,
+        "n": 5000,
+        "size_ceiling": 0.9578333333333321,
+        "ideal": 0.32058666666665875,
+        "ground_truth": 5000
+      },
+      "ktiv": {
+        "jaccard": 0.31621619047619043,
+        "n": 5000,
+        "size_ceiling": 0.8935733333333272,
+        "ideal": null,
+        "ground_truth": 0
+      },
+      "control": {
+        "jaccard": 0.008206904761904766,
+        "n": 5000,
+        "size_ceiling": 0.7933666666666417,
+        "ideal": 0.01159606332905433,
+        "ground_truth": 1558
+      }
+    },
+    {
+      "slots": 4000,
+      "vocab": 16384,
+      "uncovered": 0,
+      "mean_units": 2.0795370232972252,
+      "noun_lemmas": 3848,
+      "merges": 8734,
+      "nounadj": {
+        "jaccard": 0.35608333333332404,
+        "n": 5000,
+        "size_ceiling": 0.9634166666666663,
+        "ideal": 0.3590866666666562,
+        "ground_truth": 5000
+      },
+      "ktiv": {
+        "jaccard": 0.32370571428571415,
+        "n": 5000,
+        "size_ceiling": 0.9026533333333285,
+        "ideal": null,
+        "ground_truth": 0
+      },
+      "control": {
+        "jaccard": 0.008952857142857148,
+        "n": 5000,
+        "size_ceiling": 0.8033066666666422,
+        "ideal": 0.013324742268041213,
+        "ground_truth": 1940
+      }
+    },
+    {
+      "slots": 8000,
+      "vocab": 16384,
+      "uncovered": 0,
+      "mean_units": 2.100286887273087,
+      "noun_lemmas": 7763,
+      "merges": 4816,
+      "nounadj": {
+        "jaccard": 0.40404999999998853,
+        "n": 5000,
+        "size_ceiling": 0.9655833333333328,
+        "ideal": 0.4092199999999869,
+        "ground_truth": 5000
+      },
+      "ktiv": {
+        "jaccard": 0.3196133333333331,
+        "n": 5000,
+        "size_ceiling": 0.907956666666662,
+        "ideal": null,
+        "ground_truth": 0
+      },
+      "control": {
+        "jaccard": 0.010673095238095263,
+        "n": 5000,
+        "size_ceiling": 0.806153333333309,
+        "ideal": 0.016506877865777418,
+        "ground_truth": 2399
+      }
+    },
+    {
+      "slots": 12000,
+      "vocab": 16384,
+      "uncovered": 0,
+      "mean_units": 2.1679032497403177,
+      "noun_lemmas": 11664,
+      "merges": 915,
+      "nounadj": {
+        "jaccard": 0.46146095238094875,
+        "n": 5000,
+        "size_ceiling": 0.9665933333333322,
+        "ideal": 0.4665899999999966,
+        "ground_truth": 5000
+      },
+      "ktiv": {
+        "jaccard": 0.3325669047619058,
+        "n": 5000,
+        "size_ceiling": 0.9096366666666623,
+        "ideal": null,
+        "ground_truth": 0
+      },
+      "control": {
+        "jaccard": 0.011451673881673915,
+        "n": 5000,
+        "size_ceiling": 0.7853876190476002,
+        "ideal": 0.016076807228915677,
+        "ground_truth": 2656
+      }
+    }
+  ]
+}

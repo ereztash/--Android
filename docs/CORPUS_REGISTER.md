@@ -202,3 +202,63 @@ serious act: these were re-pinned because **the training data changed under an o
 decision**, and the change was checked against a prediction written before the table existed.
 That is a different act from adjusting a constant until a suite goes green, which remains
 forbidden.
+
+---
+
+# A1 — the one typed corpus that has now been fetched
+
+`docs/PROGRAM.md` A1 needed a register that was **typed by a person** rather than transcribed
+from speech. This is the only one on the list below that has been fetched, hashed and used.
+
+| field | value |
+|---|---|
+| corpus | Amram et al. 2018, user comments on Ynet's Facebook page |
+| source | `github.com/omilab/Neural-Sentiment-Analyzer-for-Modern-Hebrew`, `data/token_*.tsv` |
+| licence | **MIT** |
+| size | 12,804 comments; 10,746 pass this repo's own >= 4-Hebrew-token filter |
+| `token_train.tsv` sha256 | `b394fc765f10fde63001c7b92f2bc4bb43278884ee3be07c855724b0634e6aae` |
+| `token_test.tsv` sha256 | `0c19097173125fc42fe52b2b4415df19ee818a6d6547ac4bc40da8725924cbc7` |
+| used for | `A1` only — the alphabet comparison. **Nothing is trained on it and no accuracy number comes from it** |
+
+**What it is not.** Facebook comments are not phone messaging. The text is tokenized, with
+punctuation spaced out; that does not move a character-presence rate, which is all `A1` measures,
+and it *would* move a tokenization or bigram measurement. `M10-REGISTER` stays NOT MEASURED.
+
+---
+
+# What was never reached for, and is openly licensed
+
+The sentence at the top of this document — *written fifteen times, acted on zero times* — was
+answered by adding **one** source. This is the list of what else exists, compiled on 2026-08-25
+from the [NNLP-IL Hebrew Resources
+registry](https://github.com/NNLP-IL/Hebrew-Resources/blob/master/corpora_and_data_resources.rst),
+after the operator observed that the potential of external sources here is unrealised.
+
+**These are leads, not artifacts.** Sizes and licences are as the registry states them; none has
+been fetched, hashed or verified here, and each would need `build_*_corpus.py` treatment and a
+disjointness proof before a single number came out of it. They are recorded so that "no closer
+corpus exists" stops being available as an assumption.
+
+| corpus | size | register | licence | why it matters here |
+|---|---|---|---|---|
+| **Emotion UGC** | ~7M words, 350K sentences | comments **typed** on news articles | **MIT** | the only candidate that is typed rather than transcribed — the register this keyboard is actually used in |
+| **IsraParlTweet** | 294.5M tokens | parliamentary + **Twitter** | CC BY 4.0 | short-form typed Hebrew at volume |
+| **ivrit.ai** | ~15,000 hours transcribed | podcasts, spontaneous speech | CC BY 4.0 | conversational, far larger than the subtitle prefix used here |
+| **HUJI Corpus of Spoken Hebrew** | telephone conversations, 2020–21 | naturally occurring interaction | CC BY 4.0 | the closest register to messaging that exists as text |
+| **HebDB** | ~2,500 hours | spontaneous speech | CC BY 4.0 | as above |
+| **HeDC4** | cleaned, deduplicated Common Crawl | mixed web | Apache 2.0 | volume, and web text keeps the punctuation the current corpora strip |
+
+## Two things this list does not solve
+
+**No corpus of Hebrew spelling errors exists.** The registry lists none, and a targeted search
+found none. `M5-REAL-TYPOS` and `M11-BASERATE` stay NOT MEASURED. What is *not* ruled out is
+mining them: typed user-generated text contains authentic errors, and recovering them — an
+out-of-lexicon token one edit from an in-lexicon word, in an unambiguous context — is a known
+technique and an open question here, not a solved one.
+
+**Volume is not the missing ingredient.** `H1` measured that 99.16% of conversational tokens are
+already in the lexicon. More text of the same shape buys coverage this keyboard does not lack.
+What the list above is worth is **register** and, in the case of `HeDC4` and the UGC corpora,
+**an alphabet** — they keep the Latin characters, digits and punctuation that
+`build_subtitle_corpus.py` and `build_eval_corpus.py` discard. See
+[`docs/FRICTION_INVENTORY.md`](FRICTION_INVENTORY.md).

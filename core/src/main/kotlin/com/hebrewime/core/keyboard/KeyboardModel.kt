@@ -39,6 +39,24 @@ data class Key(
      * one that does nothing.
      */
     val longPressOutput: String? = null,
+    /**
+     * Why this key's [label] is not the glyph the user will see when they press it.
+     *
+     * **Null for almost every key, and it must stay that way.** Of everything the shipped
+     * layouts can emit, exactly two characters render as something else in Hebrew: `(` and `)`.
+     * Rule L4 of UAX #9 mirrors them inside a right-to-left run, so pressing the key labelled
+     * `(` puts a `)`-shaped glyph on screen. `B1` measured what that costs: **8 of 8 bracket
+     * items change meaning if the user follows the key label** and presses `)` instead.
+     *
+     * This field does not fix that. It makes it impossible to have that mismatch **silently**,
+     * which is the same bargain `GATE-CORPUS-2` strikes: a machine can find the mismatch, only
+     * a person can say why it is allowed to stand.
+     *
+     * **The requirement is enforced by `KeyLabelGlyphTest`, deliberately not by `init`.** A
+     * constructor that refused an undocumented mismatch would make the check unable to fail,
+     * and a check that cannot fail is not a check.
+     */
+    val labelDiffersBecause: String? = null,
 ) {
     init {
         require(widthWeight > 0f) { "widthWeight must be positive, was $widthWeight for $label" }
@@ -106,6 +124,32 @@ data class KeyboardLayout(
  */
 object Layouts {
 
+    /**
+     * Why `(` stays labelled `(` even though a `)` appears on screen.
+     *
+     * Rule L4 of UAX #9 mirrors a bracket inside a right-to-left run, so in Hebrew the key
+     * labelled `(` puts a `)`-shaped glyph at the caret. That is **correct text** — `B2`
+     * measured it as the rendering a Hebrew-locale app has always produced — and it is a
+     * genuine trap: `B1` measured that **8 of 8 bracket items change meaning** when a user
+     * "corrects" it by pressing `)` instead.
+     *
+     * **Relabelling was considered and rejected**, because this file already records the
+     * project making exactly that mistake once. `KeyboardLayout.scriptDirection` documents an
+     * earlier version that mirrored the key positions on the reasoning that Hebrew reads
+     * right-to-left — *"That is wrong, it shipped, and a user opened the keyboard and said it
+     * looked like a mirror."* Every Hebrew typist carries SI-1452 in muscle memory from a
+     * physical keyboard, where this key has been labelled `(` for decades. Swapping the labels
+     * to match the glyph would break that for a benefit nobody has measured.
+     *
+     * **`L2-LABEL` is NOT MEASURED.** Whether matching labels to glyphs helps a user needs a
+     * user, and there is not one. Until there is, the mismatch stands and is documented rather
+     * than fixed on a hunch — which is what this constant is.
+     */
+    const val BRACKET_LABEL_REASON: String =
+        "L4 mirrors brackets in RTL, so the glyph is the other bracket. Relabelling repeats " +
+            "the mirrored-layout mistake this file already records; SI-1452 muscle memory wins " +
+            "until L2-LABEL is measured on a user."
+
     const val HEBREW = "he"
     const val ENGLISH = "en"
     const val NUMERIC = "123"
@@ -140,7 +184,12 @@ object Layouts {
         scriptDirection = ScriptDirection.LEFT_TO_RIGHT,
         rows = listOf(
             row("1234567890"),
-            row("-/:;()₪&@\""),
+            // Built explicitly rather than through `row()`, because two of these ten keys are
+            // the only characters the shipped layouts emit whose glyph is not what the label
+            // shows. `KeyLabelGlyphTest` requires the reason; see `docs/KEY_LABELS.md`.
+            KeyboardRow(listOf("-", "/", ":", ";", "(", ")", "₪", "&", "@", "\"").map { c ->
+                Key(c, c, KeyAction.CHARACTER, labelDiffersBecause = BRACKET_LABEL_REASON.takeIf { c == "(" || c == ")" })
+            }),
             listOf(Key(".", ".", KeyAction.CHARACTER), Key(",", ",", KeyAction.CHARACTER),
                    Key("?", "?", KeyAction.CHARACTER), Key("!", "!", KeyAction.CHARACTER),
                    // Long press reaches the Hebrew punctuation the abbreviation feature needs.

@@ -79,6 +79,25 @@ tasks.withType<Test>().configureEach {
     // Adaptive learning: interpolation weight and session floor are swept on learning_dev and
     // reported on learning_test, which share no sentence with it or with each other.
     systemProperty("runLearningSweep", project.findProperty("runLearningSweep")?.toString() ?: "")
+    // O1, the offer policy: thresholds are swept on the EVEN half of the committed eval slice
+    // and reported on the ODD half, which the test asserts are disjoint rather than inferring
+    // it from the rule that split them. Opt-in, because it is a sweep and not a regression.
+    systemProperty("runOfferSweep", project.findProperty("runOfferSweep")?.toString() ?: "")
+    // K1, inference feasibility: arithmetic only, random weights, no accuracy claim. Opt-in
+    // because it is a probe, and one-sided because it runs on a build host and not a phone.
+    systemProperty("runInferenceProbe", project.findProperty("runInferenceProbe")?.toString() ?: "")
+    // B1, bidi divergence: java.text.Bidi over a hand-built corpus of the characters both eval
+    // corpora delete by construction. Opt-in because it is a probe and a sweep of four arms.
+    systemProperty("runBidiProbe", project.findProperty("runBidiProbe")?.toString() ?: "")
+    // W1, the typed register: the first evaluation slice a person typed. Opt-in; PC-1 gates it.
+    systemProperty("runTypedRegister", project.findProperty("runTypedRegister")?.toString() ?: "")
+    // W7, prefix-aware completion: measured in the harness before anything reaches the engine.
+    systemProperty("runPrefixCompletion", project.findProperty("runPrefixCompletion")?.toString() ?: "")
+    // B2, the bidi arms B1 never tested, on lines a person typed rather than hand-built.
+    systemProperty("runBidiArms", project.findProperty("runBidiArms")?.toString() ?: "")
+    // W8, spelling correction by source register: corpus A (wiki) vs D (typed), same run.
+    systemProperty("runCorrectionRegister", project.findProperty("runCorrectionRegister")?.toString() ?: "")
+    systemProperty("runSuccinctTrie", project.findProperty("runSuccinctTrie")?.toString() ?: "")
 
     // Warm-up under a deliberately small heap. An IME is one of the most heap-constrained
     // processes on Android and this project has no device to measure on, so the substitute is
@@ -99,3 +118,10 @@ tasks.withType<Test>().configureEach {
     }
 }
 
+
+// E2 — prints the :core test runtime classpath so scripts/measure_memory_floor.sh can launch
+// one JVM per (stage, heap) pair directly. Going through Gradle would add its own heap to every
+// measurement, which is the thing being measured.
+tasks.register("printTestClasspath") {
+    doLast { println(sourceSets["test"].runtimeClasspath.asPath) }
+}

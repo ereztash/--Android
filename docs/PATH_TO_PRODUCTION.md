@@ -8,14 +8,20 @@ It exists because "production ready" was being carried as a mood. It is a list.
 **Nothing in this document changes the verdict.** The verdict changes when the boxes are
 ticked, and it is ticked by evidence, not by finishing the list.
 
+**And a box is ticked by the rule in [`docs/DEFINITION_OF_DONE.md`](DEFINITION_OF_DONE.md)**,
+not by whoever is looking. That file was the last thing here still being decided from memory:
+this document says *what* has to happen, and that one says *when it counts as having
+happened*. `GATE-DOD-1` through `GATE-DOD-4` fail the build on a criterion that cites nothing,
+cites something that no longer exists, or reads MET over a check that has never run.
+
 ---
 
 ## Where it actually stands
 
 | | |
 |---|---|
-| Gates, each with a positive control demonstrated red | **23** |
-| JVM tests | **286**, 0 failures, 0 skipped |
+| Gates, each with a positive control demonstrated red | **29** |
+| JVM tests | **288**, 0 failures, 0 skipped |
 | Android lint on the release build | 0 errors, 7 style warnings |
 | Release APK + AAB | build, survive R8, carry no network permission |
 | Signing pipeline | **proven end to end** with a throwaway key, then destroyed |

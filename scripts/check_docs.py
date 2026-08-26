@@ -197,6 +197,51 @@ def live_denominators(root: str) -> dict:
     return out
 
 
+# The TOTAL number of gates is published in two documents and in two languages, and NOTHING
+# read it back. It went stale the moment GATE-WITHDRAWN-1 was added: both files still said 29
+# while the runner defined 30, and `--fix-denominators` rewrote zero of them because no rule
+# covered the number. That is the same defect this gate exists for, one level up -- the gate
+# against stale counts had a stale count outside its own reach.
+GATE_COUNT_FILES = {
+    "docs/QA_MATRIX.md": re.compile(r"\*\*(\d+) gates\*\*"),
+    "README.md": re.compile(r"(\d+) שערים"),
+}
+
+
+def live_gate_count(root: str) -> int | None:
+    runner = os.path.join(root, "scripts", "run_gates.py")
+    if not os.path.isfile(runner):
+        return None
+    return len(re.findall(r'"id": "GATE-', open(runner, encoding="utf-8").read()))
+
+
+def check_gate_count(root: str, inject: bool) -> Detector:
+    det = Detector(name="doc_gate_count", unit="published total-gate counts", denominator=0)
+    live = live_gate_count(root)
+    if live is None:
+        det.notes.append("run_gates.py missing; NOT-MEASURED")
+        return det
+    for rel, rx in GATE_COUNT_FILES.items():
+        path = os.path.join(root, rel)
+        if not os.path.isfile(path):
+            det.notes.append(f"{rel} missing; not counted")
+            continue
+        m = rx.search(open(path, encoding="utf-8").read())
+        if not m:
+            det.notes.append(f"{rel}: no published total-gate count found")
+            continue
+        det.denominator += 1
+        published = int(m.group(1)) + (1 if inject else 0)
+        det.notes.append(f"{rel}: says {published}, run_gates.py defines {live}")
+        if published != live:
+            det.findings.append(Finding(
+                "doc_gate_count", rel, 0,
+                f"{rel} publishes {published} gates; run_gates.py defines {live}. A total "
+                f"copied by hand goes stale the next time a gate is added, and this one did.",
+                "doc.stale_gate_count"))
+    return det
+
+
 def check_denominators(root: str, inject: bool) -> Detector:
     det = Detector(name="doc_denominators", unit="published gate denominators",
                    denominator=0)
@@ -324,7 +369,7 @@ def main() -> int:
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--strict", action="store_true")
     ap.add_argument("--inject-defect",
-                    choices=["stale", "denominator", "selfcontradiction"],
+                    choices=["stale", "denominator", "selfcontradiction", "gatecount"],
                     help="PLANT A DEFECT. Positive control; must go red.")
     ap.add_argument("--fix-denominators", action="store_true",
                     help="rewrite the matrix's derived numbers from a live gate run. Never "
@@ -343,6 +388,7 @@ def main() -> int:
         detectors=[
             check(args.root, args.inject_defect),
             check_denominators(args.root, args.inject_defect == "denominator"),
+            check_gate_count(args.root, args.inject_defect == "gatecount"),
         ],
         not_covered=NOT_COVERED,
     )

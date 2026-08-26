@@ -89,6 +89,9 @@ def _gates(strict: bool) -> list[dict]:
     size = os.path.join(ROOT, "scripts", "check_size.py")
     learn = os.path.join(ROOT, "scripts", "check_learning.py")
     docs = os.path.join(ROOT, "scripts", "check_docs.py")
+    dod = os.path.join(ROOT, "scripts", "check_dod.py")
+    withdrawn = os.path.join(ROOT, "scripts", "check_withdrawn.py")
+    corpalpha = os.path.join(ROOT, "scripts", "check_corpus_alphabet.py")
     apk = os.path.join(ROOT, "scripts", "check_apk.py")
     store = os.path.join(ROOT, "scripts", "build_store_assets.py")
     debug_apk = os.path.join(ROOT, "app", "build", "outputs", "apk", "debug", "app-debug.apk")
@@ -280,6 +283,21 @@ def _gates(strict: bool) -> list[dict]:
                             "-- the exact drift that made the same sentence stale twice",
         },
         {
+            # A FOURTH control on the same script. check_docs.py now carries three detectors,
+            # and the TOTAL gate count is the one that had no reader at all: it went stale in
+            # two documents the moment GATE-WITHDRAWN-1 was added, and --fix-denominators
+            # rewrote none of them because no rule covered the number. The gate against stale
+            # counts had a stale count just outside its own reach.
+            "id": "GATE-DOC-4",
+            "what": "the total number of gates published in QA_MATRIX.md and README.md is the "
+                    "number run_gates.py actually defines",
+            "real": [PY, docs, "--root", ROOT, "--json"] + s,
+            "control": [PY, docs, "--root", ROOT, "--inject-defect", "gatecount", "--json"],
+            "control_desc": "both documents publishing one gate more than the runner defines "
+                            "-- what every hand-copied total looks like the day after a gate "
+                            "is added",
+        },
+        {
             # A third control on the same detector, because "stale" only exercises the
             # cross-document comparison. This one exercises the matrix against itself, which
             # went unchecked until a bullet in QA_MATRIX.md was found contradicting a table
@@ -303,6 +321,89 @@ def _gates(strict: bool) -> list[dict]:
             "control": [PY, docs, "--root", ROOT, "--inject-defect", "denominator", "--json"],
             "control_desc": "one published denominator off by one -- what a hand-copied "
                             "count looks like the day after a source file is added",
+        },
+        {
+            # `[א-ת]+` deleted every non-Hebrew character from every corpus this project
+            # measures on. It was never registered as a decision and no gate noticed for four
+            # milestones. H1 reported it as 0.00%, A1 measured what was behind it, B1 found
+            # exactly zero divergence on 12,000 lines because the characters were gone, and W1
+            # corrected a headline number that came from one of those corpora. On the tree as
+            # it stood this gate failed on 9 of 9 corpora.
+            "id": "GATE-CORPUS-1",
+            "what": "every corpus declares the character classes it keeps, and the declared "
+                    "kept-set equals what the artifact actually contains",
+            "real": [PY, corpalpha, "--json"] + s,
+            "control": [PY, corpalpha, "--inject-defect", "kept", "--json"],
+            "control_desc": "a declaration that no longer matches the bytes -- what a builder "
+                            "whose filter changed leaves behind",
+        },
+        {
+            # The detector that carries the gate. A machine can compute WHICH classes are
+            # missing; only a person can say WHY, and not saying it is the actual defect.
+            "id": "GATE-CORPUS-2",
+            "what": "every character class a corpus does not contain is declared dropped with "
+                    "a non-empty reason",
+            "real": [PY, corpalpha, "--json"] + s,
+            "control": [PY, corpalpha, "--inject-defect", "reason", "--json"],
+            "control_desc": "a class deleted from a corpus with nothing written about why -- "
+                            "the exact state `[א-ת]+` was in for four milestones",
+        },
+        {
+            # Two layers were withdrawn against a pre-registered rule, and both withdrawals
+            # live as an ABSENCE -- a constructor no longer called, a default left at null.
+            # An absence is the easiest thing in a codebase to undo by accident, and nothing
+            # asserted the silence until this gate existed.
+            "id": "GATE-WITHDRAWN-1",
+            "what": "no layer withdrawn against a pre-registered stopping rule is constructed "
+                    "in the shipped path",
+            "real": [PY, withdrawn, "--json"] + s,
+            "control": [PY, withdrawn, "--inject-defect", "reenable", "--json"],
+            "control_desc": "the real-word detector wired back into the shipped controller -- "
+                            "what a merge resolution or a 'restored' missing wire-up looks "
+                            "like the day nobody remembers why the slot was empty",
+        },
+        {
+            # The definition of done is the third document whose central claims must be kept
+            # in step with the other two by hand -- the mechanism that produced a stale device
+            # claim twice and a stale denominator inside the gate written against stale
+            # denominators. It arrives with a gate rather than after one.
+            "id": "GATE-DOD-1",
+            "what": "every done-criterion cites something, states one of the four allowed "
+                    "states, and every waived one names a waiver that exists",
+            "real": [PY, dod, "--root", ROOT, "--json"] + s,
+            "control": [PY, dod, "--root", ROOT, "--inject-defect", "unfalsifiable",
+                        "--json"],
+            "control_desc": "a criterion citing nothing, in a state nobody defined, beside a "
+                            "waiver decided in conversation and never written down -- what a "
+                            "criterion written to feel finished looks like",
+        },
+        {
+            "id": "GATE-DOD-2",
+            "what": "everything a done-criterion cites resolves: a gate the runner defines, a "
+                    "row the QA matrix carries, or a file that exists",
+            "real": [PY, dod, "--root", ROOT, "--json"] + s,
+            "control": [PY, dod, "--root", ROOT, "--inject-defect", "phantom", "--json"],
+            "control_desc": "a criterion citing a gate and a file that no longer exist -- "
+                            "evidence renamed out from under a criterion that still reads as "
+                            "satisfied",
+        },
+        {
+            "id": "GATE-DOD-3",
+            "what": "no criterion claims MET while the QA matrix records its evidence as "
+                    "never run",
+            "real": [PY, dod, "--root", ROOT, "--json"] + s,
+            "control": [PY, dod, "--root", ROOT, "--inject-defect", "metoverunrun", "--json"],
+            "control_desc": "MET claimed over M7-LAT, which has never run -- 'ready except "
+                            "for', written one row at a time",
+        },
+        {
+            "id": "GATE-DOD-4",
+            "what": "the counts the definition of done publishes are the ones its own tables "
+                    "contain, verdict included",
+            "real": [PY, dod, "--root", ROOT, "--json"] + s,
+            "control": [PY, dod, "--root", ROOT, "--inject-defect", "count", "--json"],
+            "control_desc": "one published count off by one -- what a hand-copied summary "
+                            "looks like the day after a criterion changes state",
         },
         {
             "id": "GATE-SIZE-1",

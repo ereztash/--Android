@@ -483,3 +483,283 @@ of authentic errors, and is a second reason to want the one this project still d
   subjects.
 - **Not on a device.** `GATE-FONT-1` proves the measured bytes are in the APK. Whether the
   result is visible to a person is `M4-DEVICE`, still NOT RUN.
+
+---
+
+# O1 — the offer policy. Prediction recorded before anything is measured.
+
+## The question
+
+Every number above is about **ranking**: given that the strip speaks, is the right word in it?
+Nothing here has ever measured the other half — **whether it should speak at all**.
+
+The shipped policy speaks whenever the pruned table has any continuation for the previous word.
+That is **86.64%** of positions, and `cap64/mc5` in B1 raised it to 92.32%, which was recorded
+as a gain. From a user's side it is not obviously a gain, and the arithmetic is unflattering:
+
+| | |
+|---|---|
+| next-word top-3, over all positions | **9.09%** |
+| positions where the strip speaks | **86.64%** |
+| **top-3 among the positions where it speaks** | **10.49%** |
+
+A strip that speaks almost always and is right about one time in ten teaches a user, within a
+day or two, to stop looking at it. Once they stop looking, the 10.49% is worth nothing at all —
+the feature's value is not its accuracy but its accuracy **times** whether anyone is still
+reading it.
+
+B1 established that the ranking cannot be bought with bytes: *the representation is the
+ceiling, not the allocation*. This asks whether the **offer decision** is a lever the ranking
+is not.
+
+## The experiment
+
+The engine already computes a number that is a direct measure of evidence: a `NEXT_WORD`
+prediction's `score` is the bigram table's quantized log-count for that pair, `round(log2(c) *
+8)`. Withhold the offer when that evidence is weak, and measure what the strip is worth when it
+does speak.
+
+Three signals, **fixed now**, and no fourth will be tried after seeing a result:
+
+1. **`s1`** — the top-ranked prediction's score.
+2. **`margin`** — `s1 − s2`, with `s2 = 0` when the engine returned fewer than two.
+3. **the conjunction** — `s1 ≥ a` **and** `margin ≥ b`.
+
+Same harness, same shipped configuration, same eligibility rule as every cell above (a target
+of at least 3 characters, `previous` the token before it).
+
+### The slices, and which one is allowed to choose anything
+
+| slice | sentences | role |
+|---|---|---|
+| committed Wikipedia eval slice, **even** indices | 3,000 | **dev** — the only slice a threshold may be chosen on |
+| committed Wikipedia eval slice, **odd** indices | 3,000 | **test** — reported against, never selected on |
+| `he_conversational_test.txt.gz` | 6,000 | **register check** — never selected on, and the register a user actually types in |
+
+The two halves are disjoint by construction and the test asserts it rather than inferring it
+from the rule that produced them.
+
+## The prediction, written now
+
+1. **Precision-among-offered rises monotonically with the threshold.** `s1` is an evidence
+   count, and contexts whose best continuation was seen thousands of times are genuinely better
+   predicted than ones whose best was seen six times. If this is flat, the ranking has already
+   spent the signal and the answer is B1's answer again, arriving from a third direction.
+2. **The rule below is NOT met.** Reaching 20% precision-among-offered will cost more than the
+   rule allows: I expect retention at that point to land in **40–60%**, short of 70%.
+3. **`margin` is the weaker signal of the two.** A large gap between the first and second
+   continuation says the context is lopsided, not that it is well-evidenced; `s1` says both.
+4. **The conjunction beats either alone by less than 2 points of precision** at equal
+   retention, because the two signals are computed from the same counts and are not
+   independent.
+
+If precision-among-offered comes out **above 25%** anywhere with retention above 80%, the
+harness is wrong and gets checked before the result is believed. That would mean the shipped
+policy is discarding a very large, very cheap win, and this project has learned to distrust
+those.
+
+## The stopping rule
+
+Adopt an offer threshold only if **all** of the following hold:
+
+- on **dev**, some configuration reaches **precision-among-offered@3 ≥ 20.0%** — a doubling of
+  the shipped 10.49% — while **retaining ≥ 70%** of the top-3 hits the shipped policy produces;
+- that same configuration, on **test**, lands within **3.0 points** of its dev precision and
+  still retains ≥ 70%.
+
+Anything else is recorded and **nothing is adopted**. The 70% floor is there because withheld
+offers are a real loss to the user and not a free saving: every hit removed is a word they
+would have tapped.
+
+**Prefix-1 completion is measured alongside and is explicitly NOT under this rule.** It is the
+worst-scoring cell in the document (5.43% top-3) and the same question applies to it, but a
+rule that can be satisfied by whichever of two metrics happens to cooperate is not a rule. It
+is reported as an observation, and adopting on it would need its own pre-registration.
+
+## Why this is worth running even though prediction 2 says it fails
+
+Because "the strip speaks in 86.64% of positions" has been carried as a feature for two
+milestones and the other side of it has never been on a page. If the rule fails, the result is
+a third independent measurement of the same ceiling — after B1 on allocation and the human
+labelling on the confusion layer's thresholds — and the finding stops being a suspicion.
+
+## O1 RESULT — the offer decision is not a lever. NOT ADOPTED.
+
+One harness, the shipped configuration, the committed slice split even/odd with the split
+asserted rather than assumed. `n = 20,000` per slice per cell; JDK 17.0.19 via `jvmToolchain(17)`.
+
+Cross-check before anything else was read: the **test** half returns next-word top-3 of
+**9.09%** — the number this document already publishes, to two decimals, from a harness written
+independently of the one that produced it. The instrument measures what it claims to.
+
+### The shipped policy, restated as the user meets it
+
+| slice | offers in | top-3 among offered | top-1 among offered |
+|---|---|---|---|
+| dev (wiki) | 86.48% | 10.22% | 5.75% |
+| test (wiki) | 86.16% | 10.55% | 5.69% |
+| conversational | 93.01% | **13.00%** | 5.53% |
+
+### Signal 1 — `s1`, the top prediction's evidence. It does nothing.
+
+| threshold | offers in | top-3 among offered | retention |
+|---|---|---|---|
+| — (shipped) | 86.48% | 10.22% | 100.00% |
+| `s1 ≥ 37` | 69.89% | 10.87% | 86.02% |
+| `s1 ≥ 53` | 49.86% | 11.00% | 62.08% |
+| `s1 ≥ 69` | 29.71% | 11.08% | 37.24% |
+| `s1 ≥ 81` | 19.53% | **10.22%** | 22.58% |
+| `s1 ≥ 104` | 4.42% | 11.33% | 5.66% |
+
+Across a twentyfold reduction in offers, precision moves by **less than one point**, and not
+monotonically — at a 19.53% offer rate it is back to exactly the shipped 10.22%.
+
+### Signal 2 — `margin`. This one is real, and it is the one I predicted would be weaker.
+
+| threshold | offers in | top-3 among offered | retention |
+|---|---|---|---|
+| `margin ≥ 1` | 69.13% | 11.19% | 87.55% |
+| `margin ≥ 4` | 49.03% | 12.39% | 68.76% |
+| `margin ≥ 9` | 29.16% | 13.67% | 45.10% |
+| `margin ≥ 14` | 19.42% | 14.50% | 31.86% |
+| `margin ≥ 21` | 8.71% | 17.46% | 17.20% |
+| `margin ≥ 26` | 4.70% | **22.02%** | 11.71% |
+
+### Against the rule fixed beforehand
+
+Best dev configuration reaching the precision bar: **`s1 ≥ 28` and `margin ≥ 24`**.
+
+| | dev | test | conversational |
+|---|---|---|---|
+| offers in | 5.17% | 5.13% | 2.78% |
+| top-3 among offered | **22.53%** | **22.54%** | 22.34% |
+| retention | **13.19%** | 12.71% | 5.13% |
+
+| rule clause | required | measured | |
+|---|---|---|---|
+| dev precision-among-offered@3 | ≥ 20.0% | 22.53% | ✓ |
+| dev retention | ≥ 70.0% | **13.19%** | ✗ |
+| test replicates within | 3.0 points | 0.01 points | ✓ |
+
+**RULE NOT MET. Nothing is adopted.** To make the strip worth reading you have to silence it in
+95% of positions and throw away **87% of the words a user would have tapped**.
+
+### Where the prediction was wrong
+
+Four predictions were recorded. **Two of them are wrong, and one is the central mechanism.**
+
+| # | predicted | measured | |
+|---|---|---|---|
+| 1 | precision rises monotonically with the threshold | true of `margin`; **`s1` is flat and non-monotone** | ✗ |
+| 2 | rule not met, retention at the 20% point lands in 40–60% | rule not met, retention **13.19%** — off by a factor of four | direction ✓, magnitude ✗ |
+| 3 | `margin` is the weaker of the two signals | **`margin` is the only signal that works at all** | ✗ |
+| 4 | the conjunction beats either alone by < 2 points | +0.51 points of precision over `margin ≥ 26` | ✓ |
+
+Prediction 3 is the interesting failure. The reasoning behind it was that `s1` measures both how
+lopsided a context is *and* how well attested it is, so it should dominate a signal that
+measures only the first. The measurement says the opposite: **how much evidence a continuation
+has is uncorrelated with whether it is the right word, and how far ahead of its runner-up it is
+is not.** What predicts a hit is a context with one dominant continuation, not a context that
+was seen often. Frequency of the pair is already spent by the ranking; the shape of the
+distribution is not.
+
+### What it establishes
+
+**The offer decision is not a lever for next-word**, and this is now the third independent
+measurement of the same ceiling from a different direction:
+
+| experiment | asked | answer |
+|---|---|---|
+| B1 | can bytes be reallocated to buy accuracy? | +0.61 points. Not adopted. |
+| the human labelling | can a threshold rescue the confusion layer? | no configuration reaches the bar. |
+| **O1** | **can withholding the offer buy usefulness?** | **not without discarding 87% of the wins.** |
+
+*The representation is the ceiling.* Three experiments, three mechanisms, one answer.
+
+---
+
+## Two findings worth more than O1's own question
+
+### Finding A — every headline number in this document is the pessimistic one
+
+The same shipped engine, same configuration, same harness, run against held-out **transcribed
+dialogue** instead of held-out **encyclopedic prose**:
+
+| cell | wiki (published) | conversational | ratio |
+|---|---|---|---|
+| next-word top-3, all positions | 9.09% | **12.09%** | ×1.33 |
+| next-word top-3 among offered | 10.55% | **13.00%** | ×1.23 |
+| **prefix-1 completion top-3** | **5.35%** | **23.72%** | **×4.43** |
+| prefix-1 completion top-1 | 3.51% | **12.62%** | ×3.60 |
+
+`5.43% completion top-3 at one letter` has been quoted throughout this repository as though it
+described what a user gets. **It describes what a user would get if they typed Wikipedia.** On
+transcribed dialogue the same code scores **23.72%**.
+
+> ### CORRECTED BY W1 — read this before quoting 23.72%
+> This paragraph originally read *"on the register a phone keyboard is actually used in, the same
+> code scores 23.72% — better than one suggestion in four."* **That was wrong, and `W1` measured
+> by how much.** Transcribed dialogue is not the register a phone keyboard is used in: it is
+> speech, written down by a professional. On the closest register that a *person typed* — Ynet
+> comments, MIT, 10,700 of them — the same code scores **10.33%, 95% CI [9.75%, 10.92%]**.
+>
+> The direction of this finding survives: 10.33% is still ~1.9× the encyclopedic 5.43%, and
+> register is still worth more than any tuning measured here. **The magnitude does not.** The
+> honest sentence is *better than one suggestion in ten*, not one in four.
+>
+> Also from `W1`, and pinned here because this table is where it is quoted from: the **5.35%**
+> below is the wiki slice's **odd (test) half**; the whole slice is 5.43% and the even half is
+> 5.38%. 23.72% is a **whole** slice. The comparison mixes cell constructions. It changes no
+> conclusion and it is recorded rather than left to be found. See
+> [`docs/TYPED_REGISTER.md`](TYPED_REGISTER.md).
+>
+> `M10-REGISTER` stays **NOT MEASURED**. Facebook comments are typed; they are not phone
+> messaging.
+
+What this does and does not license:
+
+- The conversational slice is **held out by construction** — `held_out_every: 20`, a sentence is
+  written to exactly one file — from the 25% of the bigram mix that is subtitle text. This is
+  generalisation, not memorisation.
+- It is **transcribed film dialogue, not phone typing.** `M10-REGISTER` stays **NOT MEASURED**
+  and this does not close it. It is a closer proxy than Wikipedia and it is still a proxy.
+- The direction flatters the app, which is the direction to be most careful in. It is recorded
+  anyway, and prominently, because *a claim narrower than its evidence is not the safe
+  direction either* — this repository has already had one of those survive four milestones.
+
+### Finding B — the completion cell has a lever, and it must not be pulled here
+
+On dev, prefix-1 completion behaves the way next-word refused to:
+
+| threshold | offers in | top-3 among offered | retention |
+|---|---|---|---|
+| — (shipped) | 100.00% | 5.38% | 100.00% |
+| `s1 ≥ 178` | 45.26% | 9.88% | **83.16%** |
+| `s1 ≥ 199` | 39.92% | **10.32%** | **76.65%** |
+| `s1 ≥ 224` | 29.71% | 11.46% | 63.35% |
+
+Precision nearly doubles while three quarters of the hits survive — the shape O1's rule was
+written to reward, on the cell O1's rule explicitly does not cover.
+
+**It is not adopted, and it is not given a rule retro-fitted to make it pass.** Three reasons,
+in increasing order of importance:
+
+1. Adopting on a metric excluded from the rule *after seeing the result* is the tuning-on-test
+   failure the pre-registration exists to prevent. The rarer-suggestion filter in
+   `docs/LABELING_LOG.md` is the cautionary example: it passed on 12 items and died on 240.
+2. A strict doubling of 5.38% is **10.76%**, and no dev configuration reaches it at ≥70%
+   retention. Any bar this observation clears is a bar chosen after seeing it clear.
+3. **The threshold does not transfer between registers, and that is measured, not feared.** The
+   winning conjunction offers in 7.72% of dev positions and **15.92%** of conversational ones —
+   the same numeric threshold, twice the offer rate, because the score distribution is different.
+   A threshold chosen on Wikipedia and shipped to people typing messages is a threshold chosen
+   on the wrong distribution.
+
+Finding A is also the larger prize by a wide margin: the policy lever is worth about +5 points
+of precision on prefix-1 completion at a cost in coverage, and **the register is worth +18
+points at no cost at all.** What would settle it is `M10-REGISTER` — a corpus of real Hebrew
+phone typing — which is named in `docs/QA_MATRIX.md` as not measurable here and is not
+fabricated.
+
+**Recommendation to the operator, and not a change made here:** leave the offer policy alone,
+and stop quoting 5.43% as the user-facing completion figure without 23.72% beside it.

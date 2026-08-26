@@ -101,6 +101,16 @@ path for automatic replacement was unreachable, because nothing ever performed o
 > **The current, ordered list with owners and time estimates is
 > [`docs/PATH_TO_PRODUCTION.md`](PATH_TO_PRODUCTION.md).** What follows is the reasoning behind
 > the order; that file is the list.
+>
+> **What it takes for any item on that list to count as done is
+> [`docs/DEFINITION_OF_DONE.md`](DEFINITION_OF_DONE.md)** — three tiers, the same four states
+> this document's matrix uses, and a gate that fails the build on a criterion nobody can
+> check. Tier C reads **MET** with two waivers; tiers R and P read **NOT MET**, and P carries a
+> criterion that is NOT MET outright — the adjacent real-word layer ships below the precision
+> rule registered before its labels existed, with nobody having written down a decision either
+> way. Tier C reached MET only after a green run: `GATE-STORE-1` had been crashing on import on
+> every CI run since the commit that added it, and C4 stayed NOT MET from diagnosis until CI
+> proved otherwise.
 
 ### 1. Put it on a phone (nobody else can start until this happens)
 
