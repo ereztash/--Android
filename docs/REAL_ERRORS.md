@@ -156,3 +156,103 @@ single discount the engine has is aimed at a mistake he does not make.
 
 This is a finding about the model, established from the layout alone. **It is not a result about
 the fifteen messages** — the shipped path still has not been run on them.
+
+---
+
+# Result
+
+`R1Probe`, shipped configuration — `NeutralCostModel` with default `Config`, which is what
+`CorrectionController` constructs. Not the adjacency model: `CORRECTION_MEASUREMENTS.md` finding
+1 measured that as 8 points of top-1 worse and it is deliberately off.
+
+## The controls ran first and both behaved
+
+```
+PC-1  injected error 'מרלדת'  -> 3 suggestions  : RED    (the harness can see an error)
+PC-2  correct word  'מקלדת'   -> 0 suggestions  : SILENT (it does not invent one)
+```
+
+## What the engine did with twenty-five real errors
+
+| | count | |
+|---|---|---|
+| **SILENT — no suggestion at all** | **15 / 25** | 14 because the typed form is **already a valid word**; 1 because a geresh makes `שתנץ'` not a Hebrew word to `isHebrewWord` |
+| top-1 correct | 3 / 25 | |
+| top-3 correct | 6 / 25 | |
+| retrieved but wrong | 4 / 25 | |
+
+**Sixty percent of the time the keyboard says nothing.** Not a wrong suggestion — no suggestion.
+`suggest()` returns at `if (isValid(normalized)) return emptyList()` before it reaches the trie.
+`לבו`, `מחור`, `אנכנו`, `איפו`, `מורקב`, `אהבתה`, `אחשב` are all words. The engine is working
+exactly as designed and is structurally blind to most of what this person types wrong.
+
+The two it did retrieve and rank third are worth reading:
+
+```
+השגיעות  ->  הפגיעות, השגיאות, המגיעות
+שגיעות   ->  מגיעות,  פגיעות,  שגיאות
+```
+
+The right answer is **in the set** and loses to candidates that share no sound with it. Retrieval
+is not the failure. Ranking is.
+
+## The four predictions, scored
+
+| # | prediction | measured | |
+|---|---|---|---|
+| 1 | ≥3 of 15 messages carry a character the lexicon cannot represent | **1 of 15** | **FALSIFIED** |
+| 2 | out-of-lexicon on correct tokens ≥ 5.52% | **0.00%** of 119 | **FALSIFIED** |
+| 3 | top-1 materially below 78.34% | **12%** (3/25) | **HELD** |
+| 4 | ≥1 failure mode no eval corpus contains | the silent 60% | **HELD** |
+
+**Two of four falsified, and both in the direction that flatters the lexicon.** I expected phone
+messages to be full of Latin, digits and emoji the way `A1` found Ynet comments were. These are
+almost pure Hebrew letters. And I expected worse coverage than Ynet; every one of the 119
+correctly-spelled Hebrew tokens is accepted. `H1`'s 99.16% is if anything understated for this
+register.
+
+**Prediction 3 needs its like-for-like form or it is unfair.** The 78.34% was measured on corpus
+A, which **discarded 1,676 corruptions that landed on another real lexicon word**. Comparing 12%
+against it counts cases corpus A deleted. On the 10 items the engine actually engages with, top-1
+is **3 of 10 — 30%**. Still 48 points below, so the finding survives the fair comparison; the
+headline gap is the honest one only if the exclusion is stated with it.
+
+## The finding
+
+`CORRECTION_MEASUREMENTS.md` discarded **1,676 uniform and 1,174 adjacency corruptions because
+they landed on another real lexicon word** — reasonably, since "correcting" such a form is not
+clearly right. Roughly 30% of generated corruptions.
+
+**In real typing it is 60%, and it is the dominant failure.** The eval corpora removed by
+construction the thing that goes wrong most.
+
+That is not a flaw in those corpora — they answer the question they were built for. It is a
+statement about what the headline number covers. **78.34% is top-1 on the errors that remain
+after the most common real failure has been filtered out.**
+
+## What R1 supplies that the repository asked for in advance
+
+`CORRECTION_MEASUREMENTS.md` finding 1 ends:
+
+> *"What would change this answer: a corpus of real Hebrew typing errors. The true error
+> distribution lies somewhere between corpus A (uniform) and corpus B (pure adjacency), and
+> nothing in this project knows where. **Recorded as NOT MEASURED: the real Hebrew typing error
+> distribution.**"*
+
+R1 is 25 items of exactly that, and the answer is **neither A nor B**. Not uniform, not
+adjacency — **phonetic**. 21 of 25 are two ways to write one sound.
+
+**This does not license a phonetic cost weight.** Finding 1's whole lesson is that a weighting
+measured on a corpus generated from its own assumption looks like a large win and ships harm:
+adjacency gained 20 points on corpus B and lost 8 on corpus A. **Building a homophone discount
+and scoring it on R1 would rebuild corpus B.** R1 generates the hypothesis. Testing it needs a
+corpus R1 did not produce.
+
+## Not measured
+
+- **One writer, 25 items, and his status is unknown** — whether he is dyslexic, an oleh, or a
+  fluent native who types fast was asked and not established. Every number here is his.
+- **No bar was cleared or missed**, because none was set. The stopping rule holds: no weight,
+  threshold or cost model moves because of this set.
+- **`M10-REGISTER` stays NOT MEASURED.** Fifteen messages are the first sample of the register,
+  not the register.

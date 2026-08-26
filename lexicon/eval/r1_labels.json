@@ -118,7 +118,7 @@
       "intent": "סוכן",
       "confidence": "high",
       "class": "het_kaf",
-      "real_word": true
+      "_correction": "I called this a real-word error. It is not: the merchant word is סוחר, not סוחן. It is out of lexicon and the engine does fire on it."
     },
     {
       "m": 9,
