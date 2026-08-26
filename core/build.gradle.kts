@@ -97,6 +97,7 @@ tasks.withType<Test>().configureEach {
     systemProperty("runBidiArms", project.findProperty("runBidiArms")?.toString() ?: "")
     // W8, spelling correction by source register: corpus A (wiki) vs D (typed), same run.
     systemProperty("runCorrectionRegister", project.findProperty("runCorrectionRegister")?.toString() ?: "")
+    systemProperty("runSuccinctTrie", project.findProperty("runSuccinctTrie")?.toString() ?: "")
 
     // Warm-up under a deliberately small heap. An IME is one of the most heap-constrained
     // processes on Android and this project has no device to measure on, so the substitute is

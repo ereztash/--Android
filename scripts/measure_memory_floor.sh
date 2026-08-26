@@ -13,7 +13,7 @@ CP="${CP:-}"
 ASSETS="$ROOT/lexicon/assets"
 
 printf '%-12s %10s   %s\n' stage floor note
-for stage in empty lexicon trie trie-copy frequency bigrams; do
+for stage in empty lexicon trie succinct trie-copy frequency bigrams all-succinct; do
   lo=1; hi=512; note=""
   # binary search the smallest -Xmx that completes
   while [ $((hi - lo)) -gt 1 ]; do

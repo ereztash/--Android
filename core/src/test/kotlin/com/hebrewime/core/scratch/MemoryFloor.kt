@@ -47,6 +47,19 @@ object MemoryFloor {
             } else {
                 lexicon.asWordList()
             }
+            if (stage == "succinct" || stage == "all-succinct") {
+                val st = SuccinctTrie.build(words)
+                if (stage == "succinct") {
+                    return ok(stage, "nodes=${st.nodeCount} heapBytes=${st.heapBytes}")
+                }
+                // The whole shipped warm-up chain with the succinct trie substituted for
+                // LexiconTrie. This is the number a shipping decision would rest on; the
+                // `succinct` stage alone only prices the structure.
+                File(dir, "he_freq.bin.gz").inputStream().use { HebrewFrequency.load(it) }
+                val bg = File(dir, "he_bigrams.bin.gz").inputStream().use { BigramModel.load(it) }
+                return ok(stage, "held=${st.heapBytes} bigramFloor=${bg.minimumLogCount()}")
+            }
+
             val trie = LexiconTrie.build(words)
             if (stage == "trie" || stage == "trie-copy") {
                 return ok(stage, "nodes=${trie.nodeCount} heapBytes=${trie.heapBytes}")
