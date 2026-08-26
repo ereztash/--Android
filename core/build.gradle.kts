@@ -117,3 +117,10 @@ tasks.withType<Test>().configureEach {
     }
 }
 
+
+// E2 — prints the :core test runtime classpath so scripts/measure_memory_floor.sh can launch
+// one JVM per (stage, heap) pair directly. Going through Gradle would add its own heap to every
+// measurement, which is the thing being measured.
+tasks.register("printTestClasspath") {
+    doLast { println(sourceSets["test"].runtimeClasspath.asPath) }
+}
