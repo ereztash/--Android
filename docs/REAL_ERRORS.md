@@ -108,3 +108,51 @@ the party it constrains.
 - **One writer.** `n = 1` on the dimension that matters most. Whatever appears may be this
   person's habits rather than anyone else's, and no result will be written as though it were
   general.
+
+---
+
+# Observed during labelling, before the harness ran
+
+Recorded here because it was visible from the labels alone. It changes no prediction above —
+those are frozen — but it names the mechanism they were guessing at.
+
+## The errors are phonetic, not geometric: 21 of 25
+
+| substitution | occurrences | why |
+|---|---|---|
+| ח ↔ כ | 5 | both /χ/ |
+| ת ↔ ט | 3 | both /t/ |
+| א ↔ ע | 3 | both null |
+| ק ↔ כ | 2 | both /k/ |
+| ו ↔ ה | 2 | word-final /o/ vs silent ה |
+| ה ↔ ח, ה ↔ א | 2 | |
+| silent א dropped | 3 | מוציא, לבוא, אבוא |
+| whole word respelled by sound | 1 | `עכשיו` → `אחשב`, which is /axshav/ letter by letter |
+
+**This writer does not miss the key. He misses the letter.** Every pair above is two ways to
+write one sound in an abjad where the choice is not derivable from pronunciation — it has to be
+remembered.
+
+That is a different population of errors from the one every published number here was measured
+on. An **injected** error corrupts a letter, which produces a random or neighbouring
+substitution. It cannot produce `אחשב` for `עכשיו`.
+
+## The shipped cost model discounts none of them
+
+`AdjacencyCostModel` has exactly one substitution discount and it is geometric. Its own KDoc
+states the assumption: *"typing qof where resh was meant is a slip of the thumb; typing qof where
+tav was meant is a different word."*
+
+Asked directly, via `scripts`-free probe `HomophoneAdjacency` against the real layout geometry:
+
+```
+ח/כ  ק/כ  ת/ט  א/ע  ו/ה  ה/ח  ה/א   ->  discounted: 0 of 7
+thumb-slip control (ק/ר, ש/ד, ב/ה)  ->  3 of 3 adjacent  (probe works)
+```
+
+**Zero.** The control is green, so the zero is the model's answer and not a broken probe. Every
+one of this writer's systematic errors is charged the maximum a substitution can cost, and the
+single discount the engine has is aimed at a mistake he does not make.
+
+This is a finding about the model, established from the layout alone. **It is not a result about
+the fifteen messages** — the shipped path still has not been run on them.
