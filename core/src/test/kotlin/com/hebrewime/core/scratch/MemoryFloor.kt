@@ -28,13 +28,29 @@ object MemoryFloor {
         val stage = args[0]
         val dir = args[1]
         try {
-            val lexicon = File(dir, "he_lexicon.txt.gz").inputStream().use { HebrewLexicon.load(it) }
-            if (stage == "lexicon") return ok(stage, "words=${lexicon.size}")
+            // The zero arm. Without it "lexicon = 17 MB" conflates the lexicon with whatever
+            // heap a JVM needs to reach `main` at all, and there is no way to tell which.
+            if (stage == "empty") return ok(stage, "loaded=nothing")
 
-            val words = ArrayList<String>(lexicon.size)
-            for (i in 0 until lexicon.size) words.add(lexicon.wordAt(i))
+            val lexicon = File(dir, "he_lexicon.txt.gz").inputStream().use { HebrewLexicon.load(it) }
+            if (stage == "lexicon") return ok(stage, "words=${lexicon.size} heapBytes=${lexicon.heapBytes}")
+
+            // The FIRST version of this probe copied the lexicon into an ArrayList<String>
+            // before building. `CorrectionController` does not: it passes
+            // `lexicon.asWordList()`, a non-copying view. The copy is 355,587 live Strings and
+            // it dominated the floor, so the first `trie` figure measured a path the app does
+            // not take. Both are kept so the difference is visible rather than asserted.
+            val words = if (stage == "trie-copy") {
+                ArrayList<String>(lexicon.size).also { l ->
+                    for (i in 0 until lexicon.size) l.add(lexicon.wordAt(i))
+                }
+            } else {
+                lexicon.asWordList()
+            }
             val trie = LexiconTrie.build(words)
-            if (stage == "trie") return ok(stage, "nodes=${trie.nodeCount}")
+            if (stage == "trie" || stage == "trie-copy") {
+                return ok(stage, "nodes=${trie.nodeCount} heapBytes=${trie.heapBytes}")
+            }
 
             val freq = File(dir, "he_freq.bin.gz").inputStream().use { HebrewFrequency.load(it) }
             if (stage == "frequency") return ok(stage, "freq=${freq.hashCode() != 0}")

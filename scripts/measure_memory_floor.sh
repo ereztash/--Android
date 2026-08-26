@@ -13,8 +13,8 @@ CP="${CP:-}"
 ASSETS="$ROOT/lexicon/assets"
 
 printf '%-12s %10s   %s\n' stage floor note
-for stage in lexicon trie frequency bigrams; do
-  lo=8; hi=512; note=""
+for stage in empty lexicon trie trie-copy frequency bigrams; do
+  lo=1; hi=512; note=""
   # binary search the smallest -Xmx that completes
   while [ $((hi - lo)) -gt 1 ]; do
     mid=$(( (lo + hi) / 2 ))
