@@ -3,8 +3,8 @@
   "source": "15 WhatsApp messages, one writer, autocorrect OFF, Apr 2025 - Aug 2025",
   "writers": 1,
   "messages": 15,
-  "frozen": false,
-  "_frozen_note": "Set true only after the UNCERTAIN items are resolved by the operator and before the shipped path is run.",
+  "frozen": true,
+  "_frozen_note": "FROZEN 2026-08-26. All 25 intents settled with the operator before the shipped path was run on any message.",
   "items": [
     {
       "m": 1,
@@ -52,7 +52,7 @@
       "m": 2,
       "typed": "שתנץ'",
       "intent": "שטאנץ'",
-      "confidence": "medium",
+      "confidence": "operator",
       "class": "tav_tet+missing_alef"
     },
     {
@@ -124,7 +124,7 @@
       "m": 9,
       "typed": "שיחפול",
       "intent": "שכפול",
-      "confidence": "medium",
+      "confidence": "operator",
       "class": "het_kaf+extra_yod"
     },
     {
