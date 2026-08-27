@@ -237,7 +237,8 @@ def check_gate_count(root: str, inject: bool) -> Detector:
             det.findings.append(Finding(
                 "doc_gate_count", rel, 0,
                 f"{rel} publishes {published} gates; run_gates.py defines {live}. A total "
-                f"copied by hand goes stale the next time a gate is added, and this one did.",
+                f"copied by hand goes stale the next time a gate is added, and this one did. "
+                f"FIX: python3 scripts/check_docs.py --fix-denominators",
                 "doc.stale_gate_count"))
     return det
 
@@ -282,7 +283,11 @@ def check_denominators(root: str, inject: bool) -> Detector:
                 "doc_denominators", "docs/QA_MATRIX.md", 0,
                 f"{gate} publishes a denominator of {published}; {script}'s {detector} "
                 f"detector counted {expected} on this tree. A denominator copied by hand "
-                f"goes stale the next time a file is added, and this one has -- twice.",
+                f"goes stale the next time a file is added. "
+                f"FIX: python3 scripts/check_docs.py --fix-denominators  "
+                f"(do NOT edit the number by hand -- it was edited by hand seven times "
+                f"while this exact command already existed, because the failure never "
+                f"named it).",
                 "doc.stale_denominator"))
 
     # GATE-DOC-1's OWN published denominator, which the loop above cannot reach: reading it
