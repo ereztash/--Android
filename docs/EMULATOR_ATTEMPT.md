@@ -51,6 +51,27 @@ Total evidence accumulated in `DeviceEvidence`:
 `onStartInput` fired once. The keyboard never laid out. **No insets, no label-fit, no
 restricted-field evidence. Zero device-blocked rows closed.**
 
+## Two further attempts, because one configuration is not a conclusion
+
+The first run used the `google_apis` image on default cores while the host was still doing
+dexopt. Both are fixable, so they were fixed.
+
+| # | image | cores | host | boot | outcome |
+|---|---|---|---|---|---|
+| 1 | `google_apis` | default | busy | ~15 min | ANR **`com.hebrewime`** — failed to complete startup |
+| 2 | `google_apis` | 4 | idle | **~5 min** | guest load *rose* 25→36 and never settled |
+| 3 | **`default` (AOSP, no GMS)** | 4 | idle | ~8 min | load *fell* 30→21, then ANR **`com.android.launcher3`** |
+
+Four vCPUs cut boot from 15 minutes to 5, so the core count was a real constraint and is no
+longer one. Dropping Google Play services changed the load's *direction* — with `google_apis`
+it climbed and stayed climbing; with AOSP it fell steadily. Both were genuine improvements and
+**neither was sufficient.**
+
+The third attempt is the one that settles it. On the lightest available image, on all four
+cores, on an idle host, with the guest's own load trending down, **the launcher itself** could
+not stay responsive. At that point the thing failing is not the app, not the image and not the
+configuration.
+
 ## What this establishes, and what it does not
 
 **NOTICE 6 was half wrong, and the right half is now measured rather than asserted.** The limit
@@ -81,5 +102,9 @@ So the 22 do not all have the same blocker, and NOTICE 6 has been treating them 
 - **Whether the ANR would also occur on a slow real device.** The warm-up is heavy, and this
   says nothing about a low-end phone one way or the other. It was not measured and is not
   claimed.
-- The system images remain installed at `$ANDROID_HOME/system-images` (4.3 GB) so a future
-  session with KVM does not repeat the download.
+- **Three configurations were tried, not one.** That is enough to attribute the failure to the
+  absent hypervisor rather than to a choice, but it is still one host. A different unaccelerated
+  host is not covered.
+- `system-images;android-36;default;x86_64` (AOSP) remains installed so a future session with
+  KVM need not re-download it. The `google_apis` image was deleted: it is measurably the worse
+  choice here and was costing 4.3 GB.
