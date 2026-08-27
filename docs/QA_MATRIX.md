@@ -27,7 +27,7 @@ release-ready — and it is not described as release-ready anywhere in this repo
 | **Device / emulator** | **NONE. No Android device or emulator exists in this environment, and none of the results below were obtained on one.** |
 
 Scale: 44 production Kotlin files, 55 test files, **288 JVM tests**, 12 gate scripts,
-**33 gates** — the number `scripts/run_gates.py` defines, counted from it rather than
+**34 gates** — the number `scripts/run_gates.py` defines, counted from it rather than
 remembered; this line read **18** while the runner defined 25 — 5 positive-control fixtures.
 **Lint: 0 issues.**
 
@@ -116,6 +116,7 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | GATE-CORPUS-1 | Every corpus declares the character classes it keeps, and the declared kept-set equals what the artifact contains | 9 corpus artifacts | A declaration that no longer matches the bytes |
 | GATE-CORPUS-2 | Every class a corpus does not contain is declared dropped **with a reason** | 72 dropped classes | A class deleted with nothing written about why |
 | GATE-WITHDRAWN-1 | No layer withdrawn against a pre-registered stopping rule is constructed in the shipped path | 16 shipped Kotlin files | The real-word detector wired back into the shipped controller |
+| GATE-DEADLINE-1 | No external deadline passes while its action is still open, and no notice hardcodes a countdown | 1 open notice with a deadline, 6 notices scanned | A live deadline moved into the past with its status left open |
 | GATE-DOC-4 | The total gate count published in `QA_MATRIX.md` and `README.md` is the number `run_gates.py` defines | 2 published totals | Both documents publishing one gate more than the runner defines |
 | GATE-META-1 | A neutered control is caught as `NOT-A-GATE` | 3 gates | A control file emptied by hand |
 
@@ -278,7 +279,7 @@ NOT-A-GATE / PASS distinction directly, so this specific confusion cannot recur 
 | E1-FLOOR | How compressible the table actually is | Shipped today **3.523 B/entry**. Entropy floor **2.139** (gaps 12.533 bits + counts 4.579 bits); Elias–Fano **2.401**. **Prize ≈ 0.66 MB, 13% of the APK** | 51,900 groups, 477,180 continuations. Group headers are a further 311,404 B, 11.5% of the file |
 | E1-NAIVE | The obvious optimisation | **Worthless.** Packing indices to 19 bits instead of 32 reaches 3.375 B/entry raw against gzip's 3.523, and bit-packed data compresses badly — **deflate already removes those zero bytes** | Only visible by measuring against the compressed figure. Measuring raw would have shown a 40% "win" that does not exist |
 | E1-COST | What the byte saving would cost | **NOT MEASURED, and it is the whole cost side.** `logCountFor` linear-scans plain 5-byte records; a gap-coded format adds a decode per record, Elias–Fano changes it to a select | **`M7-LAT` has never run.** A byte saving bought with an unmeasurable latency cost is a trade made blind |
-| M12-SIZE | Release artifact | **APK 5,121,195 B; AAB 5,903,841 B** at `4b9f096`. Previously recorded 5,161,766 / 5,940,182 — **that row had gone stale**: the P7 withdrawal and the `ARM-EDGE` ship both changed the artifact and nothing re-read the number | DEX is now 1,995,700 B. **Found by asking whether the APK was current, not by a gate** — `GATE-SIZE-1` checks a budget, and `GATE-DOC-2` reads back five named denominators, none of them this one |
+| M12-SIZE | Release artifact | **APK 5,121,195 B (unsigned); AAB 5,903,843 B** rebuilt at `1a5fbca` on 2026-08-27. The APK is unchanged from `4b9f096`; the AAB row published **5,903,841** and is now 2 bytes larger. **Cause not established** — the APK is identical, so nothing shipped changed, and the difference is somewhere in the BUNDLE-METADATA the AAB carries and the APK does not. Inferred, not measured | **The AAB build is byte-deterministic**: two full `--rerun-tasks` builds produced identical bytes, so the 2-byte gap is drift between commits and not build noise. Second time this row has gone stale, and again found by asking rather than by a gate |
 | M12-STRIP | Whether the withdrawn layer is absent from the shipped **artifact**, not just the source | **NOT MEASURED.** Searching the release DEX for its name returns zero — but so does searching for `BidiPin`, which certainly ships. **R8 renames as well as strips, so absence of a string proves nothing** | `GATE-WITHDRAWN-1` reads source and says so in its own `NOT_COVERED`. Deciding this needs a mapping file or a DEX class-graph walk, and neither has been done |
 
 ## FAILED

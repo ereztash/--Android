@@ -91,6 +91,7 @@ def _gates(strict: bool) -> list[dict]:
     docs = os.path.join(ROOT, "scripts", "check_docs.py")
     dod = os.path.join(ROOT, "scripts", "check_dod.py")
     withdrawn = os.path.join(ROOT, "scripts", "check_withdrawn.py")
+    deadlines = os.path.join(ROOT, "scripts", "check_deadlines.py")
     corpalpha = os.path.join(ROOT, "scripts", "check_corpus_alphabet.py")
     apk = os.path.join(ROOT, "scripts", "check_apk.py")
     store = os.path.join(ROOT, "scripts", "build_store_assets.py")
@@ -347,6 +348,23 @@ def _gates(strict: bool) -> list[dict]:
             "control": [PY, corpalpha, "--inject-defect", "reason", "--json"],
             "control_desc": "a class deleted from a corpus with nothing written about why -- "
                             "the exact state `[א-ת]+` was in for four milestones",
+        },
+        {
+            # The only gate here that can fail without anyone committing anything. NOTICE 1
+            # headlined "URGENT, 11 DAYS" over a body reading "Today is 2026-08-20"; read on
+            # 2026-08-27 the real figure was FOUR, on a Play deadline that blocks every upload.
+            # A hand-written countdown is a hand-copied denominator wearing a different hat,
+            # and this repository has refreshed those six times. The second detector keeps the
+            # first honest: without it the prose countdown could come back while the date
+            # underneath it was still in the future.
+            "id": "GATE-DEADLINE-1",
+            "what": "no external deadline passes while its action is still open, and no notice "
+                    "hardcodes a countdown that can drift from the date it came from",
+            "real": [PY, deadlines, "--json"] + s,
+            "control": [PY, deadlines, "--inject-defect", "expired", "--json"],
+            "control_desc": "a live deadline moved into the past with its status left open -- "
+                            "what every deadline in this file becomes eventually, with no "
+                            "commit to catch it at",
         },
         {
             # Two layers were withdrawn against a pre-registered rule, and both withdrawals

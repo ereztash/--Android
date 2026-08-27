@@ -216,3 +216,35 @@ the answer — a corpus of real Hebrew typing errors — is named and recorded a
 
 The threshold was not moved, the corpus was not reweighted, and the feature was not shipped on
 the strength of the one corpus that flattered it.
+
+---
+
+## Release artifact, verified 2026-08-27 at `1a5fbca`
+
+Built from a clean checkout on the build host, not read from a previous record.
+
+| | |
+|---|---|
+| `:app:assembleRelease` | **succeeds** |
+| `:app:bundleRelease` | **succeeds** |
+| `lintVitalRelease` | **passes** — the release-blocking lint, not the advisory one |
+| APK | `app-release-unsigned.apk`, **5,121,195 B** |
+| AAB | `app-release.aab`, **5,903,843 B** |
+| Signature block at archive root | **absent from both** |
+| Rebuild determinism | **byte-identical** across two full `--rerun-tasks` builds |
+
+**The artifact is unsigned, and that is the build script behaving correctly, not a defect.**
+`app/build.gradle.kts` gates the release `signingConfig` behind `hasSigningSecrets`, which reads
+a keystore properties file that does not exist here. `signReleaseBundle` therefore runs as a
+no-op. Nothing needs fixing; the secrets are the operator's to supply (NOTICE 4).
+
+**Byte-determinism is worth recording as a property, because nothing had asserted it.** A
+release build that reproduces exactly is what makes an artifact auditable after the fact —
+someone can rebuild from a tag and compare. No gate checks this and it could regress silently.
+
+### What this does and does not move
+
+It moves nothing in the verdict. A release build that compiles and lints is the **floor**, not
+readiness: it says the artifact can be produced, not that it works on a phone. The two reasons
+the verdict is NOT READY are unchanged — 22 device-blocked rows, and an unsigned artifact — and
+neither is a build-host problem.
