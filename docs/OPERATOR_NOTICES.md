@@ -209,4 +209,15 @@ on-device accessibility behaviour, IME enable/select flow, the edge-to-edge inse
 recorded in `docs/QA_MATRIX.md` as **NOT RUN**, with the named device and API level it would
 need. None of them are described as passing.
 
-**Status: OPEN — structural limit of this environment, not a task that can be finished here.**
+> **CORRECTED 2026-08-27 — this notice was half wrong, and had never been tested.**
+> An emulator **does** run here: Android 36 boots (~15 min), the app installs, and
+> `ime set` selects the keyboard as the system IME. What is missing is **hardware
+> acceleration** — `/dev/kvm` is absent and `/proc/cpuinfo` carries neither `vmx` nor `svm`
+> — and unaccelerated the app cannot finish starting (ANR, load 39, 90% CPU stall). The
+> measurement is in [`EMULATOR_ATTEMPT.md`](EMULATOR_ATTEMPT.md).
+>
+> It also showed the 22 blocked rows do **not** share one blocker: geometry (insets, label
+> fit) is emulator-safe, while timing, hardware-backed keystore and anything perceptual are
+> not. This notice had been treating them as identical.
+
+**Status: OPEN — an accelerated emulator or a device is needed. No longer an untested claim.**
