@@ -161,6 +161,11 @@ android {
         xmlReport = true
         htmlReport = true
     }
+
+    // Robolectric inflates real resources, so the merged ones must be on its classpath.
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
 }
 
 androidComponents {
@@ -173,8 +178,20 @@ androidComponents {
 
 kotlin {
     jvmToolchain(17)
+
 }
 
+// Robolectric runs the framework's own classes in the JVM. It is TEST SCOPE ONLY and cannot
+// reach the shipped artifact.
+//
+// Why it was added: `:app` had ZERO automated tests while `:core` had 303, and `:app` is where
+// everything is wired together -- the commit path, the session handling, the sensitive-field
+// policy. All 16 of its files import `android.*`, so plain JUnit cannot reach any of it.
+//
+// What it does NOT do: close a single device-blocked row. Robolectric's shadows are a
+// reimplementation, not the framework, so `M4-DEVICE` -- "does the framework REALLY hand over
+// password plaintext" -- is exactly the kind of question it cannot answer. It verifies that OUR
+// wiring does what we think given a framework input; it cannot verify the input.
 dependencies {
     implementation(project(":core"))
     implementation(libs.androidx.core.ktx)
@@ -182,6 +199,8 @@ dependencies {
     implementation(libs.androidx.customview)
     implementation(libs.androidx.tracing)
     implementation(libs.kotlinx.coroutines.android)
+    testImplementation(libs.junit4)
+    testImplementation(libs.robolectric)
 
     // Compose is used in the settings/onboarding UI ONLY, never inside the IME window.
     // See docs/milestones/M2.md: ComposeView throws inside an InputMethodService until
