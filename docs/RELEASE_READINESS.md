@@ -242,6 +242,27 @@ no-op. Nothing needs fixing; the secrets are the operator's to supply (NOTICE 4)
 release build that reproduces exactly is what makes an artifact auditable after the fact —
 someone can rebuild from a tag and compare. No gate checks this and it could regress silently.
 
+### The four gates that only exist when the artifact does
+
+`GATE-NET-2`, `GATE-NET-3`, `GATE-R8-1` and `GATE-SIZE-1` all `require` a built release APK.
+In a clean container they report **NOT-MEASURED** — which is the correct behaviour and is
+exactly the failure this repository's runner was written to make loud, since these are the
+checks on the *shipping artifact* and they go dark precisely when they start to matter.
+
+Building the artifact ran them. All four **PASS with their controls red**:
+
+| gate | what it proved on the real APK |
+|---|---|
+| `GATE-NET-2` | no network permission, no network in the DEX |
+| `GATE-NET-3` | same, against the netcontrol variant |
+| `GATE-R8-1` | **R8 did not strip the classes the system instantiates by name** — `apk_ime_service=4` |
+| `GATE-SIZE-1` | inside the size budget written down for it |
+
+`GATE-R8-1` is the one worth naming. The release variant is minified and resource-shrunk, and
+a release build that compiles is not a release build that *runs*: if R8 had removed
+`HebrewImeService`, the app would install and then do nothing, and `assembleRelease` would
+still have succeeded. That is now checked against the artifact rather than assumed.
+
 ### What this does and does not move
 
 It moves nothing in the verdict. A release build that compiles and lints is the **floor**, not
