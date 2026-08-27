@@ -5,20 +5,28 @@ later. Nothing in this file is blocking the build — the clean path is being bu
 
 ---
 
-## NOTICE 1 — URGENT, 11 DAYS: Play targetSdk 36 deadline
+## NOTICE 1 — URGENT: Play targetSdk 36 deadline
 
-**Deadline 2026-08-31. Today is 2026-08-20.**
+**Deadline 2026-08-31.** Extension window ends **2026-11-01**.
+
+> **This notice used to carry a hardcoded "Today is 2026-08-20" and a "11 DAYS" headline.**
+> Read on 2026-08-27 it was **four** days, not eleven, and nothing had noticed. A countdown
+> transcribed by hand is the same failure as a denominator transcribed by hand, and this
+> repository has now hit that failure seven times. **The day count is no longer written here.**
+> `GATE-DEADLINE-1` computes it from the date above on every run and fails the build if a
+> deadline passes while its status is still open.
 
 Google Play requires targetSdk 36 for new apps *and* updates from 2026-08-31. An extension to
-**2026-11-01** is available by filing under **Policy status in Play Console**.
+2026-11-01 is available by filing under **Policy status in Play Console**.
 
-This app already targets 36, so the deadline is not a code problem. It matters because the
-first upload must clear review before the date, and a Play Console account plus an app entry
-must exist first — neither of which exists yet (see NOTICE 4).
+This app already targets 36 — verified: `gradle/libs.versions.toml` sets `targetSdk = "36"` and
+`compileSdk = "36"` — so the deadline is **not a code problem**. It matters because the first
+upload must clear review before the date, and a Play Console account plus an app entry must
+exist first — neither of which exists yet (see NOTICE 4).
 
-**Recommended action now:** file the extension request regardless of whether you think you
-need it. It costs nothing, and it converts a hard 11-day deadline into a 73-day one. If the
-first upload lands earlier, the extension is simply unused.
+**Recommended action:** file the extension request regardless of whether you think you need it.
+It costs nothing and it buys until 2026-11-01. If the first upload lands earlier, the extension
+is simply unused.
 
 **Status: NOT DONE — requires operator with Play Console access.**
 
@@ -201,4 +209,15 @@ on-device accessibility behaviour, IME enable/select flow, the edge-to-edge inse
 recorded in `docs/QA_MATRIX.md` as **NOT RUN**, with the named device and API level it would
 need. None of them are described as passing.
 
-**Status: OPEN — structural limit of this environment, not a task that can be finished here.**
+> **CORRECTED 2026-08-27 — this notice was half wrong, and had never been tested.**
+> An emulator **does** run here: Android 36 boots (~15 min), the app installs, and
+> `ime set` selects the keyboard as the system IME. What is missing is **hardware
+> acceleration** — `/dev/kvm` is absent and `/proc/cpuinfo` carries neither `vmx` nor `svm`
+> — and unaccelerated the app cannot finish starting (ANR, load 39, 90% CPU stall). The
+> measurement is in [`EMULATOR_ATTEMPT.md`](EMULATOR_ATTEMPT.md).
+>
+> It also showed the 22 blocked rows do **not** share one blocker: geometry (insets, label
+> fit) is emulator-safe, while timing, hardware-backed keystore and anything perceptual are
+> not. This notice had been treating them as identical.
+
+**Status: OPEN — an accelerated emulator or a device is needed. No longer an untested claim.**

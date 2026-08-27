@@ -128,7 +128,7 @@ lexicon/     נכסים בנויים + קורפוסי הערכה
 ```sh
 ./gradlew :core:test              # 303 בדיקות
 ./gradlew :app:assembleDebug      # APK להתקנה
-python3 scripts/run_gates.py      # 33 שערים, כל אחד עם ביקורת
+python3 scripts/run_gates.py      # 34 שערים, כל אחד עם ביקורת
 ```
 
 בשיבוט נקי חלק מהשערים ידווחו **NOT-MEASURED** ולא PASS: הם דורשים מקורות במעלה הזרם שאינם ב-git. זו התנהגות נכונה — NOT-MEASURED אינו PASS.

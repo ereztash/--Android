@@ -1,0 +1,224 @@
+{
+  "_comment": "R1 error inventory. Written BEFORE any code in this repository was run on any message, per the protocol in docs/REAL_ERRORS.md. The raw messages are held outside git; see that document for why.",
+  "source": "15 WhatsApp messages, one writer, autocorrect OFF, Apr 2025 - Aug 2025",
+  "writers": 1,
+  "messages": 15,
+  "frozen": true,
+  "_frozen_note": "FROZEN 2026-08-26. All 25 intents settled with the operator before the shipped path was run on any message.",
+  "items": [
+    {
+      "m": 1,
+      "typed": "מוצי",
+      "intent": "מוציא",
+      "confidence": "high",
+      "class": "missing_alef"
+    },
+    {
+      "m": 1,
+      "typed": "לבו",
+      "intent": "לבוא",
+      "confidence": "high",
+      "class": "missing_alef"
+    },
+    {
+      "m": 2,
+      "typed": "שמיצרים",
+      "intent": "שמייצרים",
+      "confidence": "high",
+      "class": "ktiv_male_missing_yod"
+    },
+    {
+      "m": 2,
+      "typed": "בסיגנונות",
+      "intent": "בסגנונות",
+      "confidence": "high",
+      "class": "ktiv_male_extra_yod"
+    },
+    {
+      "m": 2,
+      "typed": "מוחנים",
+      "intent": "מוכנים",
+      "confidence": "operator",
+      "class": "het_kaf"
+    },
+    {
+      "m": 2,
+      "typed": "כאיקרון",
+      "intent": "כעיקרון",
+      "confidence": "high",
+      "class": "alef_ayin"
+    },
+    {
+      "m": 2,
+      "typed": "שתנץ'",
+      "intent": "שטאנץ'",
+      "confidence": "operator",
+      "class": "tav_tet+missing_alef"
+    },
+    {
+      "m": 2,
+      "typed": "בנוסה",
+      "intent": "בנוסח",
+      "confidence": "high",
+      "class": "he_het"
+    },
+    {
+      "m": 2,
+      "typed": "החר",
+      "intent": "אחר",
+      "confidence": "high",
+      "class": "he_alef"
+    },
+    {
+      "m": 3,
+      "typed": "אהבתה",
+      "intent": "אהבת",
+      "confidence": "high",
+      "class": "extra_he",
+      "real_word": true
+    },
+    {
+      "m": 4,
+      "typed": "מורקב",
+      "intent": "מורכב",
+      "confidence": "high",
+      "class": "qof_kaf"
+    },
+    {
+      "m": 5,
+      "typed": "ליפניי",
+      "intent": "לפני",
+      "confidence": "operator",
+      "class": "ktiv_male_extra_yod"
+    },
+    {
+      "m": 6,
+      "typed": "איפו",
+      "intent": "איפה",
+      "confidence": "high",
+      "class": "vav_he"
+    },
+    {
+      "m": 7,
+      "typed": "אשקרה",
+      "intent": "אשכרה",
+      "confidence": "high",
+      "class": "qof_kaf"
+    },
+    {
+      "m": 8,
+      "typed": "מתורף",
+      "intent": "מטורף",
+      "confidence": "high",
+      "class": "tav_tet"
+    },
+    {
+      "m": 9,
+      "typed": "סוחן",
+      "intent": "סוכן",
+      "confidence": "high",
+      "class": "het_kaf",
+      "_correction": "I called this a real-word error. It is not: the merchant word is סוחר, not סוחן. It is out of lexicon and the engine does fire on it."
+    },
+    {
+      "m": 9,
+      "typed": "שיחפול",
+      "intent": "שכפול",
+      "confidence": "operator",
+      "class": "het_kaf+extra_yod"
+    },
+    {
+      "m": 10,
+      "typed": "איפו",
+      "intent": "איפה",
+      "confidence": "high",
+      "class": "vav_he",
+      "repeat_of": 6
+    },
+    {
+      "m": 11,
+      "typed": "אחשב",
+      "intent": "עכשיו",
+      "confidence": "operator",
+      "class": "phonetic_respelling"
+    },
+    {
+      "m": 12,
+      "typed": "אנכנו",
+      "intent": "אנחנו",
+      "confidence": "high",
+      "class": "kaf_het"
+    },
+    {
+      "m": 13,
+      "typed": "מחור",
+      "intent": "מכור",
+      "confidence": "operator",
+      "class": "het_kaf"
+    },
+    {
+      "m": 13,
+      "typed": "יבו",
+      "intent": "אבוא",
+      "confidence": "high",
+      "class": "yod_alef_prefix+missing_alef"
+    },
+    {
+      "m": 14,
+      "typed": "תרוף",
+      "intent": "טירוף",
+      "confidence": "operator",
+      "class": "tav_tet+ktiv_male_missing_yod"
+    },
+    {
+      "m": 15,
+      "typed": "השגיעות",
+      "intent": "השגיאות",
+      "confidence": "high",
+      "class": "ayin_alef"
+    },
+    {
+      "m": 15,
+      "typed": "שגיעות",
+      "intent": "שגיאות",
+      "confidence": "high",
+      "class": "ayin_alef",
+      "repeat_of": 15
+    }
+  ],
+  "not_errors": [
+    {
+      "typed": "קול",
+      "note": "English 'cool', deliberate transliteration"
+    },
+    {
+      "typed": "נייס",
+      "note": "English 'nice', deliberate transliteration"
+    },
+    {
+      "typed": "יו",
+      "note": "English 'yo', deliberate"
+    },
+    {
+      "typed": "אה",
+      "note": "discourse particle, deliberate"
+    },
+    {
+      "typed": "ai",
+      "note": "Latin script, deliberate"
+    },
+    {
+      "typed": "Midjourney",
+      "note": "Latin script, proper noun, deliberate"
+    },
+    {
+      "typed": "לשניה",
+      "note": "ktiv male variant of לשנייה; widely written this way and not counted as an error"
+    },
+    {
+      "typed": "פילים",
+      "note": "operator confirms: literally elephants. I had guessed 'files' and would have invented an error on a correctly spelled word. The single strongest argument for asking before running."
+    }
+  ],
+  "_operator_answers": "2026-08-26. Six UNCERTAIN items resolved by the operator, who knows the writer. Two of my six readings were wrong: הפילים was not an error at all, and מחור is מכור, not מחובר."
+}
