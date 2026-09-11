@@ -14,66 +14,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      # GATE-STORE-1 re-renders the Play assets and compares bytes, and
-      # scripts/build_store_assets.py imports Pillow at module level. Nothing installed it, so
-      # from the commit that added the gate (054a456) onwards the script died on
-      # ModuleNotFoundError before comparing a single pixel -- and run_gates.py recorded that
-      # crash as "control red (exit=1)", because a control that CANNOT RUN and one that ran and
-      # caught a planted defect exit the same way. The gate job was red for four commits on
-      # that alone.
-      #
-      # The VERSION is pinned, not floated. GATE-STORE-1's subject is a byte comparison against
-      # committed PNGs, so the renderer is part of the measurement: an unpinned Pillow means the
-      # gate can go red on a release that changed nothing about this repository's assets.
-      # 12.3.0 is the version the committed assets were verified against.
-      #
-      # This runs before the XML fast-fail so that one interpreter serves the whole job. It
-      # costs a few seconds; the fast-fail exists to skip several MINUTES of Gradle and Android
-      # SDK setup, and that ordering is unchanged.
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - name: Install the gate scripts' one third-party dependency
         run: python3 -m pip install --disable-pip-version-check pillow==12.3.0
-
-      # Cheapest gate first: a malformed XML comment costs several minutes of build to
-      # discover otherwise, behind an error with no line number.
       - name: GATE-XML-1 (fast fail)
         run: python3 scripts/check_xml.py
-
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
       - uses: gradle/actions/setup-gradle@v4
-
       - name: Resolve dependency coordinates (feeds GATE-NET-1 deps detector)
         run: ./gradlew dependencyAudit
-
-      # GATE-NET-2's control is a REAL defective APK, not a fixture. Both must exist before
-      # the gate runs, or it reports NOT-MEASURED.
-      # GATE-NET-2's control is a REAL defective APK, and GATE-NET-3/GATE-R8-1 check the
-      # RELEASE artifact -- the one that actually ships, and the only one R8 has touched.
       - name: Assemble debug, release, and the netcontrol positive-control APK
         run: ./gradlew :app:assembleDebug :app:assembleRelease :app:assembleNetcontrol
-
-      # GATE-LEX-1's reproducibility detector and GATE-LEX-2 both need the 37 MB of upstream
-      # lexicon sources, which are gitignored and therefore absent on a fresh runner. Without
-      # them there is nothing to rebuild and nothing to corrupt, so the control CANNOT go red
-      # -- and run_gates.py reports NOT-MEASURED, which is honest but leaves reproducibility
-      # unproven on every push.
-      #
-      # So the cache is warmed here, best-effort. continue-on-error because an upstream host
-      # being down is not a defect in this repository, and failing the build for it would
-      # teach everyone to ignore a red CI. When the fetch fails the gate says NOT-MEASURED in
-      # the summary below, in its own row, where it can be seen.
       - name: Fetch upstream lexicon sources (best-effort; feeds GATE-LEX-1/2)
         continue-on-error: true
         timeout-minutes: 10
         run: python3 scripts/check_lexicon.py --allow-fetch --json > /dev/null
-
       - name: Report whether the lexicon sources are present
         run: |
           for f in lexicon/cache/InflectedVerbsExtended.csv lexicon/cache/he_full.txt; do
@@ -83,13 +44,10 @@ jobs:
               echo "ABSENT: $f -- GATE-LEX-2 will report NOT-MEASURED, not PASS"
             fi
           done
-
       - name: Run all gates + positive controls
         run: python3 scripts/run_gates.py --verbose
-
       - name: Test the gates themselves
         run: python3 tools/gate_tests/test_gates.py
-
       - name: Upload gate reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -97,6 +55,7 @@ jobs:
           name: gate-reports
           path: build/reports/
           if-no-files-found: ignore
+          retention-days: 1
 
   unit-tests:
     name: JVM unit tests
@@ -109,15 +68,10 @@ jobs:
           java-version: '17'
       - uses: android-actions/setup-android@v3
       - uses: gradle/actions/setup-gradle@v4
-
       - name: Run :core unit tests
         run: ./gradlew :core:test
-
-      # A test task that runs zero tests is a zero denominator, which this project treats as
-      # NOT-MEASURED rather than green. Fail loudly instead of exiting 0 on NO-SOURCE.
       - name: Assert the suite actually ran tests
         run: python3 scripts/assert_tests_ran.py
-
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -125,6 +79,7 @@ jobs:
           name: test-reports
           path: '**/build/reports/tests/'
           if-no-files-found: ignore
+          retention-days: 1
 
   build:
     name: Assemble
@@ -139,11 +94,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Assemble the app and the benchmark host
         run: ./gradlew :app:assembleDebug :hostapp:assembleDebug
-
-      # The latency harness cannot be RUN without a device, but it must keep compiling --
-      # a harness that has silently stopped building measures nothing at all.
       - name: Assemble the latency benchmark
         run: ./gradlew :benchmark:assembleBenchmark
-
       - name: Lint
         run: ./gradlew :app:lintDebug
